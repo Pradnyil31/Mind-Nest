@@ -68,8 +68,7 @@ service cloud.firestore {
     
     // Routine completions
     match /routine_completions/{completionId} {
-      // Allow read if authenticated (document ID contains userId, so it's safe)
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }

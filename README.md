@@ -44,12 +44,23 @@ MindNest is a comprehensive personal wellness and routine tracking application d
 3.  Configure Firebase:
     -   Place your `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) in the respective `android/app` and `ios/Runner` directories.
 
-4.  Set up API Keys:
-    -   (Optional: detailed instruction on where to add the Gemini API key, e.g., in a `.env` file or directly in the code if that's how it's currently handled)
+4.  **Set up API Keys (CRITICAL)**:
+    -   You must provide your Google Gemini API key when running or building the app.
+    -   **Option A: VS Code (Recommended)**
+        -   Open the project in VS Code.
+        -   Go to the "Run and Debug" tab.
+        -   Select "MindNest (Dev)" and click the Play button.
+        -   *(Note: The `launch.json` is pre-configured with a placeholder key. Update it in `.vscode/launch.json` if needed)*
+
+    -   **Option B: Terminal**
+        -   Run with the key passed as a dart-define:
+        ```bash
+        flutter run --dart-define=GEMINI_API_KEY=YOUR_ACTUAL_API_KEY
+        ```
 
 5.  Run the app:
     ```bash
-    flutter run
+    flutter run --dart-define=GEMINI_API_KEY=YOUR_API_KEY
     ```
 
 ## 📸 Screenshots

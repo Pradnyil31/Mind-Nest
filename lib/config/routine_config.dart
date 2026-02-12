@@ -20,8 +20,8 @@ class RoutineConfig {
       // Habits & Planning
       'Delay Caffeine', 'Wake routine checklist', 'Screen-free morning hour',
       'Daily anchor habit', 'Stick to the plan', 'Morning routine',
-      'Daily habit tracking', 'Habit stacking practice', 'Small steps today',
-      'Task prioritization', 'Review goals'
+      'Habit stacking practice', 'Small steps today',
+      'Task prioritization', 'Review goals', 'Visualizing the day'
     ],
     'Afternoon': [
       // Nutrition & Energy
@@ -34,11 +34,12 @@ class RoutineConfig {
       // Focus & Work
       'Deep Work', 'Focus sessions (Pomodoro)', 'Deep work block', 
       'Single-task focus session', 'Phone-free focus block', 'Single-tasking today',
-      'Clear my workspace', 'Energy management', 'Energy mapping',
+      'Energy management', 'Energy mapping',
       
       // Mental State
       'Mindfulness', 'Check-in', 'Stress check-in', 'Anxiety check-in',
-      'Mindful breathing', 'Mindful breaks', 'Values check-in',
+      'Consistency check-in', 'Values check-in',
+      'Mindful breathing', 'Mindful breaks',
       'Grounding exercises', 'Pre-social grounding exercise', 'Emergency calm toolkit',
       '4-7-8 breathing', 'Self-compassion practice',
       
@@ -52,7 +53,7 @@ class RoutineConfig {
       // Environment
       'Dim Lights', 'Bedroom environment check', 'No Screens', 'Evening digital sunset',
       'Limit screens 1hr before bed', 'Digital detox', 'Digital detox time',
-      'Digital detox hour',
+      'Digital detox hour', 'Clear my workspace',
       
       // Relaxation
       'Read Fiction', 'Read a calming book', 'Herbal Tea', 'Herbal tea ritual',
@@ -64,7 +65,10 @@ class RoutineConfig {
       'Worry journaling', 'Brain dump journaling', 'Achievement journaling', 
       'What I can control journaling', 'Find one joy', 'Celebrate small wins',
       'Celebration moments', 'Evening review', 'Progress review', 
-      'Write it down', 'Let go of what-ifs',
+      'Write it down', 'Let go of what-ifs', 'Daily habit tracking',
+      
+      // Planning
+      'Plan tomorrow', 'Prepare for tomorrow',
       
       // Sleep Preparation
       'Early Bedtime', 'Consistent bedtime reminder', 'Sleep preparation',

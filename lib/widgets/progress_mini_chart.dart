@@ -1,182 +1,125 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../services/progress_insights_service.dart';
-import '../screens/progress_chart_screen.dart';
+import '../theme/app_colors.dart';
 
 class ProgressMiniChart extends StatelessWidget {
   final String userId;
 
-  const ProgressMiniChart({
-    Key? key,
-    required this.userId,
-  }) : super(key: key);
+  const ProgressMiniChart({Key? key, required this.userId}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final insightsService = ProgressInsightsService();
+    return FutureBuilder<QuerySnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('routine_completions')
+          .where('userId', isEqualTo: userId)
+          .orderBy('date', descending: true)
+          .limit(7)
+          .get(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox();
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProgressChartScreen(userId: userId),
+        final docs = snapshot.data!.docs;
+        final completionData = <int, double>{}; // weekday -> completion %
+
+        for (var doc in docs) {
+           final data = doc.data() as Map<String, dynamic>;
+           final date = (data['date'] as Timestamp).toDate();
+           
+           int completed = 0;
+           int total = 1; // avoid divide by zero
+           
+           if (data['completedActivities'] != null) {
+              completed = (data['completedActivities'] as List).length;
+           }
+           if (data['totalActivities'] != null) {
+              total = (data['totalActivities'] as num).toInt();
+           }
+           if (total == 0) total = 1;
+           
+           completionData[date.weekday] = (completed / total).clamp(0.0, 1.0);
+        }
+
+        final now = DateTime.now();
+        final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
+        final weekDays = List.generate(7, (index) => startOfWeek.add(Duration(days: index)));
+        final dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadowColor,
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+               Text(
+                 'Consistency',
+                 style: GoogleFonts.lato(
+                   fontSize: 16,
+                   fontWeight: FontWeight.bold,
+                   color: AppColors.textPrimary,
+                 ),
+               ),
+               const SizedBox(height: 16),
+               Row(
+                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                 crossAxisAlignment: CrossAxisAlignment.end,
+                 children: List.generate(7, (index) {
+                    final date = weekDays[index];
+                    final label = dayLabels[index];
+                    // Correct weekday mapping
+                    // weekDays[0] is Sunday. date.weekday is 7 for Sunday.
+                    // completionData key is 1..7 (Mon..Sun)
+                    final completion = completionData[date.weekday] ?? 0.0;
+                    
+                    return Column(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 40,
+                          alignment: Alignment.bottomCenter,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: FractionallySizedBox(
+                            heightFactor: completion > 0 ? completion : 0.0, // avoid 0 height crash if any logic issues
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: completion > 0.8 ? AppColors.success : 
+                                       (completion > 0.4 ? AppColors.warning : AppColors.error),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          label,
+                          style: GoogleFonts.lato(
+                            fontSize: 10,
+                            color: AppColors.textSecondary,
+                            fontWeight: date.day == now.day ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    );
+                 }),
+               ),
+            ],
           ),
         );
       },
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Your Activity',
-                      style: GoogleFonts.lato(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF2D2D2D),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Last 7 days',
-                      style: GoogleFonts.lato(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3E5F5),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.show_chart_rounded, // Changed icon to chart line
-                    color: Color(0xFFAB47BC), // Soft Purple
-                    size: 24,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 30),
-
-            // Line Chart
-            SizedBox(
-              height: 180,
-              child: FutureBuilder<Map<DateTime, double>>(
-                future: insightsService.getCompletionHistory(userId, 7),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'Start completing tasks to see data!',
-                        style: GoogleFonts.lato(
-                          color: Colors.grey[400],
-                        ),
-                      ),
-                    );
-                  }
-
-                  final data = snapshot.data!;
-                  final sortedEntries = data.entries.toList()
-                    ..sort((a, b) => a.key.compareTo(b.key));
-
-                  return LineChart(
-                    LineChartData(
-                      gridData: FlGridData(show: false),
-                      titlesData: FlTitlesData(
-                        show: true,
-                        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 22,
-                            getTitlesWidget: (value, meta) {
-                              if (value.toInt() < 0 || value.toInt() >= sortedEntries.length) {
-                                return const SizedBox();
-                              }
-                              final date = sortedEntries[value.toInt()].key;
-                              final dayName = ['M', 'T', 'W', 'T', 'F', 'S', 'S'][date.weekday - 1];
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                  dayName,
-                                  style: GoogleFonts.lato(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      minX: 0,
-                      maxX: (sortedEntries.length - 1).toDouble(),
-                      minY: 0,
-                      maxY: 100,
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: sortedEntries
-                              .asMap()
-                              .entries
-                              .map((e) => FlSpot(e.key.toDouble(), e.value.value))
-                              .toList(),
-                          isCurved: true,
-                          preventCurveOverShooting: true,
-                          curveSmoothness: 0.35,
-                          color: const Color(0xFFAB47BC), // Soft Purple
-                          barWidth: 4,
-                          isStrokeCapRound: true,
-                          dotData: FlDotData(
-                            show: true,
-                            getDotPainter: (spot, percent, barData, index) {
-                              return FlDotCirclePainter(
-                                radius: 4,
-                                color: Colors.white,
-                                strokeWidth: 2,
-                                strokeColor: const Color(0xFFAB47BC),
-                              );
-                            },
-                          ),
-                          belowBarData: BarAreaData(show: false),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

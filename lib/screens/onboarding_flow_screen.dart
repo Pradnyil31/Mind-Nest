@@ -107,19 +107,17 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             'bedTime': _formatTime(_bedTime),
           },
           'onboardingCompleted': true,
+          'onboardingCompleted': true,
           // Set initial routine: scaled by commitment level
-          // Save base routine (the master list) and daily routine (today's list)
-          'baseRoutine': _generateInitialRoutine(
+          'baseRoutine': MotiveConfig.generateRoutine(
              motive: _selectedMotive, 
-             supportAreas: _selectedSupportAreas,
              commitment: _selectedCommitment,
-             isBase: true, // Generate full list for base
+             supportAreas: _selectedSupportAreas,
           ),
-          'routineActivities': _generateInitialRoutine(
+          'routineActivities': MotiveConfig.generateRoutine(
              motive: _selectedMotive, 
-             supportAreas: _selectedSupportAreas,
              commitment: _selectedCommitment,
-             isBase: false, // Generate limited list for today
+             supportAreas: _selectedSupportAreas,
           ),
           'lastGeneratedDate': DateTime.now().toIso8601String(),
         });
@@ -151,43 +149,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     }
   }
 
-  List<String> _generateInitialRoutine({
-    required String? motive,
-    required List<String> supportAreas,
-    required String? commitment,
-    bool isBase = false,
-  }) {
-    // 1. Determine activity limit based on commitment
-    int limit = 5; // Default for 10 mins
-    if (commitment != null && !isBase) {
-      if (commitment.startsWith('5 minutes')) limit = 3;
-      else if (commitment.startsWith('10 minutes')) limit = 5;
-      else if (commitment.startsWith('15 minutes')) limit = 6;
-      else if (commitment.startsWith('30+ minutes')) limit = 8;
-    } else if (isBase) {
-        limit = 20; // Allow more for base routine
-    }
 
-    // 2. Get activities
-    final baseActivities = MotiveConfig.getRoutineActivities(motive);
-    final supportActivities = MotiveConfig.getActivitiesForSupportAreas(motive, supportAreas);
-
-    // 3. Combine with priority: Base first, then Support
-    // We intertwine them slightly to ensure variety if limit is tight
-    final combined = <String>{};
-    
-    // Always add top 2 base activities first (core habits)
-    combined.addAll(baseActivities.take(2));
-    
-    // Then add support activities (personalized needs)
-    combined.addAll(supportActivities);
-    
-    // Then fill rest with remaining base activities
-    combined.addAll(baseActivities.skip(2));
-
-    // 4. Return limited list
-    return combined.take(limit).toList();
-  }
 
   Future<void> _selectTime(bool isWakeUp) async {
     final TimeOfDay? picked = await showTimePicker(

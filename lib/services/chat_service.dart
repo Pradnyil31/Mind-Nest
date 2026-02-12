@@ -5,7 +5,7 @@ class ChatService {
   // TODO: Replace with your actual Gemini API key
   // Get key from: https://aistudio.google.com/app/apikey
   // OR: https://console.cloud.google.com/ → "Generative Language API"
-  static const String _apiKey = '***REMOVED***';
+  static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY');
 
   // List of models to try in order of preference/likelihood of working
   final List<String> _fallbackModels = [
