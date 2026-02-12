@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "MindNest (Dev)",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "--dart-define=GEMINI_API_KEY=AIzaSyBEhTDuUPu6_2SuimNipqT2qpT_r_SxXLQ"
+            ]
+        },
+        {
+            "name": "MindNest (Release)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release",
+            "args": [
+                "--dart-define=GEMINI_API_KEY=AIzaSyBEhTDuUPu6_2SuimNipqT2qpT_r_SxXLQ"
+            ]
+        }
+    ]
+}

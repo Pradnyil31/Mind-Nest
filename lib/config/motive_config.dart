@@ -48,6 +48,9 @@ class MotiveConfig {
   // ─────────────────────────────────────────────
   // Motive profiles with personalized content
   // ─────────────────────────────────────────────
+  // ─────────────────────────────────────────────
+  // Motive profiles with personalized content
+  // ─────────────────────────────────────────────
   static const Map<String, MotiveProfile> profiles = {
 
     // ── Sleep ──────────────────────────────────
@@ -59,7 +62,7 @@ class MotiveConfig {
       supportQuestion: 'What\'s keeping you up at night?',
       supportAreas: {
         'Racing thoughts':     ['Brain dump journaling', 'Sleep meditation'],
-        'Blue light habits':   ['Screen detox 1hr before bed', 'Bedroom environment check'],
+        'Blue light habits':   ['No screens after 9 PM', 'Bedroom environment check'],
         'Inconsistent schedule': ['Consistent bedtime reminder', 'Morning sunlight exposure'],
         'Stress at night':     ['Progressive muscle relaxation', 'Evening wind-down ritual'],
         'Caffeine dependency': ['Caffeine cutoff (2pm)', 'Herbal tea ritual'],
@@ -67,14 +70,14 @@ class MotiveConfig {
       },
       routineActivities: [
         'Morning sunlight exposure',
-        'Evening wind-down ritual',
-        'Limit screens 1hr before bed',
-        'Progressive muscle relaxation',
-        'Sleep meditation',
-        'Consistent sleep schedule',
+        'Drink 500ml Water',
+        'Make Bed',
         'Caffeine cutoff (2pm)',
-        'Bedroom environment check',
-        'Gratitude journaling',
+        'Physical activity',
+        'Walk',
+        'Limit screens 1hr before bed',
+        'Evening wind-down ritual',
+        'Sleep meditation',
       ],
       meditationTags: ['sleep', 'bedtime', 'deep-rest', 'body-scan', 'relaxation'],
       calmTechniquePriorities: ['Body Scan', 'Breathing', 'Guided Imagery'],
@@ -105,13 +108,14 @@ class MotiveConfig {
       },
       routineActivities: [
         'Morning mindfulness',
+        'Start the day slowly',
+        'Positive affirmations',
         'Stress check-in',
-        'Physical activity',
-        'Breathing breaks',
+        'Deep breathing breaks',
+        'Walk in nature',
         'Gratitude journaling',
-        'Evening reflection',
         'Digital detox time',
-        'Self-care moment',
+        'Progressive muscle relaxation',
       ],
       meditationTags: ['stress-relief', 'mindfulness', 'calm', 'peace', 'relaxation'],
       calmTechniquePriorities: ['Breathing', 'Grounding', 'Meditation'],
@@ -141,14 +145,15 @@ class MotiveConfig {
         'Imposter syndrome': ['Positive affirmations', 'Achievement journaling'],
       },
       routineActivities: [
-        'Grounding exercises',
-        'Worry journaling',
+        'Daily anchor habit',
+        'Morning intention setting',
         'Gentle movement',
-        'Mindful breathing',
-        'Positive affirmations',
-        'Safe space meditation',
         'Anxiety check-in',
-        'Self-compassion practice',
+        'Grounding exercises',
+        'Connect with a friend',
+        'Worry journaling',
+        'Safe space meditation',
+        'Herbal tea ritual',
       ],
       meditationTags: ['anxiety', 'present-moment', 'safety', 'grounding', 'calm'],
       calmTechniquePriorities: ['Grounding', 'Breathing', 'Body Awareness'],
@@ -178,14 +183,15 @@ class MotiveConfig {
         'Lack of motivation':  ['Morning intention setting', 'Reward planning'],
       },
       routineActivities: [
-        'Morning intention setting',
-        'Focus sessions (Pomodoro)',
-        'Digital detox periods',
-        'Concentration meditation',
         'Task prioritization',
+        'Clear my workspace',
+        'Review goals',
+        'Focus sessions (Pomodoro)',
+        'Single-task commitment',
         'Energy management',
-        'Mindful breaks',
         'Evening review',
+        'Plan tomorrow',
+        'Celebrate small wins',
       ],
       meditationTags: ['focus', 'concentration', 'clarity', 'mindfulness', 'productivity'],
       calmTechniquePriorities: ['Grounding', 'Breathing', 'Visualization'],
@@ -215,14 +221,15 @@ class MotiveConfig {
         'Productivity blocks': ['Energy mapping', 'Deep work block'],
       },
       routineActivities: [
-        'Daily habit tracking',
         'Morning routine',
-        'Evening routine',
-        'Habit stacking practice',
-        'Progress review',
+        'Drink water',
+        'Visualizing the day',
         'Consistency check-in',
-        'Celebration moments',
+        'Habit stacking practice',
+        'Healthy Lunch',
+        'Daily habit tracking',
         'Reflection journaling',
+        'Prepare for tomorrow',
       ],
       meditationTags: ['motivation', 'commitment', 'mindfulness', 'discipline', 'growth'],
       calmTechniquePriorities: ['Breathing', 'Meditation', 'Grounding', 'Affirmations'],
@@ -236,6 +243,41 @@ class MotiveConfig {
       badgeThemes: ['growth', 'momentum', 'achievement', 'consistency', 'fire'],
     ),
   };
+
+  /// Generate centralized routine based on motive and commitment
+  static List<String> generateRoutine({
+    required String? motive,
+    required String? commitment,
+    List<String> supportAreas = const [],
+  }) {
+    // 1. Determine activity limit based on commitment
+    int limit = 5; // Default (10 mins)
+    if (commitment != null) {
+      if (commitment.startsWith('5')) limit = 3;
+      else if (commitment.startsWith('10')) limit = 5;
+      else if (commitment.startsWith('15')) limit = 7;
+      else if (commitment.startsWith('30')) limit = 9;
+    }
+
+    // 2. Get activities
+    final baseActivities = getRoutineActivities(motive);
+    final supportActivities = getActivitiesForSupportAreas(motive, supportAreas);
+
+    // 3. Combine with priority: Base (Core) -> Support -> Base (Fill)
+    final combined = <String>{};
+    
+    // Always add top 2 base activities first (Core habits)
+    combined.addAll(baseActivities.take(2));
+    
+    // Then add support activities (Personalized needs)
+    combined.addAll(supportActivities);
+    
+    // Then fill rest with remaining base activities
+    combined.addAll(baseActivities.skip(2));
+
+    // 4. Return limited list
+    return combined.take(limit).toList();
+  }
 
   /// Get profile for a given motive
   static MotiveProfile? getProfile(String? motive) {

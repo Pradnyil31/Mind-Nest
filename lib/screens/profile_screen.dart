@@ -26,6 +26,7 @@ class ProfileScreen extends StatelessWidget {
           TimeOfDay wakeTime = const TimeOfDay(hour: 7, minute: 0);
           TimeOfDay bedTime = const TimeOfDay(hour: 22, minute: 0);
           String dailyCommitment = '10 minutes';
+          List<String> supportAreas = [];
           
           if (snapshot.hasData && snapshot.data!.exists) {
               final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -33,6 +34,9 @@ class ProfileScreen extends StatelessWidget {
               email = user?.email ?? '';
               primaryMotive = data['primaryMotive'] as String?;
               dailyCommitment = data['dailyCommitment'] as String? ?? '10 minutes';
+              if (data['supportAreas'] != null) {
+                supportAreas = List<String>.from(data['supportAreas']);
+              }
               
               if (data.containsKey('routine')) {
                  final routine = data['routine'] as Map<String, dynamic>;
@@ -55,7 +59,7 @@ class ProfileScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSectionHeader('My Goal'),
-                      _buildMotiveCard(context, primaryMotive),
+                      _buildMotiveCard(context, primaryMotive, dailyCommitment, supportAreas),
                       const SizedBox(height: 32),
                       
                       _buildSectionHeader('Routine Settings'),
@@ -78,7 +82,7 @@ class ProfileScreen extends StatelessWidget {
                         onTap: () => _pickTime(context, user?.uid, 'bedTime', bedTime),
                       ),
                        const SizedBox(height: 12),
-                      _buildCommitmentSection(context, dailyCommitment),
+                      _buildCommitmentSection(context, dailyCommitment, primaryMotive, supportAreas),
 
                       const SizedBox(height: 32),
                       _buildSectionHeader('Account'),
@@ -226,7 +230,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMotiveCard(BuildContext context, String? currentMotive) {
+  Widget _buildMotiveCard(BuildContext context, String? currentMotive, String commitment, List<String> supportAreas) {
     final profile = MotiveConfig.getProfile(currentMotive);
     final displayMotive = profile?.displayName ?? currentMotive ?? 'Set Motive';
     final emoji = profile?.emoji ?? '🎯';
@@ -247,7 +251,7 @@ class ProfileScreen extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _showMotiveSelection(context, currentMotive),
+          onTap: () => _showMotiveSelection(context, currentMotive, commitment, supportAreas),
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -395,7 +399,7 @@ class ProfileScreen extends StatelessWidget {
 
   // --- Actions ---
 
-  Widget _buildCommitmentSection(BuildContext context, String currentCommitment) {
+  Widget _buildCommitmentSection(BuildContext context, String currentCommitment, String? primaryMotive, List<String> supportAreas) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -410,39 +414,46 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _pickCommitment(context, AuthService().currentUser?.uid, currentCommitment, primaryMotive, supportAreas),
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-               Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.teal.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.timer_rounded, color: Colors.teal, size: 22),
-              ),
-               const SizedBox(width: 16),
-               Column(
-                 crossAxisAlignment: CrossAxisAlignment.start,
-                 children: [
-                   Text('Daily Commitment', style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF374151))),
-                   const SizedBox(height: 4),
-                   Text(
-                     currentCommitment, 
-                     style: GoogleFonts.lato(fontSize: 15, fontWeight: FontWeight.w500, color: const Color(0xFF6C63FF)),
+              Row(
+                children: [
+                   Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.timer_rounded, color: Colors.teal, size: 22),
+                  ),
+                   const SizedBox(width: 16),
+                   Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Text('Daily Commitment', style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF374151))),
+                       const SizedBox(height: 4),
+                       Text(
+                         currentCommitment, 
+                         style: GoogleFonts.lato(fontSize: 15, fontWeight: FontWeight.w500, color: const Color(0xFF6C63FF)),
+                       ),
+                     ],
                    ),
-                 ],
-               ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                 "Based on your selection: ${_getCommitmentDescription(currentCommitment)}",
+                 style: GoogleFonts.lato(fontSize: 13, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-             "Based on your onboarding selection: ${_getCommitmentDescription(currentCommitment)}",
-             style: GoogleFonts.lato(fontSize: 13, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -450,8 +461,8 @@ class ProfileScreen extends StatelessWidget {
   String _getCommitmentDescription(String commitment) {
      if (commitment.startsWith('5')) return 'Light: ~3 tasks/day';
      if (commitment.startsWith('10')) return 'Balanced: ~5 tasks/day';
-     if (commitment.startsWith('15')) return 'Solid: ~6 tasks/day';
-     return 'Intense: ~8 tasks/day';
+     if (commitment.startsWith('15')) return 'Solid: ~7 tasks/day';
+     return 'Intense: ~9 tasks/day';
   }
 
   Future<void> _pickTime(BuildContext context, String? uid, String field, TimeOfDay initial) async {
@@ -506,7 +517,7 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _pickCommitment(BuildContext context, String? uid, String current) async {
+  Future<void> _pickCommitment(BuildContext context, String? uid, String current, String? primaryMotive, List<String> supportAreas) async {
      if (uid == null) return;
      final options = ['5 minutes', '10 minutes', '15 minutes', '30+ minutes'];
      
@@ -534,12 +545,21 @@ class ProfileScreen extends StatelessWidget {
      );
      
      if (selected != null && selected != current) {
+       // Generate new base routine based on new commitment
+       final newRoutine = MotiveConfig.generateRoutine(
+         motive: primaryMotive,
+         commitment: selected,
+         supportAreas: supportAreas,
+       );
+
        await FirestoreService().updateUser(uid, {
          'dailyCommitment': selected,
-         // Note: This won't regenerate task count immediately until next daily trigger unless users forces it.
-         // Effectively takes effect tomorrow.
+         'baseRoutine': newRoutine,
        });
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Commitment updated! Tasks will adjust tomorrow.')));
+
+       if (context.mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Commitment updated! Tasks will adjust tomorrow.')));
+       }
      }
   }
   
@@ -624,7 +644,7 @@ class ProfileScreen extends StatelessWidget {
     return '$hour:$minute $period';
   }
 
-  void _showMotiveSelection(BuildContext context, String? currentMotive) {
+  void _showMotiveSelection(BuildContext context, String? currentMotive, String commitment, List<String> supportAreas) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -672,8 +692,12 @@ class ProfileScreen extends StatelessWidget {
                     onTap: () async {
                       final user = AuthService().currentUser;
                       if (user != null) {
-                         // 1. Get new activities from config
-                         final newActivities = MotiveConfig.getRoutineActivities(motive);
+                         // 1. Generate new activities
+                         final newActivities = MotiveConfig.generateRoutine(
+                            motive: motive, 
+                            commitment: commitment,
+                            supportAreas: supportAreas,
+                         );
                          
                          // 2. Check if user has completed any tasks *today*
                          // We'll query routine_completions for today
@@ -737,7 +761,7 @@ class ProfileScreen extends StatelessWidget {
                            });
                            
                            if (context.mounted) {
-                              showDialog(
+                               showDialog(
                                context: context,
                                builder: (ctx) => AlertDialog(
                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

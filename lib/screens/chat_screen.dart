@@ -50,6 +50,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
+    
+    // Basic sanitization and validation
+    // Limit length to prevent token exhaustion
+    if (text.length > 500) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Message too long. Please keep it under 500 characters.')),
+      );
+      return;
+    }
+    
+    // safe inputs
+    final sanitizedText = text.replaceAll(RegExp(r'[<>]'), ''); // minimal check for HTML-like tags
 
     // Add user message
     setState(() {
@@ -62,7 +74,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Get AI response
     try {
-      final response = await _chatService.sendMessage(text);
+      final response = await _chatService.sendMessage(sanitizedText);
       setState(() {
         _messages.add(ChatMessage(text: response, isUser: false));
         _isLoading = false;
