@@ -56,6 +56,9 @@ dependencies:
   
   # Charts for progress visualization
   fl_chart: ^0.69.2
+  flutter_local_notifications: ^20.1.0
+  timezone: ^0.10.1
+  flutter_timezone: ^5.0.1
 
 dev_dependencies:
   flutter_test:

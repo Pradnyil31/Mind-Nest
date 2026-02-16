@@ -3,8 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/notification_service.dart';
 import '../models/user_model.dart';
 import '../config/motive_config.dart';
+import '../config/notification_content.dart';
 import 'welcome_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -505,6 +507,23 @@ class ProfileScreen extends StatelessWidget {
          if (forceRegenerate) 'lastGeneratedDate': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
       });
       
+      // Reschedule notifications with new time
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (userDoc.exists && userDoc.data() != null) {
+         final data = userDoc.data() as Map<String, dynamic>;
+         final name = data['displayName'] ?? 'there';
+         final motive = data['dailyMotive'] ?? 'Wellness';
+         final routine = Map<String, dynamic>.from(data['routine'] ?? {});
+         
+         TimeOfDay wakeTime = _parseTime(routine['wakeTime'] ?? "7:00 AM");
+         TimeOfDay bedTime = _parseTime(routine['bedTime'] ?? "10:00 PM");
+         
+         if (field == 'wakeTime') wakeTime = picked;
+         if (field == 'bedTime') bedTime = picked;
+         
+         await _rescheduleNotifications(name, motive, wakeTime, bedTime);
+      }
+      
       if (forceRegenerate && context.mounted) {
          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Morning update! Routine regenerated for today.')),
@@ -580,8 +599,23 @@ class ProfileScreen extends StatelessWidget {
           TextButton(
              onPressed: () async {
                if (controller.text.isNotEmpty) {
-                 await FirestoreService().updateUser(uid, {'displayName': controller.text.trim()});
-                 Navigator.pop(ctx);
+                   await FirestoreService().updateUser(uid, {'displayName': controller.text.trim()});
+                   
+                   // Reschedule notifications with new name
+                   final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+                   if (userDoc.exists && userDoc.data() != null) {
+                      final data = userDoc.data() as Map<String, dynamic>;
+                      final motive = data['dailyMotive'] ?? 'Wellness';
+                      // Need wake/bed times. They might not be in this scope easily without refetching or passing.
+                      // Let's refetch to be safe and clean.
+                      final routine = Map<String, dynamic>.from(data['routine'] ?? {});
+                      final wakeTime = _parseTime(routine['wakeTime'] ?? "7:00 AM");
+                      final bedTime = _parseTime(routine['bedTime'] ?? "10:00 PM");
+                      
+                      await _rescheduleNotifications(controller.text.trim(), motive, wakeTime, bedTime);
+                   }
+                   
+                   Navigator.pop(ctx);
                }
              },
              child: const Text('Save'),
@@ -731,6 +765,18 @@ class ProfileScreen extends StatelessWidget {
                               'baseRoutine': newActivities,
                            });
                            
+                           // Reschedule notifications
+                           final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+                           if (userDoc.exists && userDoc.data() != null) {
+                              final data = userDoc.data() as Map<String, dynamic>;
+                              final name = data['displayName'] ?? 'there';
+                              final routine = Map<String, dynamic>.from(data['routine'] ?? {});
+                              final wakeTime = _parseTime(routine['wakeTime'] ?? "7:00 AM");
+                              final bedTime = _parseTime(routine['bedTime'] ?? "10:00 PM");
+                              
+                              await _rescheduleNotifications(name, motive, wakeTime, bedTime);
+                           }
+                           
                            if (context.mounted) {
                              showDialog(
                                context: context,
@@ -759,6 +805,18 @@ class ProfileScreen extends StatelessWidget {
                               'baseRoutine': newActivities,
                               'lastGeneratedDate': DateTime(2000, 1, 1).toIso8601String(), // Force regeneration
                            });
+                           
+                           // Reschedule notifications
+                           final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+                           if (userDoc.exists && userDoc.data() != null) {
+                              final data = userDoc.data() as Map<String, dynamic>;
+                              final name = data['displayName'] ?? 'there';
+                              final routine = Map<String, dynamic>.from(data['routine'] ?? {});
+                              final wakeTime = _parseTime(routine['wakeTime'] ?? "7:00 AM");
+                              final bedTime = _parseTime(routine['bedTime'] ?? "10:00 PM");
+                              
+                              await _rescheduleNotifications(name, motive, wakeTime, bedTime);
+                           }
                            
                            if (context.mounted) {
                                showDialog(
@@ -836,5 +894,54 @@ class ProfileScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+  Future<void> _rescheduleNotifications(String name, String motive, TimeOfDay wakeTime, TimeOfDay bedTime) async {
+     try {
+       await NotificationService().requestPermissions();
+       await NotificationService().cancelAll();
+       
+       // Wake Up
+       await NotificationService().scheduleDailyNotification(
+         id: 1, 
+         title: 'Good Morning!', 
+         body: NotificationContent.getMorningMessage(name, motive), 
+         hour: wakeTime.hour, 
+         minute: wakeTime.minute
+       );
+       
+       // Midday (Wake + 6 hours)
+       final midday = wakeTime.hour + 6;
+       final middayHour = midday >= 24 ? midday - 24 : midday;
+       await NotificationService().scheduleDailyNotification(
+         id: 2, 
+         title: 'Check In', 
+         body: NotificationContent.getAfternoonMessage(name), 
+         hour: middayHour, 
+         minute: wakeTime.minute
+       );
+       
+       // Evening (Bed - 2 hours)
+       final evening = bedTime.hour - 2;
+       final eveningHour = evening < 0 ? evening + 24 : evening;
+       await NotificationService().scheduleDailyNotification(
+         id: 3, 
+         title: 'Wind Down', 
+         body: NotificationContent.getEveningMessage(name), 
+         hour: eveningHour, 
+         minute: bedTime.minute
+       );
+       
+       // Bedtime
+       await NotificationService().scheduleDailyNotification(
+         id: 4, 
+         title: 'Sweet Dreams', 
+         body: NotificationContent.getBedtimeMessage(name), 
+         hour: bedTime.hour, 
+         minute: bedTime.minute
+       );
+       
+     } catch (e) {
+       print('Error rescheduling notifications: $e');
+     }
   }
 }

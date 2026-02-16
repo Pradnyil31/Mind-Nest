@@ -59,19 +59,9 @@ class HomeRoutineSection extends StatelessWidget {
            }
         }
         
-        // Force overrides logic
-        final lower = activity.toLowerCase();
-        if (lower.contains('caffeine')) {
-             if (lower.contains('delay')) {
-                 category = 'Morning';
-             } else {
-                 category = 'Afternoon';
-             }
-        } else if (lower.contains('morning') || lower.contains('wake') || lower.contains('breakfast')) {
-             category = 'Morning';
-        } else if (lower.contains('wind down') || lower.contains('sleep') || lower.contains('bed') || lower.contains('evening')) {
-             category = 'Evening';
-        }
+        // Logic reliant purely on schedule or config default
+        // Force overrides removed to respect user schedule
+
         
         switch (category) {
             case 'Morning': morningItems.add(activity); break;
