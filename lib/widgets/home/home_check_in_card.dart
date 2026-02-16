@@ -51,7 +51,7 @@ class HomeCheckInCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isCompleted ? 'Morning Check-in Complete' : 'Review your Morning',
+                    isCompleted ? '${_getTimePeriod()} Check-in Complete' : 'Review your ${_getTimePeriod()}',
                     style: GoogleFonts.lato(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -75,5 +75,11 @@ class HomeCheckInCard extends StatelessWidget {
         ),
       ),
     );
+  }
+  String _getTimePeriod() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Morning';
+    if (hour < 17) return 'Afternoon';
+    return 'Evening';
   }
 }

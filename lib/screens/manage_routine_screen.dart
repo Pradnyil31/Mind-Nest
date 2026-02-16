@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../config/motive_config.dart';
+import '../services/notification_service.dart';
+import '../config/notification_content.dart';
 import '../services/routine_tracking_service.dart';
 import '../config/routine_config.dart';
 
@@ -176,42 +179,119 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
   Future<void> _saveRoutine() async {
     setState(() => _isLoading = true);
     final user = _authService.currentUser;
+    
     if (user != null) {
-      // 1. Identify newly added activities (to reset their completion status if previously checked today)
-      final newActivities = _activitySchedule.keys.where((a) => !_initialSchedule.containsKey(a)).toList();
-      
-      // 2. Unmark them in Firestore so they appear as "To Do"
-      for (final activity in newActivities) {
-        await _routineService.unmarkActivityComplete(user.uid, activity);
-      }
-
-      // 3. Recalculate Schedule dynamically to ensure times are correct
-      final newActivitiesList = _activitySchedule.keys.toList();
-      final newSchedule = _calculateDynamicSchedule(newActivitiesList, _wakeTime, _bedTime);
-
-      // 4. Save new format
-      await _firestoreService.updateUser(user.uid, {
-        'routineSchedule': newSchedule, 
-        'temporarySchedule': newSchedule, // Sync temp schedule too
+      try {
+        // 1. Identify newly added activities (to reset their completion status if previously checked today)
+        final newActivities = _activitySchedule.keys.where((a) => !_initialSchedule.containsKey(a)).toList();
         
-        // Update both baseRoutine and routineActivities to stay in sync
-        'baseRoutine': newActivitiesList,
-        'routineActivities': newActivitiesList,
-      });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isFirstTimeSetup 
-              ? '✨ Your personalized routine is set!'
-              : '✓ Routine updated successfully!'),
-            backgroundColor: const Color(0xFF6C63FF),
-          ),
-        );
-        Navigator.pop(context);
+        // 2. Unmark them in Firestore so they appear as "To Do"
+        for (final activity in newActivities) {
+          try {
+             await _routineService.unmarkActivityComplete(user.uid, activity);
+          } catch (e) {
+             // Ignore individual unmark failures to prevent blocking save
+             print('Failed to unmark $activity: $e');
+          }
+        }
+
+        // 3. Recalculate Schedule dynamically to ensure times are correct
+        final newActivitiesList = _activitySchedule.keys.toList();
+        final newSchedule = _calculateDynamicSchedule(newActivitiesList, _wakeTime, _bedTime);
+
+        // 4. Save new format
+        await _firestoreService.updateUser(user.uid, {
+          'routineSchedule': newSchedule, 
+          'temporarySchedule': newSchedule, // Sync temp schedule too
+          
+          // Update both baseRoutine and routineActivities to stay in sync
+          'baseRoutine': newActivitiesList,
+          'routineActivities': newActivitiesList,
+        });
+
+        // 5. Schedule Notifications
+        try {
+           final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+           if (userDoc.exists && userDoc.data() != null) {
+              final data = userDoc.data() as Map<String, dynamic>;
+              final name = data['displayName'] ?? 'there';
+              final motive = data['dailyMotive'] ?? 'Wellness';
+           
+              await NotificationService().requestPermissions();
+              await NotificationService().cancelAll();
+              
+              // Wake Up
+              await NotificationService().scheduleDailyNotification(
+                id: 1, 
+                title: 'Good Morning!', 
+                body: NotificationContent.getMorningMessage(name, motive), 
+                hour: _wakeTime.hour, 
+                minute: _wakeTime.minute
+              );
+              
+              // Midday (Wake + 6 hours)
+              final midday = _wakeTime.hour + 6;
+              final middayHour = midday >= 24 ? midday - 24 : midday;
+              await NotificationService().scheduleDailyNotification(
+                id: 2, 
+                title: 'Check In', 
+                body: NotificationContent.getAfternoonMessage(name), 
+                hour: middayHour, 
+                minute: _wakeTime.minute
+              );
+              
+              // Evening (Bed - 2 hours)
+              final evening = _bedTime.hour - 2;
+              final eveningHour = evening < 0 ? evening + 24 : evening;
+              await NotificationService().scheduleDailyNotification(
+                id: 3, 
+                title: 'Wind Down', 
+                body: NotificationContent.getEveningMessage(name), 
+                hour: eveningHour, 
+                minute: _bedTime.minute
+              );
+              
+              // Bedtime
+              await NotificationService().scheduleDailyNotification(
+                id: 4, 
+                title: 'Sweet Dreams', 
+                body: NotificationContent.getBedtimeMessage(name), 
+                hour: _bedTime.hour, 
+                minute: _bedTime.minute
+              );
+           }
+        } catch (e) {
+           print('Notification scheduling failed: $e');
+        }
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_isFirstTimeSetup 
+                ? '✨ Your personalized routine is set!'
+                : '✓ Routine updated successfully!'),
+              backgroundColor: const Color(0xFF6C63FF),
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save routine: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+           setState(() => _isLoading = false);
+        }
       }
+    } else {
+       if (mounted) setState(() => _isLoading = false);
     }
-    setState(() => _isLoading = false);
   }
 
   void _toggleActivity(String activity) {
@@ -258,7 +338,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
   }
 
   Future<void> _changeTimePeriod(String activity) async {
-    final currentPeriod = _activitySchedule[activity];
+    final currentPeriod = _activitySchedule[activity] ?? _suggestTimePeriod(activity);
     final newPeriod = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -845,7 +925,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
                   ],
                 ),
               ),
-              if (isSelected && _activitySchedule.containsKey(activity)) ...[
+              if (true) ...[ // Always show time badge
                 const SizedBox(width: 8),
                 // Time Badge & Edit Button
                 InkWell(

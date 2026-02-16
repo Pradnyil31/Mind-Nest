@@ -9,10 +9,14 @@ import 'screens/home_screen.dart';
 import 'screens/onboarding_flow_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/user_provider.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   // Force rebuild timestamp 2
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Notifications
+  await NotificationService().init();
   
   // Initialize Firebase
   await Firebase.initializeApp();

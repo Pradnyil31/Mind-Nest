@@ -66,7 +66,7 @@ class HomeFocusCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Start morning routine', 
+                      'Start ${_getTimePeriod()} routine', 
                       style: GoogleFonts.lato(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -90,6 +90,12 @@ class HomeFocusCard extends StatelessWidget {
       ),
     ),
     );
+  }
+  String _getTimePeriod() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'morning';
+    if (hour < 17) return 'afternoon';
+    return 'evening';
   }
 }
 
