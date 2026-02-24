@@ -1,6 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:fy_project/services/firestore_service.dart';
 import 'package:fy_project/models/user_model.dart';
@@ -12,14 +10,11 @@ void main() {
 
     setUp(() {
       fakeFirestore = FakeFirebaseFirestore();
-      // Note: You'd need to pass fakeFirestore to FirestoreService
-      // For now, using default instance
-      firestoreService = FirestoreService();
+      firestoreService = FirestoreService(firestore: fakeFirestore);
     });
 
     group('User CRUD Operations', () {
       test('createUser adds user to Firestore', () async {
-        // Arrange
         final user = UserModel(
           uid: 'test-uid-123',
           email: 'test@example.com',
@@ -29,10 +24,8 @@ void main() {
           lastLogin: DateTime.now(),
         );
 
-        // Act
         await firestoreService.createUser(user);
 
-        // Assert
         final retrieved = await firestoreService.getUser(user.uid);
         expect(retrieved, isNotNull);
         expect(retrieved?.email, equals(user.email));
@@ -40,15 +33,11 @@ void main() {
       });
 
       test('getUser returns null for non-existent user', () async {
-        // Act
         final user = await firestoreService.getUser('non-existent-id');
-
-        // Assert
         expect(user, isNull);
       });
 
       test('updateUser modifies existing user data', () async {
-        // Arrange
         final user = UserModel(
           uid: 'test-uid-456',
           email: 'test@example.com',
@@ -59,18 +48,15 @@ void main() {
         );
         await firestoreService.createUser(user);
 
-        // Act
         await firestoreService.updateUser(user.uid, {
           'displayName': 'Updated Name',
         });
 
-        // Assert
         final updated = await firestoreService.getUser(user.uid);
         expect(updated?.displayName, equals('Updated Name'));
       });
 
       test('deleteUser removes user from Firestore', () async {
-        // Arrange
         final user = UserModel(
           uid: 'test-uid-789',
           email: 'delete@example.com',
@@ -81,18 +67,35 @@ void main() {
         );
         await firestoreService.createUser(user);
 
-        // Act
         await firestoreService.deleteUser(user.uid);
 
-        // Assert
         final deleted = await firestoreService.getUser(user.uid);
         expect(deleted, isNull);
+      });
+
+      test('userExists returns true for existing user', () async {
+        final user = UserModel(
+          uid: 'exists-uid',
+          email: 'exists@example.com',
+          displayName: 'Exists',
+          photoURL: null,
+          createdAt: DateTime.now(),
+          lastLogin: DateTime.now(),
+        );
+        await firestoreService.createUser(user);
+
+        final exists = await firestoreService.userExists(user.uid);
+        expect(exists, isTrue);
+      });
+
+      test('userExists returns false for non-existent user', () async {
+        final exists = await firestoreService.userExists('ghost-uid');
+        expect(exists, isFalse);
       });
     });
 
     group('User Stream', () {
       test('streamUser emits user data changes', () async {
-        // Arrange
         final user = UserModel(
           uid: 'stream-test-uid',
           email: 'stream@example.com',
@@ -103,13 +106,10 @@ void main() {
         );
         await firestoreService.createUser(user);
 
-        // Act
         final stream = firestoreService.streamUser(user.uid);
 
-        // Assert
         expect(stream, isA<Stream<UserModel?>>());
-        
-        // Listen to first emission
+
         final firstEmission = await stream.first;
         expect(firstEmission, isNotNull);
         expect(firstEmission?.uid, equals(user.uid));
@@ -118,24 +118,40 @@ void main() {
 
     group('Daily Motive', () {
       test('saveDailyMotive stores motive for user', () async {
-        // Arrange
         const userId = 'motive-test-uid';
         const motive = 'Test your limits!';
 
-        // Act
         await firestoreService.saveDailyMotive(userId, motive);
 
-        // Assert
         final retrieved = await firestoreService.getDailyMotive(userId);
         expect(retrieved, equals(motive));
       });
 
       test('getDailyMotive returns null for non-existent motive', () async {
-        // Act
         final motive = await firestoreService.getDailyMotive('no-motive-uid');
-
-        // Assert
         expect(motive, isNull);
+      });
+    });
+
+    group('Sleep Data', () {
+      test('logSleepData stores sleep data for user', () async {
+        const userId = 'sleep-uid';
+        final date = DateTime(2026, 2, 24);
+        final data = {'duration': 7.5, 'quality': 'good'};
+
+        await firestoreService.logSleepData(userId, date, data);
+
+        final retrieved = await firestoreService.getSleepData(userId, date);
+        expect(retrieved, isNotNull);
+        expect(retrieved!['duration'], equals(7.5));
+      });
+
+      test('getSleepData returns null when no data for date', () async {
+        final result = await firestoreService.getSleepData(
+          'no-sleep-uid',
+          DateTime(2026, 1, 1),
+        );
+        expect(result, isNull);
       });
     });
   });

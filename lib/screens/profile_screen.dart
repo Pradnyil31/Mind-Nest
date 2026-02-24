@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
@@ -110,6 +112,88 @@ class ProfileScreen extends StatelessWidget {
                         onTap: () => _showPrivacyDialog(context),
                       ),
                       
+                      const SizedBox(height: 40),
+
+                      // ── DEVELOPER TEST SECTION ──────────────────────────
+                      _buildSectionHeader('🧪 Notification Tests'),
+                      const SizedBox(height: 12),
+                      _buildActionTile(
+                        icon: Icons.notifications_active_outlined,
+                        title: 'Fire Test Notification (5s)',
+                        onTap: () async {
+                          final ns = NotificationService();
+                          await ns.init();
+                          await ns.requestPermissions();
+                          await ns.flutterLocalNotificationsPlugin.zonedSchedule(
+                            id: 99,
+                            title: '✅ Test Notification',
+                            body: 'MindNest notifications are working!',
+                            scheduledDate: tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
+                            notificationDetails: const NotificationDetails(
+                              android: AndroidNotificationDetails(
+                                'daily_routine_channel',
+                                'Daily Routine Reminders',
+                                importance: Importance.max,
+                                priority: Priority.high,
+                              ),
+                              iOS: DarwinNotificationDetails(),
+                            ),
+                            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+                            matchDateTimeComponents: null,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('⏱ Notification will arrive in 5 seconds — minimize the app!'),
+                                duration: Duration(seconds: 4),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      _buildActionTile(
+                        icon: Icons.list_alt_rounded,
+                        title: 'Check Pending Notifications',
+                        onTap: () async {
+                          final pending = await NotificationService()
+                              .flutterLocalNotificationsPlugin
+                              .pendingNotificationRequests();
+                          if (context.mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                title: Text(
+                                  'Pending: ${pending.length} notification${pending.length == 1 ? '' : 's'}',
+                                  style: GoogleFonts.lato(fontWeight: FontWeight.bold),
+                                ),
+                                content: pending.isEmpty
+                                    ? Text('No notifications scheduled yet.\nSave your routine to schedule them.', style: GoogleFonts.lato())
+                                    : SizedBox(
+                                        width: double.maxFinite,
+                                        child: ListView.builder(
+                                          shrinkWrap: true,
+                                          itemCount: pending.length,
+                                          itemBuilder: (_, i) => ListTile(
+                                            leading: const Icon(Icons.notifications, color: Color(0xFF6C63FF)),
+                                            title: Text(pending[i].title ?? '(no title)', style: GoogleFonts.lato(fontWeight: FontWeight.bold)),
+                                            subtitle: Text(pending[i].body ?? '', style: GoogleFonts.lato(fontSize: 12)),
+                                          ),
+                                        ),
+                                      ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: Text('OK', style: GoogleFonts.lato(color: const Color(0xFF6C63FF))),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      // ────────────────────────────────────────────────────
+
                       const SizedBox(height: 40),
                       SizedBox(
                         width: double.infinity,

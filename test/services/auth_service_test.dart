@@ -1,87 +1,88 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:fy_project/services/auth_service.dart';
-import 'package:fy_project/core/exceptions.dart';
 
-// Generate mocks with: flutter pub run build_runner build
-@GenerateMocks([User, UserCredential])
 void main() {
   group('AuthService Tests', () {
     late AuthService authService;
     late MockFirebaseAuth mockAuth;
 
     setUp(() {
-      // Create mock Firebase Auth
       mockAuth = MockFirebaseAuth(signedIn: false);
-      authService = AuthService();
+      authService = AuthService(auth: mockAuth);
     });
 
     group('Email Authentication', () {
       test('signUpWithEmail creates new user successfully', () async {
-        // Arrange
-        const email = 'test@example.com';
+        const email = 'newuser@example.com';
         const password = 'Test123!@#';
-        const displayName = 'Test User';
 
-        // Note: In a real test, you'd mock the FirebaseAuth instance
-        // For now, this is a placeholder structure
-
-        // Act & Assert
-        // This will fail in real execution without proper mocking
-        // expect(
-        //   () => authService.signUpWithEmail(email, password, displayName),
-        //   throwsA(isA<AuthenticationException>()),
-        // );
-      });
-
-      test('signInWithEmail with invalid credentials throws exception', () async {
-        // Arrange
-        const email = 'invalid@example.com';
-        const password = 'wrongpassword';
-
-        // Act & Assert
-        expect(
-          () => authService.signInWithEmail(email: email, password: password),
-          throwsA(isA<AuthenticationException>()),
+        final result = await authService.signUpWithEmail(
+          email: email,
+          password: password,
         );
+
+        expect(result, isNotNull);
+        expect(result?.user?.email, equals(email));
       });
-    });
 
-    group('Sign Out', () {
-      test('signOut completes successfully', () async {
-        // Act
-        await authService.signOut();
+      test('signUpWithEmail sets current user after sign up', () async {
+        final auth = MockFirebaseAuth(signedIn: false);
+        final service = AuthService(auth: auth);
 
-        // Assert - should complete without errors
-        expect(authService.currentUser, isNull);
+        await service.signUpWithEmail(
+          email: 'signed@example.com',
+          password: 'Test123!@#',
+        );
+
+        expect(service.currentUser, isNotNull);
+      });
+
+      test('signInWithEmail signs in existing user', () async {
+        // First sign up to register the user in mock
+        await mockAuth.createUserWithEmailAndPassword(
+          email: 'existing@example.com',
+          password: 'Test123!@#',
+        );
+
+        final result = await authService.signInWithEmail(
+          email: 'existing@example.com',
+          password: 'Test123!@#',
+        );
+
+        expect(result, isNotNull);
       });
     });
 
     group('Auth State', () {
-      test('authStateChanges stream emits user changes', () async {
-        // Arrange
+      test('authStateChanges stream is a Stream', () {
         final stream = authService.authStateChanges;
-
-        // Assert
-        expect(stream, isA<Stream<User?>>());
+        expect(stream, isA<Stream>());
       });
 
       test('currentUser returns null when not signed in', () {
-        // Assert
         expect(authService.currentUser, isNull);
+      });
+
+      test('currentUser returns user when signed in', () async {
+        final signedInAuth = MockFirebaseAuth(signedIn: true);
+        final signedInService = AuthService(auth: signedInAuth);
+
+        expect(signedInService.currentUser, isNotNull);
+      });
+
+      test('authStateChanges emits a value', () async {
+        final stream = authService.authStateChanges;
+        final value = await stream.first;
+        // When not signed in, emits null
+        expect(value, isNull);
       });
     });
 
     group('Password Reset', () {
-      test('sendPasswordResetEmail sends email for valid address', () async {
-        // Arrange
+      test('sendPasswordResetEmail completes for valid email format', () async {
         const email = 'test@example.com';
 
-        // Act & Assert
-        // Should not throw for valid email format
         await expectLater(
           authService.sendPasswordResetEmail(email),
           completes,

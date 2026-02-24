@@ -3,7 +3,10 @@ import '../models/user_model.dart';
 
 
 class FirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  FirestoreService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // Collection reference
   CollectionReference get _usersCollection => _firestore.collection('users');
