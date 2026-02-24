@@ -5,8 +5,12 @@ import '../core/exceptions.dart';
 
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirebaseAuth _auth;
+  final GoogleSignIn _googleSignIn;
+
+  AuthService({FirebaseAuth? auth, GoogleSignIn? googleSignIn})
+      : _auth = auth ?? FirebaseAuth.instance,
+        _googleSignIn = googleSignIn ?? GoogleSignIn();
 
   // Get current user
   User? get currentUser => _auth.currentUser;

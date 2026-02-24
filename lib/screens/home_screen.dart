@@ -576,10 +576,34 @@ class _HomeContentState extends ConsumerState<HomeContent> {
     return list.take(3).toList();
   }
   
+  
+
+  String _getGreeting() {
+    return _getGreetingFor(_wakeTime);
+  }
+
+  String _getGreetingFor(TimeOfDay wakeTime) {
+    final now = TimeOfDay.now();
+    final double current = now.hour + now.minute / 60.0;
+    final double wake = wakeTime.hour + wakeTime.minute / 60.0;
+    
+    if (current < 12.0) {
+       if (current < wake) return 'Early Bird,';
+       return 'Good Morning,';
+    }
+    if (current < 17.0) return 'Good Afternoon,';
+    if (current < 21.0) return 'Good Evening,';
+    return 'Good Night,';
+  }
+
   Color _getTextColor() {
+    return _getTextColorFor(_wakeTime, _bedTime);
+  }
+
+  Color _getTextColorFor(TimeOfDay wakeTime, TimeOfDay bedTime) {
      final now = TimeOfDay.now();
      final double currentDouble = now.hour + now.minute / 60.0;
-     final double bedDouble = _bedTime.hour + _bedTime.minute / 60.0;
+     final double bedDouble = bedTime.hour + bedTime.minute / 60.0;
      
      bool isNight = false;
      if (bedDouble < 5.0) { 
@@ -590,20 +614,6 @@ class _HomeContentState extends ConsumerState<HomeContent> {
      if (isNight) return Colors.white;
      if (currentDouble >= 20.0) return Colors.white;
      return AppColors.textPrimary;
-  }
-  
-  String _getGreeting() {
-    final now = TimeOfDay.now();
-    final double current = now.hour + now.minute / 60.0;
-    final double wake = _wakeTime.hour + _wakeTime.minute / 60.0;
-    
-    if (current < 12.0) {
-       if (current < wake) return 'Early Bird,';
-       return 'Good Morning,';
-    }
-    if (current < 17.0) return 'Good Afternoon,';
-    if (current < 21.0) return 'Good Evening,';
-    return 'Good Night,';
   }
 
   @override
@@ -695,16 +705,29 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                   // But `data` is only available in first stream builder.
                   // Need to pass it down.
                   
-                  Map<String, String> temporarySchedule = {};
-                  Map<String, String> routineSchedule = {};
-                  
-                  if (snapshot.hasData && snapshot.data!.exists) {
-                     final data = snapshot.data!.data() as Map<String, dynamic>;
-                     temporarySchedule = Map<String, String>.from(data['temporarySchedule'] ?? {});
-                     routineSchedule = Map<String, String>.from(data['routineSchedule'] ?? {});
-                  }
-                  
-                  final textColor = _getTextColor();
+                   Map<String, String> temporarySchedule = {};
+                   Map<String, String> routineSchedule = {};
+                   // ── Read wake/bed times directly from snapshot (fixes stale-state bug on cold start) ──
+                   TimeOfDay effectiveWakeTime = _wakeTime;
+                   TimeOfDay effectiveBedTime  = _bedTime;
+                   
+                   if (snapshot.hasData && snapshot.data!.exists) {
+                      final data = snapshot.data!.data() as Map<String, dynamic>;
+                      temporarySchedule = Map<String, String>.from(data['temporarySchedule'] ?? {});
+                      routineSchedule = Map<String, String>.from(data['routineSchedule'] ?? {});
+                      
+                      if (data.containsKey('routine')) {
+                        final r = data['routine'] as Map<String, dynamic>;
+                        if (r.containsKey('wakeUpTime')) {
+                          effectiveWakeTime = _parseTime(r['wakeUpTime']);
+                        }
+                        if (r.containsKey('bedTime')) {
+                          effectiveBedTime = _parseTime(r['bedTime']);
+                        }
+                      }
+                   }
+                   
+                   final textColor = _getTextColorFor(effectiveWakeTime, effectiveBedTime);
 
                   return SingleChildScrollView(
                     padding: const EdgeInsets.only(bottom: 100),
@@ -717,7 +740,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                              
                              HomeHeader(
                                displayName: displayName, 
-                               greeting: _getGreeting(),
+                               greeting: _getGreetingFor(effectiveWakeTime),
                                textColor: textColor,
                              ),
                              
@@ -774,8 +797,8 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                                selectedActivities: routineActivities, 
                                temporarySchedule: temporarySchedule, 
                                routineSchedule: routineSchedule, 
-                               wakeTime: _wakeTime, 
-                               bedTime: _bedTime, 
+                               wakeTime: effectiveWakeTime, 
+                               bedTime: effectiveBedTime, 
                                completedActivities: completedActivities, 
                                onToggleActivity: (activity, checked) {
                                   _toggleActivity(user.uid, activity, checked);
