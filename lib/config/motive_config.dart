@@ -391,4 +391,30 @@ class MotiveConfig {
     }
     return activities.toList();
   }
+
+  /// Returns the full pool of activities for a motive — used by the daily balanced generator.
+  /// Combines the motive's core routineActivities with ALL activities from all support areas,
+  /// giving the widest variety for daily random selection.
+  static List<String> getFullActivityPool(String? motive) {
+    final profile = getProfile(motive);
+    if (profile == null) {
+      // Default wellness pool for users without a motive
+      return [
+        'Morning mindfulness', 'Drink water', 'Stretch',
+        'Healthy Lunch', 'Walk', 'Mindful breathing',
+        'Gratitude journaling', 'Evening reflection', 'Plan tomorrow',
+        'Read a calming book', 'Deep breathing breaks', 'Positive affirmations',
+      ];
+    }
+
+    // Start with the motive's core activities
+    final pool = <String>{...profile.routineActivities};
+
+    // Add ALL activities from every support area
+    for (final areaActivities in profile.supportAreas.values) {
+      pool.addAll(areaActivities);
+    }
+
+    return pool.toList();
+  }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'dart:math';
 import 'dart:ui';
 
 // Screens
@@ -19,6 +20,7 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../providers/app_providers.dart';
 import '../config/routine_config.dart';
+import '../config/motive_config.dart';
 
 // Theme & Config
 import '../theme/app_colors.dart';
@@ -260,82 +262,128 @@ class _HomeContentState extends ConsumerState<HomeContent> {
   Future<void> _checkAndRegenerateDailyRoutine(String uid, Map<String, dynamic> data) async {
       final lastGenerated = data['lastGeneratedDate'] as String?;
       final now = DateTime.now();
-      final todayStr = "${now.year}-${now.month}-${now.day}"; 
+      final todayStr = "${now.year}-${now.month}-${now.day}";
 
-      bool needsRegeneration = false;
-      if (lastGenerated == null) {
-        needsRegeneration = true;
-      } else {
-        final lastDate = DateTime.parse(lastGenerated);
+      bool isNewDay = lastGenerated == null;
+      if (!isNewDay) {
+        final lastDate = DateTime.parse(lastGenerated!);
         final lastDateStr = "${lastDate.year}-${lastDate.month}-${lastDate.day}";
-        if (lastDateStr != todayStr) {
-          needsRegeneration = true;
-        }
+        if (lastDateStr != todayStr) isNewDay = true;
       }
 
+      // Always parse wake/bed times from Firestore
       if (data.containsKey('routine')) {
          final routine = data['routine'] as Map<String, dynamic>;
-         if (routine.containsKey('wakeUpTime')) {
-            _wakeTime = _parseTime(routine['wakeUpTime']);
-         }
-         if (routine.containsKey('bedTime')) {
-            _bedTime = _parseTime(routine['bedTime']);
-         }
+         if (routine.containsKey('wakeUpTime')) _wakeTime = _parseTime(routine['wakeUpTime']);
+         if (routine.containsKey('bedTime'))    _bedTime  = _parseTime(routine['bedTime']);
       }
 
-      if (needsRegeneration) {
-        List<String> baseRoutine = [];
-        if (data.containsKey('baseRoutine')) {
-           baseRoutine = List<String>.from(data['baseRoutine']);
-        } else if (data.containsKey('routineActivities')) {
-           baseRoutine = List<String>.from(data['routineActivities']); 
-        }
-
+      if (isNewDay) {
+        // ── Daily balanced routine generation ──
+        // Fresh tasks every new day, evenly split across Morning/Afternoon/Evening.
+        // Picks from the motive's full pool (core activities + all support areas).
+        final motive     = data['primaryMotive'] as String?;
         final commitment = data['dailyCommitment'] as String? ?? '10 minutes';
-        int limit = 5;
-        if (commitment.startsWith('5 minutes')) limit = 3;
-        else if (commitment.startsWith('10 minutes')) limit = 5;
-        else if (commitment.startsWith('15 minutes')) limit = 6;
-        else if (commitment.startsWith('30+ minutes')) limit = 8;
-        
-        final newDaily = baseRoutine.take(limit).toList();
+
+        int taskCount = 5;
+        if (commitment.startsWith('5'))  taskCount = 3;
+        else if (commitment.startsWith('10')) taskCount = 5;
+        else if (commitment.startsWith('15')) taskCount = 6;
+        else if (commitment.startsWith('30')) taskCount = 8;
+
+        final pool       = MotiveConfig.getFullActivityPool(motive);
+        final newDaily   = _generateBalancedRoutine(pool, taskCount);
         final newSchedule = _calculateDynamicSchedule(newDaily, _wakeTime, _bedTime);
-        
+
         await ref.read(firestoreServiceProvider).updateUser(uid, {
-          'routineActivities': newDaily,
-          'routineSchedule': newSchedule, 
-          'temporarySchedule': {}, 
-          'lastGeneratedDate': now.toIso8601String(),
+          'routineActivities':  newDaily,
+          'routineSchedule':    newSchedule,
+          'temporarySchedule':  {},           // Reset daily completion state
+          'lastGeneratedDate':  now.toIso8601String(),
         });
       } else {
-        // Self-healing check for Caffeine Cutoff
+        // Same day — self-healing check for Caffeine Cutoff time only
         if (data.containsKey('routineSchedule')) {
           final schedule = Map<String, String>.from(data['routineSchedule']);
-          bool needsFix = false;
-          
-          int bedMin = _bedTime.hour * 60 + _bedTime.minute;
+          bool needsFix  = false;
+          int bedMin  = _bedTime.hour  * 60 + _bedTime.minute;
           int wakeMin = _wakeTime.hour * 60 + _wakeTime.minute;
-          if (bedMin < wakeMin) bedMin += 24 * 60; 
+          if (bedMin < wakeMin) bedMin += 24 * 60;
 
           schedule.forEach((activity, time) {
-              if (activity.toLowerCase().contains('caffeine') && 
+              if (activity.toLowerCase().contains('caffeine') &&
                   (activity.toLowerCase().contains('cut') || activity.toLowerCase().contains('off'))) {
-                  
-                  final correctTime = _minToTime(bedMin - 10 * 60); 
+                  final correctTime = _minToTime(bedMin - 10 * 60);
                   if (time != correctTime) {
                       schedule[activity] = correctTime;
                       needsFix = true;
                   }
               }
           });
-          
           if (needsFix) {
-             await ref.read(firestoreServiceProvider).updateUser(uid, {
-               'routineSchedule': schedule,
-             });
+             await ref.read(firestoreServiceProvider).updateUser(uid, {'routineSchedule': schedule});
           }
         }
       }
+  }
+
+  /// Picks [count] activities from [pool], evenly distributed across
+  /// Morning, Afternoon, and Evening periods.
+  ///
+  /// Distribution table:
+  ///   count=3 → 1 M + 1 A + 1 E
+  ///   count=5 → 2 M + 2 A + 1 E
+  ///   count=6 → 2 M + 2 A + 2 E
+  ///   count=8 → 3 M + 3 A + 2 E
+  ///
+  /// If a period's pool runs short, extras are back-filled from the others.
+  List<String> _generateBalancedRoutine(List<String> pool, int count) {
+    final rng = Random();
+
+    // Group pool into periods; supplement if thin
+    final morningPool   = pool.where((a) => RoutineConfig.getTimePeriod(a) == 'Morning').toList();
+    final afternoonPool = pool.where((a) => RoutineConfig.getTimePeriod(a) == 'Afternoon').toList();
+    final eveningPool   = pool.where((a) => RoutineConfig.getTimePeriod(a) == 'Evening').toList();
+
+    if (morningPool.length   < 4) morningPool.addAll(RoutineConfig.getActivitiesForPeriod('Morning'));
+    if (afternoonPool.length < 4) afternoonPool.addAll(RoutineConfig.getActivitiesForPeriod('Afternoon'));
+    if (eveningPool.length   < 4) eveningPool.addAll(RoutineConfig.getActivitiesForPeriod('Evening'));
+
+    morningPool.shuffle(rng);
+    afternoonPool.shuffle(rng);
+    eveningPool.shuffle(rng);
+
+    // Calculate per-period counts: distribute remainder to M first, then A
+    final base = count ~/ 3;
+    final rem  = count % 3;
+    final mCount = base + (rem > 0 ? 1 : 0);
+    final aCount = base + (rem > 1 ? 1 : 0);
+    final eCount = base;
+
+    final result = <String>{};
+
+    void pickFrom(List<String> src, int needed) {
+      int taken = 0;
+      for (final a in src) {
+        if (taken >= needed) break;
+        if (result.add(a)) taken++;
+      }
+    }
+
+    pickFrom(morningPool,   mCount);
+    pickFrom(afternoonPool, aCount);
+    pickFrom(eveningPool,   eCount);
+
+    // Back-fill if pools were too small
+    if (result.length < count) {
+      final all = [...morningPool, ...afternoonPool, ...eveningPool]..shuffle(rng);
+      for (final a in all) {
+        if (result.length >= count) break;
+        result.add(a);
+      }
+    }
+
+    return result.take(count).toList();
   }
 
   Future<void> _toggleActivity(String userId, String activity, bool isCompleted) async {
@@ -639,7 +687,15 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                displayName = data['displayName'] ?? 'User';
                goals = List<String>.from(data['primaryGoals'] ?? []);
                routine = Map<String, dynamic>.from(data['routine'] ?? {});
-               routineActivities = List<String>.from(data['routineActivities'] ?? []);
+               // ── Source-of-truth for activity list ──
+               // routineSchedule is written by Manage Routine's Save and is canonical.
+               // Use its keys when available; fall back to routineActivities for new users.
+               final rawSchedule = Map<String, String>.from(data['routineSchedule'] ?? {});
+               if (rawSchedule.isNotEmpty) {
+                 routineActivities = rawSchedule.keys.toList();
+               } else {
+                 routineActivities = List<String>.from(data['routineActivities'] ?? []);
+               }
                additionalActivities = List<String>.from(data['additionalActivities'] ?? []);
                
                // Force include logic
