@@ -103,7 +103,8 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
          _userMotive = data['primaryMotive'] as String?;
          
           if (data.containsKey('routineActivities')) {
-              // Load TODAY'S Routine (List of Strings) - This is key fix
+              // Load activity list and recalculate ALL periods fresh from RoutineConfig
+              // (never trust stale Firestore period values for known activities)
               final baseList = List<String>.from(data['routineActivities']);
              final schedule = <String, String>{};
              for (var activity in baseList) {
@@ -112,11 +113,18 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
              
              setState(() {
                _activitySchedule = schedule;
-              // Check if we have a temporary schedule for today
+
+              // Merge temporarySchedule ONLY for custom activities that RoutineConfig
+              // doesn't know about — so user's manual period choices are preserved,
+              // but known activities always use the fresh RoutineConfig period.
               if (data.containsKey('temporarySchedule')) {
                  final temp = Map<String, String>.from(data['temporarySchedule']);
-                 // Merge: Temp overrides base
-                 _activitySchedule.addAll(temp);
+                 temp.forEach((activity, period) {
+                   // Only override if it's a custom activity (not in our known set)
+                   if (!_allActivities.contains(activity)) {
+                     _activitySchedule[activity] = period;
+                   }
+                 });
               }
               
               _initialSchedule = Map.from(_activitySchedule);
@@ -124,12 +132,23 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
              });
              
          } else if (data.containsKey('routineSchedule')) {
-           final schedule = Map<String, String>.from(data['routineSchedule']);
-           final custom = schedule.keys.where((a) => !_allActivities.contains(a)).toList();
+           // Recalculate all known activity periods fresh — don't trust stale Firestore periods
+           final firestoreSchedule = Map<String, String>.from(data['routineSchedule']);
+           final recalculated = <String, String>{};
+           for (final activity in firestoreSchedule.keys) {
+             if (_allActivities.contains(activity)) {
+               // Known activity → always use the authoritative RoutineConfig period
+               recalculated[activity] = RoutineConfig.getTimePeriod(activity);
+             } else {
+               // Custom activity → preserve the user's saved period
+               recalculated[activity] = firestoreSchedule[activity]!;
+             }
+           }
+           final custom = recalculated.keys.where((a) => !_allActivities.contains(a)).toList();
            
            setState(() {
-             _activitySchedule = schedule;
-             _initialSchedule = Map.from(schedule); // Store initial state
+             _activitySchedule = recalculated;
+             _initialSchedule = Map.from(recalculated);
              _customActivities = custom;
              
              // Parse user's sleep/wake times if available
@@ -200,14 +219,19 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
         final newSchedule = _calculateDynamicSchedule(newActivitiesList, _wakeTime, _bedTime);
 
         // 4. Save new format
-        await _firestoreService.updateUser(user.uid, {
-          'routineSchedule': newSchedule, 
-          'temporarySchedule': newSchedule, // Sync temp schedule too
-          
-          // Update both baseRoutine and routineActivities to stay in sync
-          'baseRoutine': newActivitiesList,
-          'routineActivities': newActivitiesList,
-        });
+      final now = DateTime.now();
+      await _firestoreService.updateUser(user.uid, {
+        'routineSchedule': newSchedule, 
+        'temporarySchedule': newSchedule, // Sync temp schedule too
+        
+        // Update both baseRoutine and routineActivities to stay in sync
+        'baseRoutine': newActivitiesList,
+        'routineActivities': newActivitiesList,
+
+        // Stamp today's date so the daily generator doesn't overwrite this
+        // customization until tomorrow's fresh generation.
+        'lastGeneratedDate': now.toIso8601String(),
+      });
 
         // 5. Schedule Notifications
         try {
@@ -215,7 +239,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
            if (userDoc.exists && userDoc.data() != null) {
               final data = userDoc.data() as Map<String, dynamic>;
               final name = data['displayName'] ?? 'there';
-              final motive = data['dailyMotive'] ?? 'Wellness';
+              final motive = data['primaryMotive'] ?? 'Wellness';
            
               await NotificationService().requestPermissions();
               await NotificationService().cancelAll();
@@ -824,6 +848,213 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
     );
   }
 
+  void _showTaskInfoSheet(String activity) {
+    final info = RoutineConfig.getTaskInfo(activity);
+    final description = info?['description'];
+    final howTo = info?['howTo'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.55,
+        minChildSize: 0.4,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFFDFCF4),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 4),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // Gradient header
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.info_outline_rounded, color: Colors.white, size: 26),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        activity,
+                        style: GoogleFonts.lato(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Scrollable content
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                  children: [
+                    if (description != null) ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF6C63FF), size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'What it means',
+                            style: GoogleFonts.lato(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF6C63FF),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6C63FF).withOpacity(0.07),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          description,
+                          style: GoogleFonts.lato(
+                            fontSize: 14.5,
+                            height: 1.6,
+                            color: const Color(0xFF2D2D2D),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                    if (howTo != null) ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.checklist_rounded, color: Color(0xFF00B89A), size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'How to do it',
+                            style: GoogleFonts.lato(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF00B89A),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00B89A).withOpacity(0.07),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          howTo,
+                          style: GoogleFonts.lato(
+                            fontSize: 14.5,
+                            height: 1.8,
+                            color: const Color(0xFF2D2D2D),
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (description == null && howTo == null) ...[
+                      Center(
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 16),
+                            Icon(Icons.auto_awesome, color: Colors.grey.shade400, size: 40),
+                            const SizedBox(height: 12),
+                            Text(
+                              'This is your custom activity!',
+                              style: GoogleFonts.lato(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'You defined this activity yourself.\nMake it meaningful and repeat it daily.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.lato(
+                                fontSize: 14,
+                                color: Colors.grey.shade500,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    // Close button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6C63FF),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Got it!',
+                          style: GoogleFonts.lato(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildActivityTile(String activity, Color color, {bool isRecommended = false}) {
     final isSelected = _activitySchedule.containsKey(activity);
     
@@ -925,8 +1156,22 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
                   ],
                 ),
               ),
+              // Info icon — only for known activities (not user-created ones)
+              if (RoutineConfig.getTaskInfo(activity) != null)
+                GestureDetector(
+                  onTap: () => _showTaskInfoSheet(activity),
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Icon(
+                      Icons.info_outline_rounded,
+                      size: 20,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                ),
               if (true) ...[ // Always show time badge
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 // Time Badge & Edit Button
                 InkWell(
                    onTap: isLocked ? () {
@@ -962,7 +1207,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
                      ),
                    ),
                  ),
-              ],
+               ],
               if (isRecommended && !isSelected && !isLocked)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

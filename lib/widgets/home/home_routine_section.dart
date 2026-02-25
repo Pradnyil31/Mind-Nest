@@ -42,32 +42,35 @@ class HomeRoutineSection extends StatelessWidget {
     final customItems = <String>[]; // Kept empty as per original logic
 
     for (var activity in activities) {
-        String rawPeriod = temporarySchedule[activity] ?? routineSchedule[activity] ?? RoutineConfig.getTimePeriod(activity);
-        String category = 'Morning'; 
+        // Always recalculate the period from RoutineConfig for known activities.
+        // This prevents stale Firestore labels (e.g. old "Evening" string saved
+        // before a config fix) from overriding the authoritative period mapping.
+        final configPeriod = RoutineConfig.getTimePeriod(activity);
 
-        if (rawPeriod == 'Morning' || rawPeriod == 'Afternoon' || rawPeriod == 'Evening') {
-           category = rawPeriod;
+        String category;
+        if (configPeriod == 'Morning' || configPeriod == 'Afternoon' || configPeriod == 'Evening') {
+          // RoutineConfig returned a valid period — trust it.
+          category = configPeriod;
         } else {
-           try {
-             final t = _parseTime(rawPeriod);
-             final double val = t.hour + t.minute / 60.0;
-             if (val < 12.0) category = 'Morning';
-             else if (val < 17.0) category = 'Afternoon';
-             else category = 'Evening';
-           } catch (e) {
-             category = 'Morning';
-           }
+          // RoutineConfig returned a time string (edge-case / custom activity).
+          // Fall back to parsing the Firestore schedule time string.
+          final rawPeriod = temporarySchedule[activity] ?? routineSchedule[activity] ?? configPeriod;
+          try {
+            final t = _parseTime(rawPeriod);
+            final double val = t.hour + t.minute / 60.0;
+            if (val < 12.0) category = 'Morning';
+            else if (val < 17.0) category = 'Afternoon';
+            else category = 'Evening';
+          } catch (e) {
+            category = 'Morning';
+          }
         }
-        
-        // Logic reliant purely on schedule or config default
-        // Force overrides removed to respect user schedule
 
-        
         switch (category) {
             case 'Morning': morningItems.add(activity); break;
             case 'Afternoon': afternoonItems.add(activity); break;
             case 'Evening': eveningItems.add(activity); break;
-            default: morningItems.add(activity); 
+            default: morningItems.add(activity);
         }
     }
 
@@ -205,11 +208,15 @@ class HomeRoutineSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         ...items.map((item) => _RoutineItemCard(
-          title: item, 
+          title: item,
           subtitle: '',
           textColor: textColor,
           isCompleted: completedActivities.contains(item),
           isEnabled: isUnlocked,
+          onInfoTap: RoutineConfig.getTaskInfo(item) != null
+              ? () => _showActivityInfo(context, item)
+              : null,
+
           onToggle: (val) {
              if (val) {
                 // Confirm dialog
@@ -247,6 +254,178 @@ class HomeRoutineSection extends StatelessWidget {
     );
   }
 
+  /// Shows the same styled info bottom sheet used in Manage Routine.
+  static void _showActivityInfo(BuildContext context, String activity) {
+    final info        = RoutineConfig.getTaskInfo(activity);
+    final description = info?['description'];
+    final howTo       = info?['howTo'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.55,
+        minChildSize: 0.4,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (ctx, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFFDFCF4),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 4),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // Gradient header
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.info_outline_rounded,
+                          color: Colors.white, size: 26),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        activity,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Scrollable content
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                  children: [
+                    if (description != null) ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.lightbulb_outline_rounded,
+                              color: Color(0xFF6C63FF), size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'What it means',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF6C63FF),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6C63FF).withOpacity(0.07),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          description,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            height: 1.6,
+                            color: Color(0xFF2D2D2D),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                    if (howTo != null) ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.checklist_rounded,
+                              color: Color(0xFF00B89A), size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'How to do it',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF00B89A),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00B89A).withOpacity(0.07),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          howTo,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            height: 1.7,
+                            color: Color(0xFF2D2D2D),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                    if (description == null && howTo == null)
+                      const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text(
+                          'No details available for this activity yet.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF757575),
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   TimeOfDay _parseTime(String timeString) {
     try {
       final parts = timeString.split(' ');
@@ -272,6 +451,7 @@ class _RoutineItemCard extends StatelessWidget {
   final bool isCompleted;
   final bool isEnabled;
   final Function(bool) onToggle;
+  final VoidCallback? onInfoTap;
 
   const _RoutineItemCard({
     required this.title,
@@ -280,6 +460,7 @@ class _RoutineItemCard extends StatelessWidget {
     required this.isCompleted,
     this.isEnabled = true,
     required this.onToggle,
+    this.onInfoTap,
   });
 
   @override
@@ -372,6 +553,20 @@ class _RoutineItemCard extends StatelessWidget {
                 ],
               ),
             ),
+            // Info icon — only for known activities (not user-created ones)
+            if (onInfoTap != null)
+              GestureDetector(
+                onTap: onInfoTap,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: Icon(
+                    Icons.info_outline_rounded,
+                    size: 20,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

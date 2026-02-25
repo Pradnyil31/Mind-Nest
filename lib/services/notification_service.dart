@@ -82,6 +82,8 @@ class NotificationService {
     required int hour,
     required int minute,
   }) async {
+    // Safety guard: ensure plugin is initialised before scheduling
+    if (!_isInitialized) await init();
     try {
       await flutterLocalNotificationsPlugin.zonedSchedule(
         id: id,
