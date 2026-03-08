@@ -1,5 +1,3 @@
-
-import '../core/logger.dart';
 import '../models/focus_session.dart';
 
 class FocusService {
@@ -15,9 +13,3 @@ class FocusService {
     return Stream.value([]);
   }
 }
-
-  Future<void> saveSession(FocusSession session) async {
-    try {
-      await _sessionsCollection.doc(session.id).set(session.toMap());
-    } catch (e, stackTrace) {
-      appLogger.e('Error saving focus session', error: e, stackTrace: stackTrace);

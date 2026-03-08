@@ -63,28 +63,3 @@ class ProgressMiniChart extends StatelessWidget {
     );
   }
 }
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          label,
-                          style: GoogleFonts.lato(
-                            fontSize: 10,
-                            color: AppColors.textSecondary,
-                            fontWeight: date.day == now.day ? FontWeight.bold : FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    );
-                 }),
-               ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}

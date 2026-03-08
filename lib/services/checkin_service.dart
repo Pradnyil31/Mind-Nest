@@ -1,4 +1,3 @@
-
 import '../models/daily_checkin.dart';
 
 class CheckInService {
@@ -15,7 +14,11 @@ class CheckInService {
     return null;
   }
 
-  Future<List<DailyCheckIn>> getCheckInsForDateRange(String userId, DateTime startDate, DateTime endDate) async {
+  Future<List<DailyCheckIn>> getCheckInsForDateRange(
+    String userId,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
     // Stub
     return [];
   }
@@ -24,3 +27,4 @@ class CheckInService {
     // Stub
     return false;
   }
+}
