@@ -128,6 +128,7 @@ create table if not exists public.smart_goals (
 -- Row Level Security Policies
 -- ============================================================
 
+-- Enable RLS on all tables
 alter table public.profiles enable row level security;
 alter table public.daily_motives enable row level security;
 alter table public.routine_completions enable row level security;
@@ -137,52 +138,70 @@ alter table public.meditation_sessions enable row level security;
 alter table public.focus_sessions enable row level security;
 alter table public.smart_goals enable row level security;
 
--- Profiles
-create policy if not exists "profiles_select_own"
+-- Drop existing policies if they exist (for clean re-runs)
+drop policy if exists "profiles_select_own" on public.profiles;
+drop policy if exists "profiles_insert_own" on public.profiles;
+drop policy if exists "profiles_update_own" on public.profiles;
+drop policy if exists "daily_motives_all_own" on public.daily_motives;
+drop policy if exists "routine_completions_all_own" on public.routine_completions;
+drop policy if exists "badges_earned_all_own" on public.badges_earned;
+drop policy if exists "journal_entries_all_own" on public.journal_entries;
+drop policy if exists "meditation_sessions_all_own" on public.meditation_sessions;
+drop policy if exists "focus_sessions_all_own" on public.focus_sessions;
+drop policy if exists "smart_goals_all_own" on public.smart_goals;
+
+-- Profiles policies
+create policy "profiles_select_own"
 on public.profiles for select
 using (auth.uid() = id);
 
-create policy if not exists "profiles_insert_own"
+create policy "profiles_insert_own"
 on public.profiles for insert
 with check (auth.uid() = id);
 
-create policy if not exists "profiles_update_own"
+create policy "profiles_update_own"
 on public.profiles for update
 using (auth.uid() = id)
 with check (auth.uid() = id);
 
--- Generic helper policies for user_id tables
-create policy if not exists "daily_motives_all_own"
+-- Daily motives policies
+create policy "daily_motives_all_own"
 on public.daily_motives for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-create policy if not exists "routine_completions_all_own"
+-- Routine completions policies
+create policy "routine_completions_all_own"
 on public.routine_completions for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-create policy if not exists "badges_earned_all_own"
+-- Badges earned policies
+create policy "badges_earned_all_own"
 on public.badges_earned for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-create policy if not exists "journal_entries_all_own"
+-- Journal entries policies
+create policy "journal_entries_all_own"
 on public.journal_entries for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-create policy if not exists "meditation_sessions_all_own"
+-- Meditation sessions policies
+create policy "meditation_sessions_all_own"
 on public.meditation_sessions for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-create policy if not exists "focus_sessions_all_own"
+-- Focus sessions policies
+create policy "focus_sessions_all_own"
 on public.focus_sessions for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-create policy if not exists "smart_goals_all_own"
+-- Smart goals policies
+create policy "smart_goals_all_own"
 on public.smart_goals for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
