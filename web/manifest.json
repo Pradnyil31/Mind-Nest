@@ -1,6 +1,6 @@
 {
-    "name": "fy_project",
-    "short_name": "fy_project",
+    "name": "mindnest",
+    "short_name": "mindnest",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

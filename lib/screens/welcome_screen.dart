@@ -3,13 +3,14 @@ import 'onboarding_intro_screen.dart';
 import 'login_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({Key? key}) : super(key: key);
+  const WelcomeScreen({super.key});
 
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProviderStateMixin {
+class _WelcomeScreenState extends State<WelcomeScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -29,15 +30,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
       ),
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
-      ),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
+          ),
+        );
 
     _animationController.forward();
   }
@@ -50,8 +49,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -60,10 +57,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF5EFFF),
-              Color(0xFFFAF7FD),
-            ],
+            colors: [Color(0xFFF5EFFF), Color(0xFFFAF7FD)],
           ),
         ),
         child: SafeArea(
@@ -78,7 +72,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                     width: double.infinity,
                     decoration: BoxDecoration(
                       image: DecorationImage(
-                        image: AssetImage('assets/images/welcome_background.png'),
+                        image: AssetImage(
+                          'assets/images/welcome_background.png',
+                        ),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -100,7 +96,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                         // Welcome Text
                         Center(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32.0,
+                            ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -151,7 +149,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                   ),
                 ),
               ),
-              
+
               // Bottom Section with Buttons
               Expanded(
                 flex: 3,
@@ -166,7 +164,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const SizedBox(height: 32),
-                          
+
                           // Get Started Button
                           SizedBox(
                             width: double.infinity,
@@ -176,7 +174,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const OnboardingIntroductionScreen(),
+                                    builder: (_) =>
+                                        const OnboardingIntroductionScreen(),
                                   ),
                                 );
                               },
@@ -199,17 +198,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               ),
                             ),
                           ),
-                          
-                          const SizedBox(height: 24),
-                          
 
+                          const SizedBox(height: 24),
 
                           // Login Link
                           TextButton(
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
                               );
                             },
                             child: Text(
@@ -223,7 +222,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               ),
                             ),
                           ),
-                          
+
                           const SizedBox(height: 32),
                         ],
                       ),

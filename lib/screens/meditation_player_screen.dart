@@ -10,7 +10,7 @@ import '../services/meditation_analytics_service.dart';
 class MeditationPlayerScreen extends StatefulWidget {
   final GuidedMeditation meditation;
 
-  const MeditationPlayerScreen({Key? key, required this.meditation}) : super(key: key);
+  const MeditationPlayerScreen({super.key, required this.meditation});
 
   @override
   State<MeditationPlayerScreen> createState() => _MeditationPlayerScreenState();

@@ -7,7 +7,7 @@ import '../services/auth_service.dart';
 import 'create_goal_screen.dart';
 
 class SmartGoalsScreen extends StatelessWidget {
-  const SmartGoalsScreen({Key? key}) : super(key: key);
+  const SmartGoalsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

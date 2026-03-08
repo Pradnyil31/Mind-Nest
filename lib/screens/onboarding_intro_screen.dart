@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'auth_options_screen.dart';
 
 class OnboardingIntroductionScreen extends StatefulWidget {
-  const OnboardingIntroductionScreen({Key? key}) : super(key: key);
+  const OnboardingIntroductionScreen({super.key});
 
   @override
   State<OnboardingIntroductionScreen> createState() => _OnboardingIntroductionScreenState();

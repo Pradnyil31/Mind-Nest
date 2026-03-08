@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../theme/app_colors.dart';
 import '../../config/routine_config.dart';
 
 class HomeRoutineSection extends StatelessWidget {
@@ -16,7 +15,7 @@ class HomeRoutineSection extends StatelessWidget {
   final int streak;
 
   const HomeRoutineSection({
-    Key? key,
+    super.key,
     required this.selectedActivities,
     required this.temporarySchedule,
     required this.routineSchedule,
@@ -26,7 +25,7 @@ class HomeRoutineSection extends StatelessWidget {
     required this.onToggleActivity,
     required this.textColor,
     this.streak = 0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -39,50 +38,65 @@ class HomeRoutineSection extends StatelessWidget {
     final morningItems = <String>[];
     final afternoonItems = <String>[];
     final eveningItems = <String>[];
-    final customItems = <String>[]; // Kept empty as per original logic
 
     for (var activity in activities) {
-        // Always recalculate the period from RoutineConfig for known activities.
-        // This prevents stale Firestore labels (e.g. old "Evening" string saved
-        // before a config fix) from overriding the authoritative period mapping.
-        final configPeriod = RoutineConfig.getTimePeriod(activity);
+      // Always recalculate the period from RoutineConfig for known activities.
+      // This prevents stale Firestore labels (e.g. old "Evening" string saved
+      // before a config fix) from overriding the authoritative period mapping.
+      final configPeriod = RoutineConfig.getTimePeriod(activity);
 
-        String category;
-        if (configPeriod == 'Morning' || configPeriod == 'Afternoon' || configPeriod == 'Evening') {
-          // RoutineConfig returned a valid period — trust it.
-          category = configPeriod;
-        } else {
-          // RoutineConfig returned a time string (edge-case / custom activity).
-          // Fall back to parsing the Firestore schedule time string.
-          final rawPeriod = temporarySchedule[activity] ?? routineSchedule[activity] ?? configPeriod;
-          try {
-            final t = _parseTime(rawPeriod);
-            final double val = t.hour + t.minute / 60.0;
-            if (val < 12.0) category = 'Morning';
-            else if (val < 17.0) category = 'Afternoon';
-            else category = 'Evening';
-          } catch (e) {
+      String category;
+      if (configPeriod == 'Morning' ||
+          configPeriod == 'Afternoon' ||
+          configPeriod == 'Evening') {
+        // RoutineConfig returned a valid period — trust it.
+        category = configPeriod;
+      } else {
+        // RoutineConfig returned a time string (edge-case / custom activity).
+        // Fall back to parsing the Firestore schedule time string.
+        final rawPeriod =
+            temporarySchedule[activity] ??
+            routineSchedule[activity] ??
+            configPeriod;
+        try {
+          final t = _parseTime(rawPeriod);
+          final double val = t.hour + t.minute / 60.0;
+          if (val < 12.0) {
             category = 'Morning';
-          }
+          } else if (val < 17.0)
+            category = 'Afternoon';
+          else
+            category = 'Evening';
+        } catch (e) {
+          category = 'Morning';
         }
+      }
 
-        switch (category) {
-            case 'Morning': morningItems.add(activity); break;
-            case 'Afternoon': afternoonItems.add(activity); break;
-            case 'Evening': eveningItems.add(activity); break;
-            default: morningItems.add(activity);
-        }
+      switch (category) {
+        case 'Morning':
+          morningItems.add(activity);
+          break;
+        case 'Afternoon':
+          afternoonItems.add(activity);
+          break;
+        case 'Evening':
+          eveningItems.add(activity);
+          break;
+        default:
+          morningItems.add(activity);
+      }
     }
 
     final now = TimeOfDay.now();
     final double currentDouble = now.hour + now.minute / 60.0;
     final double wakeDouble = wakeTime.hour + wakeTime.minute / 60.0;
-    bool isMorningUnlocked = currentDouble >= wakeDouble && currentDouble < 12.0;
+    bool isMorningUnlocked =
+        currentDouble >= wakeDouble && currentDouble < 12.0;
     bool isAfternoonUnlocked = currentDouble >= 12.0 && currentDouble < 17.0;
     bool isEveningUnlocked = currentDouble >= 17.0;
 
     return Column(
-      mainAxisSize: MainAxisSize.min, 
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
@@ -100,7 +114,10 @@ class HomeRoutineSection extends StatelessWidget {
               ),
               if (activities.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF6C63FF).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -123,39 +140,39 @@ class HomeRoutineSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         if (morningItems.isNotEmpty) ...[
-            _buildRoutineSection(
-              context,
-              'Morning', 
-              Icons.wb_sunny_rounded, 
-              const Color(0xFFFDBB2D), 
-              morningItems,
-              isMorningUnlocked,
-            ),
-           const SizedBox(height: 20),
+          _buildRoutineSection(
+            context,
+            'Morning',
+            Icons.wb_sunny_rounded,
+            const Color(0xFFFDBB2D),
+            morningItems,
+            isMorningUnlocked,
+          ),
+          const SizedBox(height: 20),
         ],
         if (afternoonItems.isNotEmpty) ...[
-            _buildRoutineSection(
-              context,
-              'Afternoon', 
-              Icons.wb_twilight_rounded, 
-              const Color(0xFF22C1C3), 
-              afternoonItems,
-              isAfternoonUnlocked,
-            ),
-           const SizedBox(height: 20),
+          _buildRoutineSection(
+            context,
+            'Afternoon',
+            Icons.wb_twilight_rounded,
+            const Color(0xFF22C1C3),
+            afternoonItems,
+            isAfternoonUnlocked,
+          ),
+          const SizedBox(height: 20),
         ],
         if (eveningItems.isNotEmpty) ...[
-            _buildRoutineSection(
-              context,
-              'Evening', 
-              Icons.nights_stay, 
-              const Color(0xFF6C5CE7), 
-              eveningItems,
-              isEveningUnlocked,
-            ),
-           const SizedBox(height: 20),
+          _buildRoutineSection(
+            context,
+            'Evening',
+            Icons.nights_stay,
+            const Color(0xFF6C5CE7),
+            eveningItems,
+            isEveningUnlocked,
+          ),
+          const SizedBox(height: 20),
         ],
-        
+
         // Streak indicator
         if (streak > 0)
           Container(
@@ -187,7 +204,14 @@ class HomeRoutineSection extends StatelessWidget {
     );
   }
 
-  Widget _buildRoutineSection(BuildContext context, String title, IconData icon, Color color, List<String> items, bool isUnlocked) {
+  Widget _buildRoutineSection(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color color,
+    List<String> items,
+    bool isUnlocked,
+  ) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,66 +223,71 @@ class HomeRoutineSection extends StatelessWidget {
             Text(
               title + (!isUnlocked ? ' (Locked)' : ''),
               style: GoogleFonts.lato(
-                fontSize: 18, 
-                fontWeight: FontWeight.bold, 
-                color: !isUnlocked ? Colors.grey : textColor
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: !isUnlocked ? Colors.grey : textColor,
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        ...items.map((item) => _RoutineItemCard(
-          title: item,
-          subtitle: '',
-          textColor: textColor,
-          isCompleted: completedActivities.contains(item),
-          isEnabled: isUnlocked,
-          onInfoTap: RoutineConfig.getTaskInfo(item) != null
-              ? () => _showActivityInfo(context, item)
-              : null,
+        ...items.map(
+          (item) => _RoutineItemCard(
+            title: item,
+            subtitle: '',
+            textColor: textColor,
+            isCompleted: completedActivities.contains(item),
+            isEnabled: isUnlocked,
+            onInfoTap: RoutineConfig.getTaskInfo(item) != null
+                ? () => _showActivityInfo(context, item)
+                : null,
 
-          onToggle: (val) {
-             if (val) {
+            onToggle: (val) {
+              if (val) {
                 // Confirm dialog
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                      backgroundColor: Colors.white,
-                      title: Text("Complete Task?", style: GoogleFonts.lato(fontWeight: FontWeight.bold)),
-                      content: Text("Mark '$item' as complete?"),
-                      actions: [
-                          TextButton(
-                            child: const Text("Cancel"), 
-                            onPressed: () => Navigator.pop(context)
-                          ),
-                          TextButton(
-                            child: const Text("Confirm"), 
-                            onPressed: () {
-                              Navigator.pop(context);
-                              onToggleActivity(item, true);
-                            }
-                          ),
-                      ]
-                  )
-              );
-             } else {
-               // Assuming uncheck is allowed or handled by parent, but original logic prevented it via confirm?
-               // Original logic: "Prevent unchecking" if (!completed) return; inside onToggle.
-               // Here val IS the new state (true if checking, false if unchecking).
-               // So if val is false, we try to uncheck.
-               onToggleActivity(item, false);
-             }
-          },
-        )).toList(),
+                    backgroundColor: Colors.white,
+                    title: Text(
+                      "Complete Task?",
+                      style: GoogleFonts.lato(fontWeight: FontWeight.bold),
+                    ),
+                    content: Text("Mark '$item' as complete?"),
+                    actions: [
+                      TextButton(
+                        child: const Text("Cancel"),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      TextButton(
+                        child: const Text("Confirm"),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          onToggleActivity(item, true);
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              } else {
+                // Assuming uncheck is allowed or handled by parent, but original logic prevented it via confirm?
+                // Original logic: "Prevent unchecking" if (!completed) return; inside onToggle.
+                // Here val IS the new state (true if checking, false if unchecking).
+                // So if val is false, we try to uncheck.
+                onToggleActivity(item, false);
+              }
+            },
+          ),
+        ),
       ],
     );
   }
 
   /// Shows the same styled info bottom sheet used in Manage Routine.
   static void _showActivityInfo(BuildContext context, String activity) {
-    final info        = RoutineConfig.getTaskInfo(activity);
+    final info = RoutineConfig.getTaskInfo(activity);
     final description = info?['description'];
-    final howTo       = info?['howTo'];
+    final howTo = info?['howTo'];
 
     showModalBottomSheet(
       context: context,
@@ -310,8 +339,11 @@ class HomeRoutineSection extends StatelessWidget {
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.info_outline_rounded,
-                          color: Colors.white, size: 26),
+                      child: const Icon(
+                        Icons.info_outline_rounded,
+                        color: Colors.white,
+                        size: 26,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -337,8 +369,11 @@ class HomeRoutineSection extends StatelessWidget {
                     if (description != null) ...[
                       Row(
                         children: [
-                          const Icon(Icons.lightbulb_outline_rounded,
-                              color: Color(0xFF6C63FF), size: 20),
+                          const Icon(
+                            Icons.lightbulb_outline_rounded,
+                            color: Color(0xFF6C63FF),
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           const Text(
                             'What it means',
@@ -372,8 +407,11 @@ class HomeRoutineSection extends StatelessWidget {
                     if (howTo != null) ...[
                       Row(
                         children: [
-                          const Icon(Icons.checklist_rounded,
-                              color: Color(0xFF00B89A), size: 20),
+                          const Icon(
+                            Icons.checklist_rounded,
+                            color: Color(0xFF00B89A),
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           const Text(
                             'How to do it',
@@ -432,14 +470,14 @@ class HomeRoutineSection extends StatelessWidget {
       final timeParts = parts[0].split(':');
       int hour = int.parse(timeParts[0]);
       int minute = int.parse(timeParts[1]);
-      final period = parts[1]; 
+      final period = parts[1];
 
       if (period == 'PM' && hour != 12) hour += 12;
       if (period == 'AM' && hour == 12) hour = 0;
 
       return TimeOfDay(hour: hour, minute: minute);
     } catch (e) {
-      return const TimeOfDay(hour: 7, minute: 0); 
+      return const TimeOfDay(hour: 7, minute: 0);
     }
   }
 }
@@ -466,14 +504,16 @@ class _RoutineItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: isEnabled ? () {
-        // Toggle logic handled by parent via callback, but we pass desired state?
-        // Actually, best to just signal "I was tapped". 
-        // But for compatibility with existing logic:
-        // note: logic in parent (original code) checks `!completed` to prevent unchecking.
-        // so we pass `!isCompleted` as the target state.
-        onToggle(!isCompleted);
-      } : null,
+      onTap: isEnabled
+          ? () {
+              // Toggle logic handled by parent via callback, but we pass desired state?
+              // Actually, best to just signal "I was tapped".
+              // But for compatibility with existing logic:
+              // note: logic in parent (original code) checks `!completed` to prevent unchecking.
+              // so we pass `!isCompleted` as the target state.
+              onToggle(!isCompleted);
+            }
+          : null,
       child: Opacity(
         opacity: isEnabled ? 1.0 : 0.5,
         child: ClipRRect(
@@ -484,12 +524,12 @@ class _RoutineItemCard extends StatelessWidget {
               margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isCompleted 
+                color: isCompleted
                     ? const Color(0xFF55EFC4).withOpacity(0.2)
                     : Colors.white.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isCompleted 
+                  color: isCompleted
                       ? const Color(0xFF55EFC4).withOpacity(0.5)
                       : Colors.white.withOpacity(0.2),
                   width: 1.5,
@@ -503,75 +543,92 @@ class _RoutineItemCard extends StatelessWidget {
                 ],
               ),
               child: Row(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: isCompleted ? const Color(0xFF55EFC4) : Colors.transparent,
-                border: Border.all(
-                  color: isCompleted ? const Color(0xFF55EFC4) : Colors.grey.shade400,
-                  width: 2,
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: !isEnabled && !isCompleted
-                  ? const Center(
-                      child: Icon(Icons.lock, size: 14, color: Colors.grey),
-                    )
-                  : (isCompleted
-                      ? const Center(
-                          child: Icon(Icons.check, size: 16, color: Colors.white),
-                        )
-                      : null),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.lato(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: isCompleted 
-                          ? Colors.grey 
-                          : (textColor ?? const Color(0xFF2D3436)),
-                      decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: isCompleted
+                          ? const Color(0xFF55EFC4)
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: isCompleted
+                            ? const Color(0xFF55EFC4)
+                            : Colors.grey.shade400,
+                        width: 2,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: !isEnabled && !isCompleted
+                        ? const Center(
+                            child: Icon(
+                              Icons.lock,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
+                          )
+                        : (isCompleted
+                              ? const Center(
+                                  child: Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : null),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.lato(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: isCompleted
+                                ? Colors.grey
+                                : (textColor ?? const Color(0xFF2D3436)),
+                            decoration: isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
+                        ),
+                        if (subtitle.isNotEmpty)
+                          Text(
+                            subtitle,
+                            style: GoogleFonts.lato(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  if (subtitle.isNotEmpty)
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.lato(
-                        fontSize: 12,
-                        color: Colors.grey,
+                  // Info icon — only for known activities (not user-created ones)
+                  if (onInfoTap != null)
+                    GestureDetector(
+                      onTap: onInfoTap,
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
+                        child: Icon(
+                          Icons.info_outline_rounded,
+                          size: 20,
+                          color: Colors.grey.shade400,
+                        ),
                       ),
                     ),
                 ],
               ),
             ),
-            // Info icon — only for known activities (not user-created ones)
-            if (onInfoTap != null)
-              GestureDetector(
-                onTap: onInfoTap,
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  child: Icon(
-                    Icons.info_outline_rounded,
-                    size: 20,
-                    color: Colors.grey.shade400,
-                  ),
-                ),
-              ),
-          ],
+          ),
         ),
-      ),
-        ),
-      ),
       ),
     );
   }

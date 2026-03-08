@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_colors.dart';
-import '../../screens/profile_screen.dart';
 import '../../screens/badges_screen.dart';
 
 class HomeHeader extends StatelessWidget {
@@ -11,12 +10,12 @@ class HomeHeader extends StatelessWidget {
   final VoidCallback? onNotificationTap;
 
   const HomeHeader({
-    Key? key,
+    super.key,
     required this.displayName,
     required this.greeting,
     this.textColor = AppColors.textPrimary,
     this.onNotificationTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,9 +50,7 @@ class HomeHeader extends StatelessWidget {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const BadgesScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const BadgesScreen()),
             );
           },
           icon: const Icon(Icons.emoji_events_rounded),

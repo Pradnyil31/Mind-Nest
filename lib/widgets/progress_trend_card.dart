@@ -8,12 +8,12 @@ class ProgressTrendCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const ProgressTrendCard({
-    Key? key,
+    super.key,
     required this.encouragingMessage,
     required this.trendDirection,
     required this.highlights,
     this.onTap,
-  }) : super(key: key);
+  });
 
   Color _getTrendColor() {
     switch (trendDirection) {

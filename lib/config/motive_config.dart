@@ -1,5 +1,6 @@
 /// Motive-specific configuration and profiles
 /// Defines personalized content for each user motive
+library;
 
 class MotiveProfile {
   final String name;
@@ -253,8 +254,9 @@ class MotiveConfig {
     // 1. Determine activity limit based on commitment
     int limit = 5; // Default (10 mins)
     if (commitment != null) {
-      if (commitment.startsWith('5')) limit = 3;
-      else if (commitment.startsWith('10')) limit = 5;
+      if (commitment.startsWith('5')) {
+        limit = 3;
+      } else if (commitment.startsWith('10')) limit = 5;
       else if (commitment.startsWith('15')) limit = 7;
       else if (commitment.startsWith('30')) limit = 9;
     }

@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Badge {
   final String id;
   final String name;
@@ -61,7 +59,7 @@ class Badge {
       'badgeName': name,
       'description': description,
       'emoji': emoji,
-      'earnedDate': earnedDate != null ? Timestamp.fromDate(earnedDate!) : null,
+      'earnedDate': earnedDate?.toIso8601String(),
     };
   }
 
@@ -71,7 +69,9 @@ class Badge {
       name: map['badgeName'] ?? '',
       description: map['description'] ?? '',
       emoji: map['emoji'] ?? '🏆',
-      earnedDate: map['earnedDate'] != null ? (map['earnedDate'] as Timestamp).toDate() : null,
+      earnedDate: map['earnedDate'] != null
+          ? DateTime.parse(map['earnedDate'] as String)
+          : null,
     );
   }
 

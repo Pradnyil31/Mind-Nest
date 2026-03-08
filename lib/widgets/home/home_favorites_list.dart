@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../theme/app_colors.dart';
 import '../../screens/focus_screen.dart';
 import '../../screens/breathing_screen.dart';
 import '../../screens/meditation_library_screen.dart';
@@ -16,12 +15,12 @@ class HomeFavoritesList extends StatelessWidget {
   final VoidCallback onCheckInComplete;
 
   const HomeFavoritesList({
-    Key? key,
+    super.key,
     required this.activities,
     required this.routine,
     required this.textColor,
     required this.onCheckInComplete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,25 +28,29 @@ class HomeFavoritesList extends StatelessWidget {
       return SizedBox(
         height: 130,
         child: ListView(
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            children: [
-               _FavoriteItem(
-                label: 'Journaling', 
-                icon: Icons.book_outlined,
-                iconColor: const Color(0xFF4DB6AC),
-                textColor: textColor,
-              ),
-              const SizedBox(width: 16),
-              _FavoriteItem(
-                label: 'Mood\nTracking', 
-                icon: Icons.mood,
-                iconColor: const Color(0xFFFFB74D),
-                textColor: textColor,
-              ),
-              const SizedBox(width: 16),
-               _FavoriteItem(label: 'Bamboo Forest', assetPath: 'assets/images/bamboo_forest_icon.png', textColor: textColor),
-            ],
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          children: [
+            _FavoriteItem(
+              label: 'Journaling',
+              icon: Icons.book_outlined,
+              iconColor: const Color(0xFF4DB6AC),
+              textColor: textColor,
+            ),
+            const SizedBox(width: 16),
+            _FavoriteItem(
+              label: 'Mood\nTracking',
+              icon: Icons.mood,
+              iconColor: const Color(0xFFFFB74D),
+              textColor: textColor,
+            ),
+            const SizedBox(width: 16),
+            _FavoriteItem(
+              label: 'Bamboo Forest',
+              assetPath: 'assets/images/bamboo_forest_icon.png',
+              textColor: textColor,
+            ),
+          ],
         ),
       );
     }
@@ -108,23 +111,38 @@ class HomeFavoritesList extends StatelessWidget {
     }
 
     return _FavoriteItem(
-      label: label, 
-      icon: icon, 
+      label: label,
+      icon: icon,
       iconColor: color,
       textColor: textColor,
       onTap: () async {
         Widget? screen;
         switch (activity) {
-          case 'Focus Sessions': screen = const FocusScreen(); break;
-          case 'Breathing': screen = const BreathingScreen(); break;
-          case 'Meditation': screen = const MeditationLibraryScreen(); break;
-          case 'Smart Goals': screen = const SmartGoalsScreen(); break;
-          case 'Journaling': screen = const JournalingScreen(); break;
-          case 'Daily Check-ins': screen = const DailyCheckInScreen(); break;
+          case 'Focus Sessions':
+            screen = const FocusScreen();
+            break;
+          case 'Breathing':
+            screen = const BreathingScreen();
+            break;
+          case 'Meditation':
+            screen = const MeditationLibraryScreen();
+            break;
+          case 'Smart Goals':
+            screen = const SmartGoalsScreen();
+            break;
+          case 'Journaling':
+            screen = const JournalingScreen();
+            break;
+          case 'Daily Check-ins':
+            screen = const DailyCheckInScreen();
+            break;
         }
-        
+
         if (screen != null) {
-          final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => screen!));
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => screen!),
+          );
           if (result == true && activity == 'Daily Check-ins') {
             onCheckInComplete();
           }
@@ -133,7 +151,7 @@ class HomeFavoritesList extends StatelessWidget {
             SnackBar(content: Text('$label feature coming soon!')),
           );
         }
-      }
+      },
     );
   }
 }
@@ -147,9 +165,9 @@ class _FavoriteItem extends StatelessWidget {
   final Color textColor;
 
   const _FavoriteItem({
-    required this.label, 
-    this.assetPath, 
-    this.icon, 
+    required this.label,
+    this.assetPath,
+    this.icon,
     this.iconColor,
     this.onTap,
     required this.textColor,
@@ -169,7 +187,7 @@ class _FavoriteItem extends StatelessWidget {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9), 
+                  color: Colors.white.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: Colors.white, width: 2),
                   boxShadow: [
@@ -185,9 +203,9 @@ class _FavoriteItem extends StatelessWidget {
                   child: assetPath != null && assetPath!.isNotEmpty
                       ? Image.asset(assetPath!, fit: BoxFit.contain)
                       : Icon(
-                          icon ?? Icons.circle, 
-                          color: iconColor ?? Colors.grey, 
-                          size: 30
+                          icon ?? Icons.circle,
+                          color: iconColor ?? Colors.grey,
+                          size: 30,
                         ),
                 ),
               ),

@@ -1,97 +1,117 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import '../core/logger.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/supabase_config.dart';
 import '../core/exceptions.dart';
+import '../core/logger.dart';
 
+class AppUser {
+  final String uid;
+  final String? email;
+  final String? displayName;
+
+  const AppUser({required this.uid, this.email, this.displayName});
+
+  factory AppUser.fromSupabase(User user) {
+    return AppUser(
+      uid: user.id,
+      email: user.email,
+      displayName: user.userMetadata?['display_name'] as String?,
+    );
+  }
+}
+
+class AppUserCredential {
+  final AppUser? user;
+
+  const AppUserCredential({this.user});
+}
 
 class AuthService {
-  final FirebaseAuth _auth;
-  final GoogleSignIn _googleSignIn;
+  final SupabaseClient _client;
 
-  AuthService({FirebaseAuth? auth, GoogleSignIn? googleSignIn})
-      : _auth = auth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+  AuthService({SupabaseClient? client, Object? auth, Object? googleSignIn})
+    : _client = client ?? SupabaseConfig.client;
 
-  // Get current user
-  User? get currentUser => _auth.currentUser;
+  AppUser? get currentUser {
+    final user = _client.auth.currentUser;
+    if (user == null) return null;
+    return AppUser.fromSupabase(user);
+  }
 
-  // Stream of auth state changes
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<AppUser?> get authStateChanges {
+    return _client.auth.onAuthStateChange.map((_) {
+      final user = _client.auth.currentUser;
+      if (user == null) return null;
+      return AppUser.fromSupabase(user);
+    });
+  }
 
-  // Sign up with email and password
-  Future<UserCredential?> signUpWithEmail({
+  Future<AppUserCredential?> signUpWithEmail({
     required String email,
     required String password,
   }) async {
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      final response = await _client.auth.signUp(
         email: email,
         password: password,
       );
-      return userCredential;
-    } on FirebaseAuthException catch (e) {
+      return AppUserCredential(
+        user: response.user == null
+            ? null
+            : AppUser.fromSupabase(response.user!),
+      );
+    } on AuthException catch (e) {
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (_) {
       throw 'An error occurred. Please try again.';
     }
   }
 
-  // Sign in with email and password
-  Future<UserCredential?> signInWithEmail({
+  Future<AppUserCredential?> signInWithEmail({
     required String email,
     required String password,
   }) async {
     try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      final response = await _client.auth.signInWithPassword(
         email: email,
         password: password,
       );
-      return userCredential;
-    } on FirebaseAuthException catch (e) {
+      return AppUserCredential(
+        user: response.user == null
+            ? null
+            : AppUser.fromSupabase(response.user!),
+      );
+    } on AuthException catch (e) {
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (_) {
       throw 'An error occurred. Please try again.';
     }
   }
 
-  // Sign in with Google
-  Future<UserCredential?> signInWithGoogle() async {
+  Future<AppUserCredential?> signInWithGoogle() async {
     try {
-      // Sign out from previous sessions to ensure clean sign-in
-      await _googleSignIn.signOut();
-      
-      // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
-      if (googleUser == null) {
-        // User canceled the sign-in
-        appLogger.i('User canceled Google sign-in');
-        return null;
-      }
-
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // Create a new credential
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+      await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'io.supabase.flutter://login-callback/',
       );
-
-      // Sign in to Firebase with the Google credential
-      final result = await _auth.signInWithCredential(credential);
-      appLogger.i('Google sign-in successful for user: ${result.user?.email}');
-      return result;
-    } on FirebaseAuthException catch (e, stackTrace) {
-      appLogger.e('Firebase Auth Error during Google sign-in', error: e, stackTrace: stackTrace);
+      return null;
+    } on AuthException catch (e, stackTrace) {
+      appLogger.e(
+        'Supabase auth error during Google sign-in',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw AuthenticationException(
         'Google sign-in failed: ${e.message}',
-        code: e.code,
+        code: e.statusCode,
         originalError: e,
         stackTrace: stackTrace,
       );
     } catch (e, stackTrace) {
-      appLogger.e('Unexpected error during Google sign-in', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        'Unexpected error during Google sign-in',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw AuthenticationException(
         'Google sign-in failed',
         originalError: e,
@@ -100,59 +120,47 @@ class AuthService {
     }
   }
 
-  // Sign out
   Future<void> signOut() async {
     try {
-      await Future.wait([
-        _auth.signOut(),
-        _googleSignIn.signOut(),
-      ]);
-    } catch (e) {
+      await _client.auth.signOut();
+    } catch (_) {
       throw 'Sign out failed. Please try again.';
     }
   }
 
-  // Delete account
   Future<void> deleteAccount() async {
-    try {
-      await currentUser?.delete();
-    } catch (e) {
-      throw 'Account deletion failed. Please try again.';
-    }
+    throw 'Account deletion is not available from client side yet.';
   }
 
-  // Send password reset email
   Future<void> sendPasswordResetEmail(String email) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
+      await _client.auth.resetPasswordForEmail(email);
+    } on AuthException catch (e) {
       throw _handleAuthException(e);
-    } catch (e) {
+    } catch (_) {
       throw 'Failed to send password reset email.';
     }
   }
 
-  // Handle Firebase Auth exceptions
-  String _handleAuthException(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'weak-password':
-        return 'The password is too weak.';
-      case 'email-already-in-use':
-        return 'An account already exists for this email.';
-      case 'user-not-found':
-        return 'No user found with this email.';
-      case 'wrong-password':
-        return 'Incorrect password.';
-      case 'invalid-email':
-        return 'The email address is invalid.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
-      case 'operation-not-allowed':
-        return 'This sign-in method is not enabled.';
-      default:
-        return 'Authentication failed. Please try again.';
+  String _handleAuthException(AuthException e) {
+    final code = e.statusCode;
+    final message = e.message.toLowerCase();
+
+    if (message.contains('already registered')) {
+      return 'An account already exists for this email.';
     }
+    if (message.contains('invalid login credentials')) {
+      return 'Incorrect email or password.';
+    }
+    if (message.contains('password should be at least')) {
+      return 'The password is too weak.';
+    }
+    if (message.contains('invalid email')) {
+      return 'The email address is invalid.';
+    }
+    if (code == '429') {
+      return 'Too many attempts. Please try again later.';
+    }
+    return 'Authentication failed. Please try again.';
   }
 }

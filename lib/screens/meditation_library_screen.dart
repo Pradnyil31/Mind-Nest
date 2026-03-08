@@ -9,7 +9,7 @@ import 'meditation_player_screen.dart';
 import 'meditation_timer_screen.dart';
 
 class MeditationLibraryScreen extends StatefulWidget {
-  const MeditationLibraryScreen({Key? key}) : super(key: key);
+  const MeditationLibraryScreen({super.key});
 
   @override
   State<MeditationLibraryScreen> createState() => _MeditationLibraryScreenState();
@@ -323,7 +323,7 @@ class _MeditationLibraryScreenState extends State<MeditationLibraryScreen> {
               _getCategoryName(category),
               category,
             );
-          }).toList(),
+          }),
         ],
       ),
     );

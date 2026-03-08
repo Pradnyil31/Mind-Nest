@@ -1,13 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/smart_goal.dart';
 
 class GoalService {
-  final FirebaseFirestore _firestore;
-
-  GoalService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
-
-  CollectionReference get _goalsCollection => _firestore.collection('smart_goals');
+  // TODO: Implement Supabase integration
+  // Services should use FirestoreService for data access
+  
+  GoalService();
 
   Future<void> addGoal(SmartGoal goal) async {
     try {

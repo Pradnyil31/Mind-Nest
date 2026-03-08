@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum MeditationType { guided, timer, breathing }
 
 class MeditationSession {
@@ -25,7 +23,7 @@ class MeditationSession {
     return {
       'id': id,
       'userId': userId,
-      'startTime': Timestamp.fromDate(startTime),
+      'startTime': startTime.toIso8601String(),
       'durationMinutes': durationMinutes,
       'type': type.toString().split('.').last,
       'meditationId': meditationId,
@@ -37,7 +35,7 @@ class MeditationSession {
     return MeditationSession(
       id: docId,
       userId: map['userId'] ?? '',
-      startTime: (map['startTime'] as Timestamp).toDate(),
+      startTime: DateTime.parse(map['startTime'] as String),
       durationMinutes: map['durationMinutes'] ?? 5,
       type: MeditationType.values.firstWhere(
         (e) => e.toString().split('.').last == map['type'],

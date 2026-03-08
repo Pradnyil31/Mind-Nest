@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "fy_project" "\0"
+            VALUE "FileDescription", "mindnest" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "fy_project" "\0"
+            VALUE "InternalName", "mindnest" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "fy_project.exe" "\0"
-            VALUE "ProductName", "fy_project" "\0"
+            VALUE "OriginalFilename", "mindnest.exe" "\0"
+            VALUE "ProductName", "mindnest" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

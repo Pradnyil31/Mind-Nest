@@ -1,71 +1,77 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/supabase_config.dart';
 import '../models/user_model.dart';
 
+class AppDocumentSnapshot {
+  final Map<String, dynamic>? _data;
+
+  const AppDocumentSnapshot(this._data);
+
+  bool get exists => _data != null;
+
+  Map<String, dynamic>? data() => _data;
+}
 
 class FirestoreService {
-  final FirebaseFirestore _firestore;
+  final SupabaseClient _client;
 
-  FirestoreService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  FirestoreService({SupabaseClient? client, Object? firestore})
+    : _client = client ?? SupabaseConfig.client;
 
-  // Collection reference
-  CollectionReference get _usersCollection => _firestore.collection('users');
-
-  // Create user document
   Future<void> createUser(UserModel user) async {
     try {
-      await _usersCollection.doc(user.uid).set(user.toMap());
+      await _client.from('profiles').upsert(_toProfileInsert(user));
     } catch (e) {
       throw 'Failed to create user profile: $e';
     }
   }
 
-  // Get user by ID
   Future<UserModel?> getUser(String uid) async {
     try {
-      DocumentSnapshot doc = await _usersCollection.doc(uid).get();
-      if (doc.exists) {
-        return UserModel.fromMap(doc.data() as Map<String, dynamic>);
-      }
-      return null;
+      final data = await _client
+          .from('profiles')
+          .select()
+          .eq('id', uid)
+          .maybeSingle();
+      if (data == null) return null;
+      return UserModel.fromMap(_fromProfileRow(data));
     } catch (e) {
       throw 'Failed to get user data: $e';
     }
   }
 
-  // Update user
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
     try {
-      await _usersCollection.doc(uid).update(data);
+      await _client
+          .from('profiles')
+          .update(_toProfileUpdate(data))
+          .eq('id', uid);
     } catch (e) {
       throw 'Failed to update user: $e';
     }
   }
 
-  // Update last login
   Future<void> updateLastLogin(String uid) async {
     try {
       final now = DateTime.now();
-      
-      // Get current user data to check login dates
-      final doc = await _usersCollection.doc(uid).get();
+      final user = await _client
+          .from('profiles')
+          .select()
+          .eq('id', uid)
+          .maybeSingle();
+
       List<DateTime> currentLoginDates = [];
-      
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        if (data['loginDates'] != null) {
-          currentLoginDates = (data['loginDates'] as List<dynamic>)
-              .map((e) => (e as Timestamp).toDate())
-              .toList();
-        }
+      if (user != null && user['login_dates'] != null) {
+        currentLoginDates = (user['login_dates'] as List<dynamic>)
+            .map((e) => DateTime.parse(e.toString()))
+            .toList();
       }
 
-      // Check if already logged in today (ignoring time)
       bool alreadyLoggedInToday = false;
       if (currentLoginDates.isNotEmpty) {
         final lastDate = currentLoginDates.last;
-        if (lastDate.year == now.year && 
-            lastDate.month == now.month && 
+        if (lastDate.year == now.year &&
+            lastDate.month == now.month &&
             lastDate.day == now.day) {
           alreadyLoggedInToday = true;
         }
@@ -73,107 +79,234 @@ class FirestoreService {
 
       if (!alreadyLoggedInToday) {
         currentLoginDates.add(now);
-        // Keep only last 30 days to avoid document size limits
         if (currentLoginDates.length > 30) {
-           currentLoginDates.removeAt(0);
+          currentLoginDates.removeAt(0);
         }
       }
 
-      await _usersCollection.doc(uid).update({
-        'lastLogin': Timestamp.fromDate(now),
-        'loginDates': currentLoginDates.map((e) => Timestamp.fromDate(e)).toList(),
-      });
+      await _client
+          .from('profiles')
+          .update({
+            'last_login': now.toIso8601String(),
+            'login_dates': currentLoginDates
+                .map((e) => e.toIso8601String())
+                .toList(),
+          })
+          .eq('id', uid);
     } catch (e) {
       throw 'Failed to update last login: $e';
     }
   }
 
-  // Delete user
   Future<void> deleteUser(String uid) async {
     try {
-      await _usersCollection.doc(uid).delete();
+      await _client.from('profiles').delete().eq('id', uid);
     } catch (e) {
       throw 'Failed to delete user: $e';
     }
   }
 
-  // Stream of user data
   Stream<UserModel?> streamUser(String uid) {
-    return _usersCollection.doc(uid).snapshots().map((doc) {
-      if (doc.exists) {
-        return UserModel.fromMap(doc.data() as Map<String, dynamic>);
-      }
-      return null;
+    return getUserStream(uid).map((doc) {
+      if (!doc.exists) return null;
+      return UserModel.fromMap(doc.data()!);
     });
   }
 
-  // Check if user exists
   Future<bool> userExists(String uid) async {
     try {
-      DocumentSnapshot doc = await _usersCollection.doc(uid).get();
-      return doc.exists;
-    } catch (e) {
+      final doc = await _client
+          .from('profiles')
+          .select('id')
+          .eq('id', uid)
+          .maybeSingle();
+      return doc != null;
+    } catch (_) {
       return false;
     }
   }
-  // Stream of user document
-  Stream<DocumentSnapshot> getUserStream(String uid) {
-    return _usersCollection.doc(uid).snapshots();
+
+  Stream<AppDocumentSnapshot> getUserStream(String uid) {
+    return _client
+        .from('profiles')
+        .stream(primaryKey: ['id'])
+        .eq('id', uid)
+        .map((rows) {
+          if (rows.isEmpty) return const AppDocumentSnapshot(null);
+          return AppDocumentSnapshot(_fromProfileRow(rows.first));
+        });
   }
 
-  // Save Daily Motive
   Future<void> saveDailyMotive(String uid, String motive) async {
     final today = DateTime.now();
-    final dateId = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
-    
-    await _usersCollection.doc(uid).collection('dailyMotives').doc(dateId).set({
+    final date = DateTime(today.year, today.month, today.day);
+    await _client.from('daily_motives').upsert({
+      'user_id': uid,
+      'motive_date': date.toIso8601String().split('T').first,
       'motive': motive,
-      'timestamp': FieldValue.serverTimestamp(),
     });
   }
 
-  // Get Daily Motive
   Future<String?> getDailyMotive(String uid) async {
     final today = DateTime.now();
-    final dateId = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+    final date = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).toIso8601String().split('T').first;
 
-    final doc = await _usersCollection.doc(uid).collection('dailyMotives').doc(dateId).get();
-    if (doc.exists && doc.data() != null) {
-      return (doc.data() as Map<String, dynamic>)['motive'] as String?;
-    }
-    return null;
+    final doc = await _client
+        .from('daily_motives')
+        .select('motive')
+        .eq('user_id', uid)
+        .eq('motive_date', date)
+        .maybeSingle();
+
+    return doc?['motive'] as String?;
   }
-  // Save Sleep Data
-  Future<void> logSleepData(String uid, DateTime date, Map<String, dynamic> data) async {
-    final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    
+
+  Future<void> logSleepData(
+    String uid,
+    DateTime date,
+    Map<String, dynamic> data,
+  ) async {
+    final dateKey =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
     try {
-      await _usersCollection.doc(uid).set({
-        'sleepData': {
-          dateKey: data
-        }
-      }, SetOptions(merge: true));
+      final user = await _client
+          .from('profiles')
+          .select('sleep_data')
+          .eq('id', uid)
+          .maybeSingle();
+      final currentSleep = Map<String, dynamic>.from(user?['sleep_data'] ?? {});
+      currentSleep[dateKey] = data;
+      await _client
+          .from('profiles')
+          .update({'sleep_data': currentSleep})
+          .eq('id', uid);
     } catch (e) {
       throw 'Failed to log sleep data: $e';
     }
   }
 
-  // Get Sleep Data for a specific date
   Future<Map<String, dynamic>?> getSleepData(String uid, DateTime date) async {
-    final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    
+    final dateKey =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
     try {
-      final doc = await _usersCollection.doc(uid).get();
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        if (data.containsKey('sleepData')) {
-          final sleepMap = data['sleepData'] as Map<String, dynamic>;
-          return sleepMap[dateKey] as Map<String, dynamic>?;
-        }
-      }
-      return null;
+      final user = await _client
+          .from('profiles')
+          .select('sleep_data')
+          .eq('id', uid)
+          .maybeSingle();
+      if (user == null) return null;
+      final sleepMap = Map<String, dynamic>.from(user['sleep_data'] ?? {});
+      return sleepMap[dateKey] as Map<String, dynamic>?;
     } catch (e) {
       throw 'Failed to get sleep data: $e';
     }
+  }
+
+  Map<String, dynamic> _toProfileInsert(UserModel user) {
+    return {
+      'id': user.uid,
+      'email': user.email,
+      'display_name': user.displayName,
+      'created_at': user.createdAt.toIso8601String(),
+      'last_login': user.lastLogin?.toIso8601String(),
+      'photo_url': user.photoURL,
+      'sign_in_method': user.signInMethod,
+      'login_dates':
+          user.loginDates?.map((e) => e.toIso8601String()).toList() ?? [],
+      'sleep_data': user.sleepData ?? {},
+      'primary_motive': user.primaryMotive,
+      'secondary_motives': user.secondaryMotives ?? [],
+      'preferred_time': user.preferredTime,
+      'daily_commitment': user.dailyCommitment,
+    };
+  }
+
+  Map<String, dynamic> _toProfileUpdate(Map<String, dynamic> data) {
+    final updated = <String, dynamic>{};
+    final keyMap = {
+      'displayName': 'display_name',
+      'createdAt': 'created_at',
+      'lastLogin': 'last_login',
+      'photoURL': 'photo_url',
+      'signInMethod': 'sign_in_method',
+      'loginDates': 'login_dates',
+      'sleepData': 'sleep_data',
+      'primaryMotive': 'primary_motive',
+      'secondaryMotives': 'secondary_motives',
+      'preferredTime': 'preferred_time',
+      'dailyCommitment': 'daily_commitment',
+      'supportAreas': 'support_areas',
+      'experienceLevel': 'experience_level',
+      'onboardingCompleted': 'onboarding_completed',
+      'routineActivities': 'routine_activities',
+      'routineSchedule': 'routine_schedule',
+      'temporarySchedule': 'temporary_schedule',
+      'additionalActivities': 'additional_activities',
+      'baseRoutine': 'base_routine',
+    };
+
+    data.forEach((key, value) {
+      if (key.startsWith('routine.')) {
+        final nestedKey = key.replaceFirst('routine.', '');
+        updated['routine'] = {
+          ...(updated['routine'] as Map<String, dynamic>? ?? {}),
+          nestedKey: value,
+        };
+        return;
+      }
+      final mappedKey = keyMap[key] ?? key;
+      if (mappedKey == 'login_dates' && value is List<DateTime>) {
+        updated[mappedKey] = value.map((e) => e.toIso8601String()).toList();
+      } else {
+        updated[mappedKey] = value;
+      }
+    });
+
+    return updated;
+  }
+
+  Map<String, dynamic> _fromProfileRow(Map<String, dynamic> row) {
+    return {
+      'uid': row['id'],
+      'email': row['email'],
+      'displayName': row['display_name'] ?? '',
+      'createdAt':
+          DateTime.tryParse(row['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+      'lastLogin': row['last_login'] == null
+          ? null
+          : DateTime.tryParse(row['last_login'].toString()),
+      'photoURL': row['photo_url'],
+      'signInMethod': row['sign_in_method'],
+      'loginDates': (row['login_dates'] as List<dynamic>? ?? [])
+          .map((e) => DateTime.tryParse(e.toString()) ?? DateTime.now())
+          .toList(),
+      'sleepData': Map<String, dynamic>.from(row['sleep_data'] ?? {}),
+      'primaryMotive': row['primary_motive'],
+      'secondaryMotives': List<String>.from(row['secondary_motives'] ?? []),
+      'supportAreas': List<String>.from(row['support_areas'] ?? []),
+      'preferredTime': row['preferred_time'],
+      'dailyCommitment': row['daily_commitment'],
+      'experienceLevel': row['experience_level'],
+      'onboardingCompleted': row['onboarding_completed'] ?? false,
+      'routine': Map<String, dynamic>.from(row['routine'] ?? {}),
+      'routineActivities': List<String>.from(row['routine_activities'] ?? []),
+      'routineSchedule': Map<String, dynamic>.from(
+        row['routine_schedule'] ?? {},
+      ),
+      'temporarySchedule': Map<String, dynamic>.from(
+        row['temporary_schedule'] ?? {},
+      ),
+      'additionalActivities': List<String>.from(
+        row['additional_activities'] ?? [],
+      ),
+      'baseRoutine': List<String>.from(row['base_routine'] ?? []),
+    };
   }
 }

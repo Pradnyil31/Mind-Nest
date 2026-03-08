@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class GroundingExerciseScreen extends StatefulWidget {
-  const GroundingExerciseScreen({Key? key}) : super(key: key);
+  const GroundingExerciseScreen({super.key});
 
   @override
   State<GroundingExerciseScreen> createState() => _GroundingExerciseScreenState();

@@ -6,10 +6,10 @@ class HomeCheckInCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const HomeCheckInCard({
-    Key? key,
+    super.key,
     required this.isCompleted,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -8,9 +8,9 @@ class ProgressChartScreen extends StatefulWidget {
   final String userId;
 
   const ProgressChartScreen({
-    Key? key,
+    super.key,
     required this.userId,
-  }) : super(key: key);
+  });
 
   @override
   State<ProgressChartScreen> createState() => _ProgressChartScreenState();
@@ -415,7 +415,7 @@ class _ProgressChartScreenState extends State<ProgressChartScreen> {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class UserModel {
   final String uid;
   final String email;
@@ -31,17 +29,17 @@ class UserModel {
     this.dailyCommitment,
   });
 
-  // Convert to Map for Firestore
+  // Convert to Map for Supabase
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
       'email': email,
       'displayName': displayName,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'lastLogin': lastLogin != null ? Timestamp.fromDate(lastLogin!) : null,
+      'createdAt': createdAt.toIso8601String(),
+      'lastLogin': lastLogin?.toIso8601String(),
       'photoURL': photoURL,
       'signInMethod': signInMethod,
-      'loginDates': loginDates?.map((e) => Timestamp.fromDate(e)).toList(),
+      'loginDates': loginDates?.map((e) => e.toIso8601String()).toList(),
       'sleepData': sleepData,
       'primaryMotive': primaryMotive,
       'secondaryMotives': secondaryMotives,
@@ -50,22 +48,22 @@ class UserModel {
     };
   }
 
-  // Create from Firestore document
+  // Create from Supabase document
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       uid: map['uid'] ?? '',
       email: map['email'] ?? '',
       displayName: map['displayName'] ?? '',
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      lastLogin: map['lastLogin'] != null 
-          ? (map['lastLogin'] as Timestamp).toDate() 
+      createdAt: DateTime.parse(map['createdAt'] as String),
+      lastLogin: map['lastLogin'] != null
+          ? DateTime.parse(map['lastLogin'] as String)
           : null,
       photoURL: map['photoURL'],
       signInMethod: map['signInMethod'],
       loginDates: map['loginDates'] != null
           ? (map['loginDates'] as List<dynamic>)
-              .map((e) => (e as Timestamp).toDate())
-              .toList()
+                .map((e) => DateTime.parse(e as String))
+                .toList()
           : [],
       sleepData: map['sleepData'] as Map<String, dynamic>?,
       primaryMotive: map['primaryMotive'] as String?,

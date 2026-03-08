@@ -7,7 +7,7 @@ import '../services/meditation_service.dart';
 import '../services/meditation_analytics_service.dart';
 
 class MeditationTimerScreen extends StatefulWidget {
-  const MeditationTimerScreen({Key? key}) : super(key: key);
+  const MeditationTimerScreen({super.key});
 
   @override
   State<MeditationTimerScreen> createState() => _MeditationTimerScreenState();

@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum FocusMode { timer, sound, video }
 
 class FocusSession {
@@ -27,7 +25,7 @@ class FocusSession {
     return {
       'id': id,
       'userId': userId,
-      'startTime': Timestamp.fromDate(startTime),
+      'startTime': startTime.toIso8601String(),
       'durationMinutes': durationMinutes,
       'taskName': taskName,
       'mode': mode.toString().split('.').last,
@@ -40,7 +38,7 @@ class FocusSession {
     return FocusSession(
       id: docId,
       userId: map['userId'] ?? '',
-      startTime: (map['startTime'] as Timestamp).toDate(),
+      startTime: DateTime.parse(map['startTime'] as String),
       durationMinutes: map['durationMinutes'] ?? 25,
       taskName: map['taskName'] ?? 'Focus Session',
       mode: FocusMode.values.firstWhere(

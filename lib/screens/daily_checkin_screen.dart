@@ -7,7 +7,7 @@ import '../services/auth_service.dart';
 import '../services/goal_service.dart';
 
 class DailyCheckInScreen extends StatefulWidget {
-  const DailyCheckInScreen({Key? key}) : super(key: key);
+  const DailyCheckInScreen({super.key});
 
   @override
   State<DailyCheckInScreen> createState() => _DailyCheckInScreenState();
@@ -23,7 +23,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
   int _energyLevel = 5;
   String _selectedMood = '';
   List<SmartGoal> _activeGoals = [];
-  List<String> _checkedGoals = [];
+  final List<String> _checkedGoals = [];
   String _notes = '';
 
   @override
@@ -92,8 +92,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
                title: Text(addedActivities.isNotEmpty ? 'Routine Updated' : 'Check-in Complete'),
                content: Text(
                  addedActivities.isNotEmpty 
-                   ? 'Based on your check-in, we added the following to your routine:\n\n' + 
-                     addedActivities.map((e) => '• $e').join('\n')
+                   ? 'Based on your check-in, we added the following to your routine:\n\n${addedActivities.map((e) => '• $e').join('\n')}'
                    : 'Great job checking in! Your routine looks good for today.'
                ),
                actions: [

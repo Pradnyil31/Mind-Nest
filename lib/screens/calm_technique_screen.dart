@@ -5,7 +5,7 @@ import '../models/calm_technique.dart';
 class CalmTechniqueScreen extends StatefulWidget {
   final CalmTechnique technique;
 
-  const CalmTechniqueScreen({Key? key, required this.technique}) : super(key: key);
+  const CalmTechniqueScreen({super.key, required this.technique});
 
   @override
   State<CalmTechniqueScreen> createState() => _CalmTechniqueScreenState();

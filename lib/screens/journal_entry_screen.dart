@@ -7,7 +7,7 @@ import '../services/auth_service.dart';
 class JournalEntryScreen extends StatefulWidget {
   final JournalEntry? entry; // Null if creating a new entry
 
-  const JournalEntryScreen({Key? key, this.entry}) : super(key: key);
+  const JournalEntryScreen({super.key, this.entry});
 
   @override
   State<JournalEntryScreen> createState() => _JournalEntryScreenState();

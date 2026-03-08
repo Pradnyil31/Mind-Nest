@@ -6,7 +6,7 @@ import '../services/goal_service.dart';
 import '../services/auth_service.dart';
 
 class CreateGoalScreen extends StatefulWidget {
-  const CreateGoalScreen({Key? key}) : super(key: key);
+  const CreateGoalScreen({super.key});
 
   @override
   State<CreateGoalScreen> createState() => _CreateGoalScreenState();

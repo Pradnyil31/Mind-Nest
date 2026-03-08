@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class RoutineCompletion {
   final String id;
   final String userId;
@@ -19,7 +17,7 @@ class RoutineCompletion {
     return {
       'id': id,
       'userId': userId,
-      'date': Timestamp.fromDate(date),
+      'date': date.toIso8601String(),
       'completedActivities': completedActivities,
       'totalActivities': totalActivities,
     };
@@ -29,7 +27,7 @@ class RoutineCompletion {
     return RoutineCompletion(
       id: docId,
       userId: map['userId'] ?? '',
-      date: (map['date'] as Timestamp).toDate(),
+      date: DateTime.parse(map['date'] as String),
       completedActivities: List<String>.from(map['completedActivities'] ?? []),
       totalActivities: map['totalActivities'] ?? 0,
     );

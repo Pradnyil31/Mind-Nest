@@ -1,11 +1,11 @@
-// This is a basic test file.
+﻿// This is a basic test file.
 // Add widget tests for your screens here.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fy_project/main.dart';
+import 'package:mindnest/main.dart';
 
 void main() {
   testWidgets('App launches without crashing', (WidgetTester tester) async {

@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class JournalEntry {
   final String id;
   final String userId;
@@ -26,7 +24,7 @@ class JournalEntry {
       'title': title,
       'content': content,
       'mood': mood,
-      'timestamp': Timestamp.fromDate(timestamp),
+      'timestamp': timestamp.toIso8601String(),
       'tags': tags,
     };
   }
@@ -38,7 +36,7 @@ class JournalEntry {
       title: map['title'] ?? '',
       content: map['content'] ?? '',
       mood: map['mood'] ?? 'Neutral',
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
+      timestamp: DateTime.parse(map['timestamp'] as String),
       tags: List<String>.from(map['tags'] ?? []),
     );
   }

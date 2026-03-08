@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class SmartGoal {
   final String id;
   final String userId;
@@ -34,7 +32,7 @@ class SmartGoal {
       'targetValue': targetValue,
       'currentValue': currentValue,
       'unit': unit,
-      'deadline': Timestamp.fromDate(deadline),
+      'deadline': deadline.toIso8601String(),
       'colorValue': colorValue,
       'isCompleted': isCompleted,
     };
@@ -49,7 +47,7 @@ class SmartGoal {
       targetValue: (map['targetValue'] ?? 0).toDouble(),
       currentValue: (map['currentValue'] ?? 0).toDouble(),
       unit: map['unit'] ?? '',
-      deadline: (map['deadline'] as Timestamp).toDate(),
+      deadline: DateTime.parse(map['deadline'] as String),
       colorValue: map['colorValue'] ?? 0xFF4CAF50, // Default Green
       isCompleted: map['isCompleted'] ?? false,
     );

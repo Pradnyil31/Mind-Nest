@@ -13,7 +13,7 @@ import '../config/motive_config.dart';
 import 'home_screen.dart';
 
 class OnboardingFlowScreen extends StatefulWidget {
-  const OnboardingFlowScreen({Key? key}) : super(key: key);
+  const OnboardingFlowScreen({super.key});
 
   @override
   State<OnboardingFlowScreen> createState() => _OnboardingFlowScreenState();
@@ -68,7 +68,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   ];
 
   void _nextPage() {
-    if (_currentPage < 6) { // 7 pages total (0-6)
+    if (_currentPage < 6) {
+      // 7 pages total (0-6)
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -97,7 +98,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       if (user != null) {
         await _firestoreService.updateUser(user.uid, {
           'primaryMotive': _selectedMotive,
-          'primaryGoals': [_selectedMotive ?? 'General Wellness'], // Save for compatibility
+          'primaryGoals': [
+            _selectedMotive ?? 'General Wellness',
+          ], // Save for compatibility
           'supportAreas': _selectedSupportAreas,
           'experienceLevel': _selectedExperienceLevel,
           'preferredTime': _selectedPreferredTime,
@@ -107,17 +110,16 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             'bedTime': _formatTime(_bedTime),
           },
           'onboardingCompleted': true,
-          'onboardingCompleted': true,
           // Set initial routine: scaled by commitment level
           'baseRoutine': MotiveConfig.generateRoutine(
-             motive: _selectedMotive, 
-             commitment: _selectedCommitment,
-             supportAreas: _selectedSupportAreas,
+            motive: _selectedMotive,
+            commitment: _selectedCommitment,
+            supportAreas: _selectedSupportAreas,
           ),
           'routineActivities': MotiveConfig.generateRoutine(
-             motive: _selectedMotive, 
-             commitment: _selectedCommitment,
-             supportAreas: _selectedSupportAreas,
+            motive: _selectedMotive,
+            commitment: _selectedCommitment,
+            supportAreas: _selectedSupportAreas,
           ),
           'lastGeneratedDate': DateTime.now().toIso8601String(),
         });
@@ -127,18 +129,22 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const HomeScreen()),
             (route) => false,
-          ); 
-          
+          );
+
           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('✨ Profile set! Welcome to your personalized routine.')),
+            const SnackBar(
+              content: Text(
+                '✨ Profile set! Welcome to your personalized routine.',
+              ),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving profile: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving profile: $e')));
       }
     } finally {
       if (mounted) {
@@ -148,8 +154,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       }
     }
   }
-
-
 
   Future<void> _selectTime(bool isWakeUp) async {
     final TimeOfDay? picked = await showTimePicker(
@@ -203,23 +207,31 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             LinearProgressIndicator(
               value: (_currentPage + 1) / 7, // 7 pages
               backgroundColor: const Color(0xFFE0D4F5),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFA78BFA)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFFA78BFA),
+              ),
               minHeight: 6,
             ),
-            
+
             // App Bar / Nav
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 16.0,
+              ),
               child: Row(
                 children: [
-                   if (_currentPage > 0)
+                  if (_currentPage > 0)
                     IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Color(0xFF4A4A4A)),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF4A4A4A),
+                      ),
                       onPressed: _previousPage,
                     )
                   else
                     const SizedBox(width: 48),
-                  
+
                   const Spacer(),
                   Text(
                     'Step ${_currentPage + 1}/7',
@@ -259,7 +271,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                     title: 'Have you tried meditation or mindfulness before?',
                     subtitle: 'Help us guide you',
                     options: _experienceLevelOptions,
-                    selectedValues: [_selectedExperienceLevel].where((e) => e.isNotEmpty).toList(),
+                    selectedValues: [
+                      _selectedExperienceLevel,
+                    ].where((e) => e.isNotEmpty).toList(),
                     allowMultiple: false,
                     onSingleSelect: (val) {
                       setState(() {
@@ -273,7 +287,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                     title: 'When do you prefer to recharge?',
                     subtitle: 'We\'ll schedule your routine around this',
                     options: _preferredTimeOptions,
-                    selectedValues: [_selectedPreferredTime].where((e) => e.isNotEmpty).toList(),
+                    selectedValues: [
+                      _selectedPreferredTime,
+                    ].where((e) => e.isNotEmpty).toList(),
                     allowMultiple: false,
                     onSingleSelect: (val) {
                       setState(() {
@@ -287,7 +303,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                     title: 'How much time can you commit daily?',
                     subtitle: 'Start small — you can always adjust later',
                     options: _commitmentOptions,
-                    selectedValues: [_selectedCommitment].where((e) => e.isNotEmpty).toList(),
+                    selectedValues: [
+                      _selectedCommitment,
+                    ].where((e) => e.isNotEmpty).toList(),
                     allowMultiple: false,
                     onSingleSelect: (val) {
                       setState(() {
@@ -374,10 +392,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Color(0xFF757575),
-            ),
+            style: const TextStyle(fontSize: 16, color: Color(0xFF757575)),
           ),
           const SizedBox(height: 32),
           ListView.separated(
@@ -388,7 +403,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             itemBuilder: (context, index) {
               final option = options[index];
               final isSelected = selectedValues.contains(option);
-              
+
               return InkWell(
                 onTap: () {
                   setState(() {
@@ -399,9 +414,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                         selectedValues.add(option);
                       }
                     } else {
-                       if (onSingleSelect != null) {
-                         onSingleSelect(option);
-                       }
+                      if (onSingleSelect != null) {
+                        onSingleSelect(option);
+                      }
                     }
                   });
                 },
@@ -409,9 +424,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFA78BFA).withOpacity(0.1) : Colors.white,
+                    color: isSelected
+                        ? const Color(0xFFA78BFA).withOpacity(0.1)
+                        : Colors.white,
                     border: Border.all(
-                      color: isSelected ? const Color(0xFFA78BFA) : const Color(0xFFEEEEEE),
+                      color: isSelected
+                          ? const Color(0xFFA78BFA)
+                          : const Color(0xFFEEEEEE),
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(16),
@@ -424,7 +443,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
-                            color: isSelected ? const Color(0xFFA78BFA) : const Color(0xFF4A4A4A),
+                            color: isSelected
+                                ? const Color(0xFFA78BFA)
+                                : const Color(0xFF4A4A4A),
                           ),
                         ),
                       ),
@@ -479,12 +500,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
               children: MotiveConfig.allMotives.map((motive) {
                 final profile = MotiveConfig.getProfile(motive);
                 final isSelected = _selectedMotive == motive;
-                
+
                 return GestureDetector(
                   onTap: () {
                     setState(() {
                       if (_selectedMotive != motive) {
-                        _selectedSupportAreas.clear(); // Reset when motive changes
+                        _selectedSupportAreas
+                            .clear(); // Reset when motive changes
                       }
                       _selectedMotive = motive;
                     });
@@ -493,10 +515,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                     margin: const EdgeInsets.only(bottom: 16),
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF667EEA).withOpacity(0.1) : Colors.white,
+                      color: isSelected
+                          ? const Color(0xFF667EEA).withOpacity(0.1)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isSelected ? const Color(0xFF667EEA) : Colors.grey.shade200,
+                        color: isSelected
+                            ? const Color(0xFF667EEA)
+                            : Colors.grey.shade200,
                         width: isSelected ? 2.5 : 1,
                       ),
                       boxShadow: [
@@ -515,7 +541,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                           width: 60,
                           height: 60,
                           decoration: BoxDecoration(
-                            color: isSelected 
+                            color: isSelected
                                 ? const Color(0xFF667EEA).withOpacity(0.2)
                                 : Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(16),
@@ -601,10 +627,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Color(0xFF757575),
-            ),
+            style: const TextStyle(fontSize: 16, color: Color(0xFF757575)),
           ),
           const SizedBox(height: 60),
           Center(
@@ -619,11 +642,17 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                 GestureDetector(
                   onTap: () => _selectTime(isWakeUp),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 48,
+                      vertical: 20,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFA78BFA), width: 2),
+                      border: Border.all(
+                        color: const Color(0xFFA78BFA),
+                        width: 2,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFFA78BFA).withOpacity(0.1),
@@ -645,10 +674,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Tap to change time',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade500,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
                 ),
               ],
             ),

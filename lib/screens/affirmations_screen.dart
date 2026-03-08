@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/calm_technique.dart';
 
 class AffirmationsScreen extends StatefulWidget {
-  const AffirmationsScreen({Key? key}) : super(key: key);
+  const AffirmationsScreen({super.key});
 
   @override
   State<AffirmationsScreen> createState() => _AffirmationsScreenState();

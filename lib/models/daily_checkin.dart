@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class DailyCheckIn {
   final String id;
   final String userId;
@@ -25,7 +23,7 @@ class DailyCheckIn {
     return {
       'id': id,
       'userId': userId,
-      'date': Timestamp.fromDate(date),
+      'date': date.toIso8601String(),
       'mood': mood,
       'sleepQuality': sleepQuality,
       'energyLevel': energyLevel,
@@ -38,7 +36,7 @@ class DailyCheckIn {
     return DailyCheckIn(
       id: docId,
       userId: map['userId'] ?? '',
-      date: (map['date'] as Timestamp).toDate(),
+      date: DateTime.parse(map['date'] as String),
       mood: map['mood'] ?? '',
       sleepQuality: map['sleepQuality'] ?? 5,
       energyLevel: map['energyLevel'] ?? 5,

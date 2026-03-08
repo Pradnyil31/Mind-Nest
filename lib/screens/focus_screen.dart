@@ -7,7 +7,7 @@ import '../services/auth_service.dart';
 import '../services/focus_service.dart';
 
 class FocusScreen extends StatefulWidget {
-  const FocusScreen({Key? key}) : super(key: key);
+  const FocusScreen({super.key});
 
   @override
   State<FocusScreen> createState() => _FocusScreenState();

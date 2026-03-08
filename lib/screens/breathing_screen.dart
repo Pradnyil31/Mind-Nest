@@ -5,7 +5,7 @@ import '../models/breathing_technique.dart';
 import 'breathing_exercise_screen.dart';
 
 class BreathingScreen extends StatefulWidget {
-  const BreathingScreen({Key? key}) : super(key: key);
+  const BreathingScreen({super.key});
 
   @override
   State<BreathingScreen> createState() => _BreathingScreenState();

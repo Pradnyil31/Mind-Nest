@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart' hide Badge;
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/badge.dart';
-import '../services/progress_insights_service.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
-import '../config/motive_config.dart';
 
 class BadgesScreen extends StatefulWidget {
-  const BadgesScreen({Key? key}) : super(key: key);
+  const BadgesScreen({super.key});
 
   @override
   State<BadgesScreen> createState() => _BadgesScreenState();
 }
 
 class _BadgesScreenState extends State<BadgesScreen> {
-  final ProgressInsightsService _insightsService = ProgressInsightsService();
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
   List<Badge> _earnedBadges = [];
@@ -35,43 +31,27 @@ class _BadgesScreenState extends State<BadgesScreen> {
         setState(() {
           _isLoading = true;
         });
-        
+
         print('🔍 Loading badges for user: ${user.uid}');
-        
-        // Get earned badge IDs from Firestore
-        final earnedSnapshot = await FirebaseFirestore.instance
-            .collection('badges')
-            .doc(user.uid)
-            .collection('earned')
-            .get();
-        
-        final earnedBadgeIds = earnedSnapshot.docs.map((doc) => doc.id).toSet();
-        print('📝 Earned badge IDs from Firestore: $earnedBadgeIds');
-        
-        // Map to full Badge objects with earned dates
+
+        // TODO: Implement badge tracking in Supabase
+        // For now, use empty earned badges list
         final earnedBadges = <Badge>[];
-        for (final doc in earnedSnapshot.docs) {
-          final data = doc.data();
-          final badge = Badge.allBadges.firstWhere((b) => b.id == doc.id);
-          earnedBadges.add(badge.copyWith(
-            earnedDate: (data['earnedDate'] as Timestamp?)?.toDate(),
-          ));
-        }
-        
         print('✅ Loaded ${earnedBadges.length} earned badges');
 
         // Get user motive
         String? motive;
         try {
-          final userDoc = await _firestoreService.getUserStream(user.uid).first;
-          if (userDoc.exists) {
-            final data = userDoc.data() as Map<String, dynamic>;
-            motive = data['primaryMotive'] as String?;
+          final userSnapshot = await _firestoreService
+              .getUserStream(user.uid)
+              .first;
+          if (userSnapshot.exists) {
+            motive = userSnapshot.data()?['primaryMotive'] as String?;
           }
         } catch (e) {
           print('Error loading user motive: $e');
         }
-        
+
         if (mounted) {
           setState(() {
             _earnedBadges = earnedBadges;
@@ -158,9 +138,9 @@ class _BadgesScreenState extends State<BadgesScreen> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // Earned Badges Section
                     if (_earnedBadges.isNotEmpty) ...[
                       Text(
@@ -172,13 +152,17 @@ class _BadgesScreenState extends State<BadgesScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      ...(_earnedBadges.map((badge) => _buildBadgeCard(_themeBadge(badge), true))),
+                      ...(_earnedBadges.map(
+                        (badge) => _buildBadgeCard(_themeBadge(badge), true),
+                      )),
                       const SizedBox(height: 32),
                     ],
-                    
+
                     // Locked Badges Section
                     Text(
-                      _earnedBadges.isEmpty ? 'Available Badges' : 'Locked Badges',
+                      _earnedBadges.isEmpty
+                          ? 'Available Badges'
+                          : 'Locked Badges',
                       style: GoogleFonts.lato(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -188,7 +172,9 @@ class _BadgesScreenState extends State<BadgesScreen> {
                     const SizedBox(height: 16),
                     ...(Badge.allBadges
                         .where((b) => !_earnedBadges.any((e) => e.id == b.id))
-                        .map((badge) => _buildBadgeCard(_themeBadge(badge), false))),
+                        .map(
+                          (badge) => _buildBadgeCard(_themeBadge(badge), false),
+                        )),
                   ],
                 ),
               ),
@@ -240,7 +226,7 @@ class _BadgesScreenState extends State<BadgesScreen> {
             ),
           ),
           const SizedBox(width: 16),
-          
+
           // Badge Info
           Expanded(
             child: Column(
@@ -292,7 +278,9 @@ class _BadgesScreenState extends State<BadgesScreen> {
                   badge.description,
                   style: GoogleFonts.lato(
                     fontSize: 14,
-                    color: isEarned ? Colors.grey.shade700 : Colors.grey.shade400,
+                    color: isEarned
+                        ? Colors.grey.shade700
+                        : Colors.grey.shade400,
                   ),
                 ),
                 if (isEarned && badge.earnedDate != null)
@@ -317,8 +305,18 @@ class _BadgesScreenState extends State<BadgesScreen> {
 
   String _formatDate(DateTime date) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -359,9 +357,6 @@ class _BadgesScreenState extends State<BadgesScreen> {
     final overrides = motiveThemes[_userMotive]?[badge.id];
     if (overrides == null) return badge;
 
-    return badge.copyWith(
-      name: overrides['name'],
-      emoji: overrides['emoji'],
-    );
+    return badge.copyWith(name: overrides['name'], emoji: overrides['emoji']);
   }
 }

@@ -8,12 +8,12 @@ class TodaysRoutineCard extends StatelessWidget {
   final Function(String) onActivityToggle;
 
   const TodaysRoutineCard({
-    Key? key,
+    super.key,
     required this.allActivities,
     required this.completedActivities,
     required this.streak,
     required this.onActivityToggle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

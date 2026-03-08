@@ -4,12 +4,11 @@ import 'login_screen.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../models/user_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'home_screen.dart';
 import 'onboarding_flow_screen.dart';
 
 class AuthOptionsScreen extends StatelessWidget {
-  const AuthOptionsScreen({Key? key}) : super(key: key);
+  const AuthOptionsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +25,7 @@ class AuthOptionsScreen extends StatelessWidget {
         child: Column(
           children: [
             const Spacer(),
-            
+
             // Bottom Card with Auth Options
             Container(
               width: double.infinity,
@@ -52,44 +51,50 @@ class AuthOptionsScreen extends StatelessWidget {
                           onPressed: () async {
                             try {
                               final authService = AuthService();
-                              final userCredential = await authService.signInWithGoogle();
-                              
-                              if (userCredential != null && userCredential.user != null) {
-                                 final user = userCredential.user!;
-                                 
-                                 // Check Firestore
-                                 final userDoc = await FirebaseFirestore.instance
-                                     .collection('users')
-                                     .doc(user.uid)
-                                     .get();
-                                 
-                                 bool onboardingCompleted = false;
-                                 
-                                 if (!userDoc.exists) {
-                                    // Create new user
-                                    await FirestoreService().createUser(UserModel(
+                              final userCredential = await authService
+                                  .signInWithGoogle();
+
+                              if (userCredential != null &&
+                                  userCredential.user != null) {
+                                final user = userCredential.user!;
+
+                                // Check user in Supabase
+                                final firestoreService = FirestoreService();
+                                final userDoc = await firestoreService.getUser(
+                                  user.uid,
+                                );
+
+                                // TODO: Implement onboarding status tracking in Supabase
+                                bool onboardingCompleted =
+                                    userDoc !=
+                                    null; // Assume completed if user exists
+
+                                if (userDoc == null) {
+                                  // Create new user
+                                  await firestoreService.createUser(
+                                    UserModel(
                                       uid: user.uid,
                                       email: user.email ?? '',
-                                      displayName: user.displayName ?? 'New User',
+                                      displayName:
+                                          user.displayName ?? 'New User',
                                       createdAt: DateTime.now(),
                                       lastLogin: DateTime.now(),
                                       signInMethod: 'google',
-                                    ));
-                                 } else {
-                                   onboardingCompleted = userDoc.data()?['onboardingCompleted'] ?? false;
-                                 }
-                                 
-                                 if (context.mounted) {
-                                    Navigator.pushAndRemoveUntil(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => onboardingCompleted 
-                                            ? const HomeScreen() 
-                                            : const OnboardingFlowScreen(),
-                                      ),
-                                      (route) => false,
-                                    );
-                                 }
+                                    ),
+                                  );
+                                }
+
+                                if (context.mounted) {
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => onboardingCompleted
+                                          ? const HomeScreen()
+                                          : const OnboardingFlowScreen(),
+                                    ),
+                                    (route) => false,
+                                  );
+                                }
                               }
                             } catch (e) {
                               if (context.mounted) {
@@ -137,9 +142,9 @@ class AuthOptionsScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Continue with Email Button
                       SizedBox(
                         width: double.infinity,
@@ -181,7 +186,7 @@ class AuthOptionsScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 20),
 
                       // Login Link
@@ -199,7 +204,9 @@ class AuthOptionsScreen extends StatelessWidget {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
                               );
                             },
                             child: const Text(
@@ -213,9 +220,9 @@ class AuthOptionsScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Terms and Conditions
                       Text(
                         'by continuing, you agree with Mindnest\'s\nTerms & Conditions',

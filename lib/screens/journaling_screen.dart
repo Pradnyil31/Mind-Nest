@@ -7,7 +7,7 @@ import '../services/auth_service.dart';
 import 'journal_entry_screen.dart';
 
 class JournalingScreen extends StatelessWidget {
-  const JournalingScreen({Key? key}) : super(key: key);
+  const JournalingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

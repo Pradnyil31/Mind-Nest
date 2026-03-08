@@ -42,7 +42,7 @@ final hasCompletedOnboardingProvider = Provider<bool>((ref) {
       if (profile == null) return false;
       // Check if user has onboarding data
       // You can add more sophisticated checks here
-      return profile.displayName != null && profile.displayName!.isNotEmpty;
+      return profile.displayName.isNotEmpty;
     },
     loading: () => false,
     error: (_, __) => false,

@@ -1,21 +1,18 @@
-import '../models/progress_insights.dart';
 import '../models/routine_completion.dart';
 import '../models/badge.dart';
 import 'routine_tracking_service.dart';
-import 'firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/logger.dart';
 
 class ProgressInsightsService {
   final RoutineTrackingService _routineService = RoutineTrackingService();
-  final FirestoreService _firestoreService = FirestoreService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   /// Get trend direction based on recent activity
   Future<String> getTrendDirection(String userId) async {
     try {
       final weekCompletions = await _routineService.getWeekCompletions(userId);
-      
+
       if (weekCompletions.isEmpty) {
         return 'needs_attention';
       }
@@ -25,7 +22,7 @@ class ProgressInsightsService {
         0,
         (sum, completion) => sum + completion.completedActivities.length,
       );
-      
+
       final avgPerDay = totalActivities / 7;
 
       // Determine trend
@@ -37,7 +34,11 @@ class ProgressInsightsService {
         return 'needs_attention';
       }
     } catch (e, stackTrace) {
-      appLogger.e('Error getting trend direction', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        'Error getting trend direction',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return 'stable';
     }
   }
@@ -46,14 +47,14 @@ class ProgressInsightsService {
   Future<List<String>> getWeeklyHighlights(String userId) async {
     try {
       final highlights = <String>[];
-      
+
       // Get routine completions
       final weekCompletions = await _routineService.getWeekCompletions(userId);
       final totalActivities = weekCompletions.fold<int>(
         0,
         (sum, completion) => sum + completion.completedActivities.length,
       );
-      
+
       if (totalActivities > 0) {
         highlights.add('🎯 Completed $totalActivities activities this week');
       }
@@ -78,13 +79,20 @@ class ProgressInsightsService {
 
       return highlights;
     } catch (e, stackTrace) {
-      appLogger.e('Error getting weekly highlights', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        'Error getting weekly highlights',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return [];
     }
   }
 
   /// Generate encouraging message based on user's motive
-  Future<String> generateEncouragingMessage(String userId, {String? userMotive}) async {
+  Future<String> generateEncouragingMessage(
+    String userId, {
+    String? userMotive,
+  }) async {
     try {
       final streak = await _routineService.getCompletionStreak(userId);
       final highlights = await getWeeklyHighlights(userId);
@@ -93,18 +101,18 @@ class ProgressInsightsService {
       if (streak >= 7 && userMotive != null) {
         // Import MotiveConfig messages
         final streakMessages = {
-          'Sleep': '🌙 ${streak} nights of better sleep habits!',
-          'Stress': '💆 ${streak} days of stress management!',
-          'Anxiety': '🌊 ${streak} days of building calm!',
-          'Focus': '🎯 ${streak} days of mental clarity!',
-          'Habit Building': '📈 ${streak} days of consistency!',
+          'Sleep': '🌙 $streak nights of better sleep habits!',
+          'Stress': '💆 $streak days of stress management!',
+          'Anxiety': '🌊 $streak days of building calm!',
+          'Focus': '🎯 $streak days of mental clarity!',
+          'Habit Building': '📈 $streak days of consistency!',
         };
-        return streakMessages[userMotive] ?? '🌟 Amazing! ${streak} days in a row!';
-      }
-      else if (streak >= 7) {
-        return '🌟 Amazing! ${streak} days in a row! You\'re building incredible habits!';
+        return streakMessages[userMotive] ??
+            '🌟 Amazing! $streak days in a row!';
+      } else if (streak >= 7) {
+        return '🌟 Amazing! $streak days in a row! You\'re building incredible habits!';
       } else if (streak >= 3) {
-        return '💪 ${streak} days strong! Keep the momentum going!';
+        return '💪 $streak days strong! Keep the momentum going!';
       } else if (highlights.length >= 3) {
         return '✨ You\'re doing great this week! Keep it up!';
       } else if (highlights.isNotEmpty) {
@@ -160,7 +168,10 @@ class ProgressInsightsService {
       final snapshot = await _firestore
           .collection('meditation_sessions')
           .where('userId', isEqualTo: userId)
-          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(weekAgo))
+          .where(
+            'timestamp',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(weekAgo),
+          )
           .get();
       return snapshot.docs.length;
     } catch (e) {
@@ -174,7 +185,10 @@ class ProgressInsightsService {
       final snapshot = await _firestore
           .collection('journal_entries')
           .where('userId', isEqualTo: userId)
-          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(weekAgo))
+          .where(
+            'timestamp',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(weekAgo),
+          )
           .get();
       return snapshot.docs.length;
     } catch (e) {
@@ -201,28 +215,32 @@ class ProgressInsightsService {
         case 'first_step':
           final completions = await _routineService.getWeekCompletions(userId);
           return completions.isNotEmpty;
-        
+
         case 'week_warrior':
           final streak = await _routineService.getCompletionStreak(userId);
           return streak >= 7;
-        
+
         case 'perfect_week':
-          final weekCompletions = await _routineService.getWeekCompletions(userId);
+          final weekCompletions = await _routineService.getWeekCompletions(
+            userId,
+          );
           return weekCompletions.length >= 7 &&
-              weekCompletions.every((c) => c.completedActivities.length == c.totalActivities);
-        
+              weekCompletions.every(
+                (c) => c.completedActivities.length == c.totalActivities,
+              );
+
         case 'meditation_master':
           final meditationCount = await _getMeditationCountEver(userId);
           return meditationCount >= 10;
-        
+
         case 'journal_warrior':
           final journalCount = await _getJournalCountEver(userId);
           return journalCount >= 15;
-        
+
         case 'goal_crusher':
           final goalsCount = await _getCompletedGoalsCount(userId);
           return goalsCount >= 3;
-        
+
         default:
           return false;
       }
@@ -282,13 +300,20 @@ class ProgressInsightsService {
   }
 
   /// Get completion history for charting - Returns map of dates to completion percentages
-  Future<Map<DateTime, double>> getCompletionHistory(String userId, int days) async {
+  Future<Map<DateTime, double>> getCompletionHistory(
+    String userId,
+    int days,
+  ) async {
     try {
       final history = <DateTime, double>{};
       final now = DateTime.now();
-      
+
       // Get all completions for the date range in one query
-      final startDate = DateTime(now.year, now.month, now.day).subtract(Duration(days: days));
+      final startDate = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: days));
       final snapshot = await _firestore
           .collection('routine_completions')
           .where('userId', isEqualTo: userId)
@@ -298,30 +323,42 @@ class ProgressInsightsService {
       // Create a map for quick lookup
       final Map<String, RoutineCompletion> completionMap = {};
       for (var doc in snapshot.docs) {
-         final completion = RoutineCompletion.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-         final dateStr = "${completion.date.year}-${completion.date.month}-${completion.date.day}";
-         completionMap[dateStr] = completion;
+        final completion = RoutineCompletion.fromMap(doc.data(), doc.id);
+        final dateStr =
+            "${completion.date.year}-${completion.date.month}-${completion.date.day}";
+        completionMap[dateStr] = completion;
       }
-      
+
       // Fill in all days (even zero ones)
       for (int i = days - 1; i >= 0; i--) {
-        final date = DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
+        final date = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(Duration(days: i));
         final dateStr = "${date.year}-${date.month}-${date.day}";
-        
+
         double percentage = 0.0;
         if (completionMap.containsKey(dateStr)) {
-           final completion = completionMap[dateStr]!;
-           if (completion.totalActivities > 0) {
-             percentage = (completion.completedActivities.length / completion.totalActivities) * 100;
-             if (percentage > 100) percentage = 100; // Cap at 100%
-           }
+          final completion = completionMap[dateStr]!;
+          if (completion.totalActivities > 0) {
+            percentage =
+                (completion.completedActivities.length /
+                    completion.totalActivities) *
+                100;
+            if (percentage > 100) percentage = 100; // Cap at 100%
+          }
         }
         history[date] = percentage;
       }
-      
+
       return history;
     } catch (e, stackTrace) {
-      appLogger.e('Error getting completion history', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        'Error getting completion history',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return {};
     }
   }
@@ -332,17 +369,19 @@ class ProgressInsightsService {
       final breakdown = <String, int>{};
       final now = DateTime.now();
       final startDate = now.subtract(Duration(days: days));
-      
+
       final snapshot = await _firestore
           .collection('routine_completions')
           .where('userId', isEqualTo: userId)
           .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
           .get();
-      
+
       for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final completedActivities = List<String>.from(data['completedActivities'] ?? []);
-        
+        final data = doc.data();
+        final completedActivities = List<String>.from(
+          data['completedActivities'] ?? [],
+        );
+
         // Count each activity
         for (final activity in completedActivities) {
           if (activity.isNotEmpty) {
@@ -350,45 +389,15 @@ class ProgressInsightsService {
           }
         }
       }
-      
+
       return breakdown;
     } catch (e, stackTrace) {
-      appLogger.e('Error getting activity breakdown', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        'Error getting activity breakdown',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return {};
     }
-  }
-
-  Future<int> _getCompletionsForDate(String userId, DateTime date) async {
-    final startOfDay = DateTime(date.year, date.month, date.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-    
-    final snapshot = await _firestore
-        .collection('routine_completions')
-        .where('userId', isEqualTo: userId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('date', isLessThan: Timestamp.fromDate(endOfDay))
-        .get();
-    
-    // Count total completed activities across all documents for this day
-    int totalCompletions = 0;
-    for (var doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
-      final activities = List<String>.from(data['completedActivities'] ?? []);
-      totalCompletions += activities.length;
-    }
-    
-    return totalCompletions;
-  }
-
-  Future<int> _getTotalActivitiesForDate(String userId, DateTime date) async {
-    final userDoc = await _firestore.collection('users').doc(userId).get();
-    
-    if (userDoc.exists) {
-      final data = userDoc.data() as Map<String, dynamic>;
-      final routineActivities = List<String>.from(data['routineActivities'] ?? []);
-      return routineActivities.isNotEmpty ? routineActivities.length : 5;
-    }
-    
-    return 5;
   }
 }
