@@ -27,6 +27,7 @@ create table if not exists public.profiles (
   additional_activities text[] default '{}',
   base_routine text[] default '{}',
   sleep_data jsonb default '{}'::jsonb,
+  last_generated_date timestamptz,
   updated_at timestamptz not null default now()
 );
 

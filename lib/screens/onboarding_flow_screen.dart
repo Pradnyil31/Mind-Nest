@@ -98,9 +98,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       if (user != null) {
         await _firestoreService.updateUser(user.uid, {
           'primaryMotive': _selectedMotive,
-          'primaryGoals': [
-            _selectedMotive ?? 'General Wellness',
-          ], // Save for compatibility
           'supportAreas': _selectedSupportAreas,
           'experienceLevel': _selectedExperienceLevel,
           'preferredTime': _selectedPreferredTime,
@@ -121,7 +118,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             commitment: _selectedCommitment,
             supportAreas: _selectedSupportAreas,
           ),
-          'lastGeneratedDate': DateTime.now().toIso8601String(),
+          'last_generated_date': DateTime.now().toIso8601String(),
         });
 
         if (mounted) {

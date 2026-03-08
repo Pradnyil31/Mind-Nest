@@ -241,7 +241,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
 
           // Stamp today's date so the daily generator doesn't overwrite this
           // customization until tomorrow's fresh generation.
-          'lastGeneratedDate': now.toIso8601String(),
+          'last_generated_date': now.toIso8601String(),
         });
 
         // 5. Schedule Notifications

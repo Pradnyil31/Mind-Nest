@@ -131,10 +131,44 @@ class FirestoreService {
         .from('profiles')
         .stream(primaryKey: ['id'])
         .eq('id', uid)
-        .map((rows) {
-          if (rows.isEmpty) return const AppDocumentSnapshot(null);
+        .asyncMap((rows) async {
+          if (rows.isEmpty) {
+            final authUser = _client.auth.currentUser;
+            if (authUser != null && authUser.id == uid) {
+              await _safeCreateProfileFromAuth(authUser);
+              final created = await _client
+                  .from('profiles')
+                  .select()
+                  .eq('id', uid)
+                  .maybeSingle();
+              if (created != null) {
+                return AppDocumentSnapshot(_fromProfileRow(created));
+              }
+            }
+            return const AppDocumentSnapshot(null);
+          }
           return AppDocumentSnapshot(_fromProfileRow(rows.first));
         });
+  }
+
+  Future<void> _safeCreateProfileFromAuth(User authUser) async {
+    final profile = {
+      'id': authUser.id,
+      'email': authUser.email ?? '',
+      'display_name':
+          (authUser.userMetadata?['display_name'] as String?) ??
+          (authUser.email?.split('@').first ?? 'User'),
+      'sign_in_method':
+          (authUser.appMetadata['provider'] as String?) ?? 'email',
+      'created_at': DateTime.now().toIso8601String(),
+      'last_login': DateTime.now().toIso8601String(),
+    };
+
+    try {
+      await _client.from('profiles').upsert(profile);
+    } catch (_) {
+      // Ignore here: stream will continue and caller handles null profile state.
+    }
   }
 
   Future<void> saveDailyMotive(String uid, String motive) async {
@@ -249,6 +283,7 @@ class FirestoreService {
       'temporarySchedule': 'temporary_schedule',
       'additionalActivities': 'additional_activities',
       'baseRoutine': 'base_routine',
+      'lastGeneratedDate': 'last_generated_date',
     };
 
     data.forEach((key, value) {
@@ -307,6 +342,11 @@ class FirestoreService {
         row['additional_activities'] ?? [],
       ),
       'baseRoutine': List<String>.from(row['base_routine'] ?? []),
+      'lastGeneratedDate': row['last_generated_date'] == null
+          ? null
+          : (row['last_generated_date'] is DateTime
+                ? (row['last_generated_date'] as DateTime).toIso8601String()
+                : row['last_generated_date'].toString()),
     };
   }
 }

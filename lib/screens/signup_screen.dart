@@ -17,10 +17,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
-  
+
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
@@ -48,20 +48,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       if (userCredential != null && userCredential.user != null) {
-        // Create user document in Firestore
+        // If session is null here, Supabase "Confirm email" is still enabled.
+        // For this app flow we require immediate sign-in.
+        if (_authService.currentUser == null) {
+          throw 'Email confirmation is enabled in Supabase. Disable it in Authentication > Providers > Email (turn off Confirm email).';
+        }
+
         final user = UserModel(
           uid: userCredential.user!.uid,
           email: _emailController.text.trim(),
-          displayName: _emailController.text.split('@')[0], // Use email username as display name
+          displayName: _emailController.text.split('@')[0],
           createdAt: DateTime.now(),
           lastLogin: DateTime.now(),
           signInMethod: 'email',
         );
-
         await _firestoreService.createUser(user);
 
         if (mounted) {
-          // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Account created successfully! 🎉'),
@@ -70,7 +73,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           );
 
-          // Navigate to Onboarding Flow
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => const OnboardingFlowScreen()),
@@ -126,7 +128,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 24),
-                
+
                 // Email Field
                 TextFormField(
                   controller: _emailController,
@@ -137,10 +139,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   decoration: InputDecoration(
                     hintText: 'Email',
-                    hintStyle: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 16,
-                    ),
+                    hintStyle: TextStyle(color: Colors.grey[600], fontSize: 16),
                     filled: true,
                     fillColor: const Color(0xFFF0EDF5),
                     border: OutlineInputBorder(
@@ -162,9 +161,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Password Field
                 TextFormField(
                   controller: _passwordController,
@@ -175,10 +174,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   decoration: InputDecoration(
                     hintText: 'Password',
-                    hintStyle: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 16,
-                    ),
+                    hintStyle: TextStyle(color: Colors.grey[600], fontSize: 16),
                     filled: true,
                     fillColor: const Color(0xFFF0EDF5),
                     border: OutlineInputBorder(
@@ -213,9 +209,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Confirm Password Field
                 TextFormField(
                   controller: _confirmPasswordController,
@@ -226,10 +222,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   decoration: InputDecoration(
                     hintText: 'Confirm Password',
-                    hintStyle: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 16,
-                    ),
+                    hintStyle: TextStyle(color: Colors.grey[600], fontSize: 16),
                     filled: true,
                     fillColor: const Color(0xFFF0EDF5),
                     border: OutlineInputBorder(
@@ -249,7 +242,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       onPressed: () {
                         setState(() {
-                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                          _isConfirmPasswordVisible =
+                              !_isConfirmPasswordVisible;
                         });
                       },
                     ),
@@ -264,9 +258,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     return null;
                   },
                 ),
-                
+
                 const Spacer(),
-                
+
                 // Already have account link
                 TextButton(
                   onPressed: () {
@@ -285,9 +279,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Sign Up Button
                 SizedBox(
                   width: double.infinity,
@@ -320,7 +314,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
               ],
             ),

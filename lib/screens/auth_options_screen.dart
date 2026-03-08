@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import 'signup_screen.dart';
 import 'login_screen.dart';
 import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
-import '../models/user_model.dart';
-import 'home_screen.dart';
-import 'onboarding_flow_screen.dart';
 
 class AuthOptionsScreen extends StatelessWidget {
   const AuthOptionsScreen({super.key});
@@ -51,51 +47,7 @@ class AuthOptionsScreen extends StatelessWidget {
                           onPressed: () async {
                             try {
                               final authService = AuthService();
-                              final userCredential = await authService
-                                  .signInWithGoogle();
-
-                              if (userCredential != null &&
-                                  userCredential.user != null) {
-                                final user = userCredential.user!;
-
-                                // Check user in Supabase
-                                final firestoreService = FirestoreService();
-                                final userDoc = await firestoreService.getUser(
-                                  user.uid,
-                                );
-
-                                // TODO: Implement onboarding status tracking in Supabase
-                                bool onboardingCompleted =
-                                    userDoc !=
-                                    null; // Assume completed if user exists
-
-                                if (userDoc == null) {
-                                  // Create new user
-                                  await firestoreService.createUser(
-                                    UserModel(
-                                      uid: user.uid,
-                                      email: user.email ?? '',
-                                      displayName:
-                                          user.displayName ?? 'New User',
-                                      createdAt: DateTime.now(),
-                                      lastLogin: DateTime.now(),
-                                      signInMethod: 'google',
-                                    ),
-                                  );
-                                }
-
-                                if (context.mounted) {
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => onboardingCompleted
-                                          ? const HomeScreen()
-                                          : const OnboardingFlowScreen(),
-                                    ),
-                                    (route) => false,
-                                  );
-                                }
-                              }
+                              await authService.signInWithGoogle();
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(

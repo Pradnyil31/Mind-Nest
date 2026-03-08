@@ -1023,11 +1023,11 @@ class ProfileScreen extends StatelessWidget {
                           }
                         } else {
                           // Case B: No activity -> Update immediately
-                          // We set lastGeneratedDate to past to trigger Home Screen regeneration
+                          // We set last_generated_date to past to trigger Home Screen regeneration
                           await FirestoreService().updateUser(user.uid, {
                             'primaryMotive': motive,
                             'baseRoutine': newActivities,
-                            'lastGeneratedDate': DateTime(
+                            'last_generated_date': DateTime(
                               2000,
                               1,
                               1,

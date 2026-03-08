@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../models/user_model.dart';
 import 'home_screen.dart';
 import 'onboarding_flow_screen.dart';
 import 'signup_screen.dart';
@@ -46,9 +47,24 @@ class _LoginScreenState extends State<LoginScreen> {
       if (userCredential != null && userCredential.user != null) {
         // Check user document for onboarding status
         final firestoreService = FirestoreService();
-        final userDoc = await firestoreService.getUser(
+        UserModel? userDoc = await firestoreService.getUser(
           userCredential.user!.uid,
         );
+
+        if (userDoc == null) {
+          final newUser = UserModel(
+            uid: userCredential.user!.uid,
+            email: userCredential.user!.email ?? _emailController.text.trim(),
+            displayName:
+                userCredential.user!.displayName ??
+                _emailController.text.split('@')[0],
+            createdAt: DateTime.now(),
+            lastLogin: DateTime.now(),
+            signInMethod: 'email',
+          );
+          await firestoreService.createUser(newUser);
+          userDoc = await firestoreService.getUser(userCredential.user!.uid);
+        }
 
         // TODO: Implement onboarding status tracking in Supabase
         bool onboardingCompleted =

@@ -225,13 +225,15 @@ class _HomeContentState extends ConsumerState<HomeContent> {
     String uid,
     Map<String, dynamic> data,
   ) async {
-    final lastGenerated = data['lastGeneratedDate'] as String?;
+    final lastGeneratedRaw = data['last_generated_date'];
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month}-${now.day}";
 
-    bool isNewDay = lastGenerated == null;
+    bool isNewDay = lastGeneratedRaw == null;
     if (!isNewDay) {
-      final lastDate = DateTime.parse(lastGenerated);
+      final lastDate = lastGeneratedRaw is DateTime
+          ? lastGeneratedRaw
+          : DateTime.parse(lastGeneratedRaw.toString());
       final lastDateStr = "${lastDate.year}-${lastDate.month}-${lastDate.day}";
       if (lastDateStr != todayStr) isNewDay = true;
     }
@@ -274,7 +276,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
         'routineActivities': newDaily,
         'routineSchedule': newSchedule,
         'temporarySchedule': {}, // Reset daily completion state
-        'lastGeneratedDate': now.toIso8601String(),
+        'last_generated_date': now.toIso8601String(),
       });
     } else {
       // Same day â€” self-healing check for Caffeine Cutoff time only
@@ -757,7 +759,8 @@ class _HomeContentState extends ConsumerState<HomeContent> {
         if (snapshot.hasData && snapshot.data!.exists) {
           final data = snapshot.data!.data() as Map<String, dynamic>;
           displayName = data['displayName'] ?? 'User';
-          goals = List<String>.from(data['primaryGoals'] ?? []);
+          primaryMotive = data['primaryMotive'] as String?;
+          goals = primaryMotive != null ? [primaryMotive] : [];
           routine = Map<String, dynamic>.from(data['routine'] ?? {});
           // â”€â”€ Source-of-truth for activity list â”€â”€
           // routineSchedule is written by Manage Routine's Save and is canonical.
@@ -802,8 +805,6 @@ class _HomeContentState extends ConsumerState<HomeContent> {
           if (_checkInCompleted) {
             additionalActivities.remove('Daily Check-ins');
           }
-
-          primaryMotive = data['primaryMotive'] as String?;
 
           if (data['loginDates'] != null) {
             loginDates = (data['loginDates'] as List<dynamic>)

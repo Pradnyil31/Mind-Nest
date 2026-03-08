@@ -54,15 +54,19 @@ class UserModel {
       uid: map['uid'] ?? '',
       email: map['email'] ?? '',
       displayName: map['displayName'] ?? '',
-      createdAt: DateTime.parse(map['createdAt'] as String),
+      createdAt: map['createdAt'] is DateTime
+          ? map['createdAt']
+          : DateTime.parse(map['createdAt'] as String),
       lastLogin: map['lastLogin'] != null
-          ? DateTime.parse(map['lastLogin'] as String)
+          ? (map['lastLogin'] is DateTime
+                ? map['lastLogin']
+                : DateTime.parse(map['lastLogin'] as String))
           : null,
       photoURL: map['photoURL'],
       signInMethod: map['signInMethod'],
       loginDates: map['loginDates'] != null
           ? (map['loginDates'] as List<dynamic>)
-                .map((e) => DateTime.parse(e as String))
+                .map((e) => e is DateTime ? e : DateTime.parse(e as String))
                 .toList()
           : [],
       sleepData: map['sleepData'] as Map<String, dynamic>?,
