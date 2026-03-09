@@ -241,10 +241,12 @@ class _HomeContentState extends ConsumerState<HomeContent> {
     // Always parse wake/bed times from Firestore
     if (data.containsKey('routine')) {
       final routine = data['routine'] as Map<String, dynamic>;
-      if (routine.containsKey('wakeUpTime'))
+      if (routine.containsKey('wakeUpTime')) {
         _wakeTime = _parseTime(routine['wakeUpTime']);
-      if (routine.containsKey('bedTime'))
+      }
+      if (routine.containsKey('bedTime')) {
         _bedTime = _parseTime(routine['bedTime']);
+      }
     }
 
     if (isNewDay) {
@@ -331,12 +333,15 @@ class _HomeContentState extends ConsumerState<HomeContent> {
         .where((a) => RoutineConfig.getTimePeriod(a) == 'Evening')
         .toList();
 
-    if (morningPool.length < 4)
+    if (morningPool.length < 4) {
       morningPool.addAll(RoutineConfig.getActivitiesForPeriod('Morning'));
-    if (afternoonPool.length < 4)
+    }
+    if (afternoonPool.length < 4) {
       afternoonPool.addAll(RoutineConfig.getActivitiesForPeriod('Afternoon'));
-    if (eveningPool.length < 4)
+    }
+    if (eveningPool.length < 4) {
       eveningPool.addAll(RoutineConfig.getActivitiesForPeriod('Evening'));
+    }
 
     morningPool.shuffle(rng);
     afternoonPool.shuffle(rng);
@@ -613,12 +618,15 @@ class _HomeContentState extends ConsumerState<HomeContent> {
   }
 
   Color _getMotiveColor(String motive) {
-    if (motive.contains('Sleep') || motive.contains('Rest'))
+    if (motive.contains('Sleep') || motive.contains('Rest')) {
       return const Color(0xFF818CF8);
-    if (motive.contains('Stress') || motive.contains('Calm'))
+    }
+    if (motive.contains('Stress') || motive.contains('Calm')) {
       return const Color(0xFF34D399);
-    if (motive.contains('Focus') || motive.contains('Work'))
+    }
+    if (motive.contains('Focus') || motive.contains('Work')) {
       return const Color(0xFFF472B6);
+    }
     return const Color(0xFFFBBF24);
   }
 

@@ -1,8 +1,9 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../core/logger.dart';
 
 class ChatService {
-  static const String _apiKey = 'AIzaSyBnVSVukO9q5H9fdi9eoezkKyQ1mBFTPmc';
+  static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
 
   // List of models to try in order of preference/likelihood of working
   final List<String> _fallbackModels = [

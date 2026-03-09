@@ -1,4 +1,3 @@
-import '../core/logger.dart';
 
 class MeditationAnalyticsService {
   // TODO: Implement Supabase integration for meditation analytics

@@ -12,6 +12,7 @@ class UserModel {
   final List<String>? secondaryMotives; // Additional goals
   final String? preferredTime; // Morning, Afternoon, Evening, Before Bed
   final String? dailyCommitment; // 5min, 10min, 15min, 30+min
+  final bool? onboardingCompleted; // Whether user completed onboarding
 
   UserModel({
     required this.uid,
@@ -27,6 +28,7 @@ class UserModel {
     this.secondaryMotives,
     this.preferredTime,
     this.dailyCommitment,
+    this.onboardingCompleted,
   });
 
   // Convert to Map for Supabase
@@ -45,6 +47,7 @@ class UserModel {
       'secondaryMotives': secondaryMotives,
       'preferredTime': preferredTime,
       'dailyCommitment': dailyCommitment,
+      'onboardingCompleted': onboardingCompleted,
     };
   }
 
@@ -75,6 +78,7 @@ class UserModel {
           ? List<String>.from(map['secondaryMotives'])
           : null,
       preferredTime: map['preferredTime'] as String?,
+      onboardingCompleted: map['onboardingCompleted'] as bool?,
       dailyCommitment: map['dailyCommitment'] as String?,
     );
   }
@@ -94,6 +98,7 @@ class UserModel {
     List<String>? secondaryMotives,
     String? preferredTime,
     String? dailyCommitment,
+    bool? onboardingCompleted,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -109,6 +114,7 @@ class UserModel {
       secondaryMotives: secondaryMotives ?? this.secondaryMotives,
       preferredTime: preferredTime ?? this.preferredTime,
       dailyCommitment: dailyCommitment ?? this.dailyCommitment,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     );
   }
 }

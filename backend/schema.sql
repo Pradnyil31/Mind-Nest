@@ -92,7 +92,22 @@ create table if not exists public.journal_entries (
   title text not null,
   content text not null,
   mood text,
+  tags text[] default '{}',
   created_at timestamptz not null default now()
+);
+
+-- Daily check-ins
+create table if not exists public.daily_checkins (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  date date not null,
+  mood text not null,
+  sleep_quality int not null default 5,
+  energy_level int not null default 5,
+  active_goals_checked text[] default '{}',
+  notes text,
+  created_at timestamptz not null default now(),
+  unique(user_id, date)
 );
 
 -- Meditation sessions
@@ -120,7 +135,11 @@ create table if not exists public.smart_goals (
   user_id uuid not null references auth.users(id) on delete cascade,
   title text not null,
   description text,
+  target_value double precision not null default 0,
+  current_value double precision not null default 0,
+  unit text not null default '',
   deadline timestamptz,
+  color_value int not null default 0xFF4CAF50,
   is_completed boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -135,6 +154,7 @@ alter table public.daily_motives enable row level security;
 alter table public.routine_completions enable row level security;
 alter table public.badges_earned enable row level security;
 alter table public.journal_entries enable row level security;
+alter table public.daily_checkins enable row level security;
 alter table public.meditation_sessions enable row level security;
 alter table public.focus_sessions enable row level security;
 alter table public.smart_goals enable row level security;
@@ -147,6 +167,7 @@ drop policy if exists "daily_motives_all_own" on public.daily_motives;
 drop policy if exists "routine_completions_all_own" on public.routine_completions;
 drop policy if exists "badges_earned_all_own" on public.badges_earned;
 drop policy if exists "journal_entries_all_own" on public.journal_entries;
+drop policy if exists "daily_checkins_all_own" on public.daily_checkins;
 drop policy if exists "meditation_sessions_all_own" on public.meditation_sessions;
 drop policy if exists "focus_sessions_all_own" on public.focus_sessions;
 drop policy if exists "smart_goals_all_own" on public.smart_goals;
@@ -186,6 +207,12 @@ with check (auth.uid() = user_id);
 -- Journal entries policies
 create policy "journal_entries_all_own"
 on public.journal_entries for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+-- Daily check-ins policies
+create policy "daily_checkins_all_own"
+on public.daily_checkins for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 

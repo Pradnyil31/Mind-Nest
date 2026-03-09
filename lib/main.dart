@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_flow_screen.dart';
@@ -12,6 +13,9 @@ import 'config/supabase_config.dart';
 void main() async {
   // Force rebuild timestamp 2
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
 
   // Initialize Notifications
   await NotificationService().init();
@@ -88,11 +92,11 @@ class AuthWrapper extends ConsumerWidget {
               return const WelcomeScreen();
             }
 
-            // Check if user has completed onboarding
-            // For now, we check if displayName is set (set during onboarding)
-            final hasCompletedOnboarding = profile.displayName.isNotEmpty;
+            // Check if user has completed onboarding by checking the onboardingCompleted field
+            // This is set during onboarding flow, not automatically populated
+            final onboardingCompleted = profile.onboardingCompleted ?? false;
 
-            if (hasCompletedOnboarding) {
+            if (onboardingCompleted) {
               return const HomeScreen();
             } else {
               return const OnboardingFlowScreen();
