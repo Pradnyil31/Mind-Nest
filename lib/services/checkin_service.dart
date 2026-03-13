@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/logger.dart';
 import '../models/daily_checkin.dart';
+import 'firestore_service.dart';
 
 class CheckInService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirestoreService _firestoreService = FirestoreService();
 
   CollectionReference get _checkInsCollection => _firestore.collection('daily_checkins');
   CollectionReference get _usersCollection => _firestore.collection('users');
@@ -23,6 +25,9 @@ class CheckInService {
       );
       
       await docRef.set(checkInWithId.toMap());
+
+      // Log completion for badge system — only fires on actual check-in submission
+      _firestoreService.logActivityCompletion(checkIn.userId, 'daily_checkin');
       
       // Trigger adaptive routine logic and return changes
       return await _applyAdaptiveRoutine(checkIn);

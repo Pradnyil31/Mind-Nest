@@ -176,4 +176,44 @@ class FirestoreService {
       throw 'Failed to get sleep data: $e';
     }
   }
+
+  // ── Activity Completion Tracking ─────────────────────────────────────────
+  // Called whenever a user FULLY completes an activity (not just opens it).
+  // Powers the badge system with fast single-document reads instead of
+  // expensive full-collection scans.
+  //
+  // activityKey values: 'journaling' | 'focus_session' | 'meditation'
+  //                     | 'smart_goals' | 'daily_checkin' | 'breathing'
+  Future<void> logActivityCompletion(String uid, String activityKey) async {
+    try {
+      await _usersCollection
+          .doc(uid)
+          .collection('activity_stats')
+          .doc(activityKey)
+          .set({
+        'completionCount': FieldValue.increment(1),
+        'lastCompleted': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      // Silent fail — never block the user's main action for analytics
+    }
+  }
+
+  // Get total completion count for a single activity (used by badge system)
+  Future<int> getActivityCompletionCount(String uid, String activityKey) async {
+    try {
+      final doc = await _usersCollection
+          .doc(uid)
+          .collection('activity_stats')
+          .doc(activityKey)
+          .get();
+      if (doc.exists) {
+        return (doc.data()?['completionCount'] as int?) ?? 0;
+      }
+      return 0;
+    } catch (e) {
+      return 0;
+    }
+  }
 }
+

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/logger.dart';
+import 'firestore_service.dart';
 
 class MeditationAnalyticsService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -130,6 +131,9 @@ class MeditationAnalyticsService {
           'lastMeditationDate': FieldValue.serverTimestamp(),
         });
       }
+
+      // Log completion for badge system — only fires after a full session
+      FirestoreService().logActivityCompletion(userId, 'meditation');
     } catch (e, stackTrace) {
       appLogger.e('Error updating meditation stats', error: e, stackTrace: stackTrace);
     }

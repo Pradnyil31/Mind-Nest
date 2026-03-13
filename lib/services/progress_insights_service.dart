@@ -212,12 +212,14 @@ class ProgressInsightsService {
               weekCompletions.every((c) => c.completedActivities.length == c.totalActivities);
         
         case 'meditation_master':
-          final meditationCount = await _getMeditationCountEver(userId);
-          return meditationCount >= 10;
+          // Fast single-document read using activity_stats (no full collection scan)
+          final count = await _getActivityCompletionCount(userId, 'meditation');
+          return count >= 10;
         
         case 'journal_warrior':
-          final journalCount = await _getJournalCountEver(userId);
-          return journalCount >= 15;
+          // Fast single-document read using activity_stats (no full collection scan)
+          final count = await _getActivityCompletionCount(userId, 'journaling');
+          return count >= 15;
         
         case 'goal_crusher':
           final goalsCount = await _getCompletedGoalsCount(userId);
@@ -231,25 +233,20 @@ class ProgressInsightsService {
     }
   }
 
-  Future<int> _getMeditationCountEver(String userId) async {
+  /// Fast single-document read from activity_stats — used by badge system.
+  /// Much cheaper than full collection scans.
+  Future<int> _getActivityCompletionCount(String userId, String activityKey) async {
     try {
-      final snapshot = await _firestore
-          .collection('meditation_sessions')
-          .where('userId', isEqualTo: userId)
+      final doc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('activity_stats')
+          .doc(activityKey)
           .get();
-      return snapshot.docs.length;
-    } catch (e) {
+      if (doc.exists) {
+        return (doc.data()?['completionCount'] as int?) ?? 0;
+      }
       return 0;
-    }
-  }
-
-  Future<int> _getJournalCountEver(String userId) async {
-    try {
-      final snapshot = await _firestore
-          .collection('journal_entries')
-          .where('userId', isEqualTo: userId)
-          .get();
-      return snapshot.docs.length;
     } catch (e) {
       return 0;
     }

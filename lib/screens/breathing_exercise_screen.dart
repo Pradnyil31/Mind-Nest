@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/breathing_technique.dart';
+import '../services/firestore_service.dart';
+import '../services/voice_service.dart';
 
 class BreathingExerciseScreen extends StatefulWidget {
   final BreathingTechnique technique;
@@ -25,10 +28,27 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
   String _instructionText = 'Get Ready...';
   bool _isActive = false;
 
+  // Round tracking — 3 full rounds = 1 completed session
+  int _completedRounds = 0;
+  static const int _targetRounds = 3;
+  bool _sessionLogged = false;
+
+  // Voice
+  final VoiceService _voice = VoiceService();
+  String _lastSpokenInstruction = '';
+
+  // Background animation
+  late AnimationController _bgController;
+
   @override
   void initState() {
     super.initState();
     _setupAnimations();
+    _bgController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 14),
+    )..repeat(reverse: true);
+    _voice.init();
     _startSession();
   }
 
@@ -65,19 +85,82 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
   void _nextStep() {
     if (!mounted || !_isActive) return;
 
+    final previousIndex = _currentStepIndex;
+
     setState(() {
       _currentStepIndex = (_currentStepIndex + 1) % 4;
       // Skip steps with 0 duration (e.g., 4-7-8 has no hold after exhale)
       while (widget.technique.pattern[_currentStepIndex] == 0) {
         _currentStepIndex = (_currentStepIndex + 1) % 4;
       }
-      
+
+      // A full round is completed when we wrap back past the exhale step (index 2)
+      if (previousIndex == 2 && _currentStepIndex == 0) {
+        _completedRounds++;
+      } else if (previousIndex >= 2 && _currentStepIndex < previousIndex) {
+        _completedRounds++;
+      }
+
       _secondsRemaining = widget.technique.pattern[_currentStepIndex];
     });
+
+    // After 3 full rounds, count as a completed session
+    if (_completedRounds >= _targetRounds && !_sessionLogged) {
+      _sessionLogged = true;
+      _timer?.cancel();
+      setState(() => _isActive = false);
+      _logCompletionAndShowDialog();
+      return;
+    }
 
     _updateInstruction();
     _animatePhase();
     _startTimer();
+  }
+
+  Future<void> _logCompletionAndShowDialog() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      FirestoreService().logActivityCompletion(uid, 'breathing');
+    }
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('🌬️  Session Complete!',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(
+          'You completed $_targetRounds full breathing cycles. Great work!',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            child: const Text('Done', style: TextStyle(color: Color(0xFF6C63FF))),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              // Reset and start again
+              setState(() {
+                _completedRounds = 0;
+                _sessionLogged = false;
+                _isActive = false;
+              });
+              _startSession();
+            },
+            child: const Text('Go Again', style: TextStyle(color: Color(0xFF26C6DA))),
+          ),
+        ],
+      ),
+    );
   }
 
   void _updateInstruction() {
@@ -94,6 +177,11 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
       case 3:
         _instructionText = 'Hold';
         break;
+    }
+    // Speak the instruction only when it changes
+    if (_instructionText != _lastSpokenInstruction) {
+      _lastSpokenInstruction = _instructionText;
+      _voice.speak(_instructionText);
     }
   }
 
@@ -154,25 +242,60 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
     for (var c in _bloomControllers) {
       c.dispose();
     }
+    _voice.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E), // Deep dark peaceful background
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Back Button
-            Positioned(
-              top: 16,
-              left: 16,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white70),
-                onPressed: () => Navigator.pop(context),
+    return AnimatedBuilder(
+      animation: _bgController,
+      builder: (context, child) {
+        final t = _bgController.value;
+        final bg1 = Color.lerp(const Color(0xFF0A1A28), const Color(0xFF0D2233), t)!;
+        final bg2 = Color.lerp(const Color(0xFF0D2233), const Color(0xFF0A1A28), t)!;
+        return Scaffold(
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [bg1, bg2],
               ),
             ),
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  // Back Button
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white38),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  // Mute button top right
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: StatefulBuilder(
+                      builder: (ctx, setLS) => IconButton(
+                        icon: Icon(
+                          _voice.isEnabled
+                              ? Icons.volume_up_rounded
+                              : Icons.volume_off_rounded,
+                          color: Colors.white38,
+                          size: 22,
+                        ),
+                        onPressed: () async {
+                          await _voice.setEnabled(!_voice.isEnabled);
+                          setLS(() {});
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                  ),
             
             // Central Content
             Center(
@@ -202,9 +325,9 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
                            return AnimatedBuilder(
                              animation: _bloomControllers[index],
                              builder: (context, child) {
-                               final value = _bloomControllers[index].value; // 0.0 to 1.0
-                               final scale = 1.0 + (0.6 * value) + (index * 0.15); // Staggered sizes
-                               final opacity = 0.2 - (0.05 * index); // Fading outer layers
+                               final value = _bloomControllers[index].value;
+                               final scale = 1.0 + (0.6 * value) + (index * 0.15);
+                               final opacity = 0.2 - (0.05 * index);
                                
                                return Transform.scale(
                                  scale: scale,
@@ -215,8 +338,8 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
                                      shape: BoxShape.circle,
                                      gradient: RadialGradient(
                                        colors: [
-                                         const Color(0xFF6C63FF).withOpacity(opacity * value),
-                                         const Color(0xFF26C6DA).withOpacity(0.0), // Fade to transparent
+                                         const Color(0xFF1A5276).withAlpha((opacity * value * 255).round()),
+                                         const Color(0xFF26C6DA).withAlpha(0),
                                        ],
                                        stops: const [0.2, 1.0],
                                      ),
@@ -240,7 +363,7 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF6C63FF).withOpacity(0.5 * _mainController.value),
+                                      color: const Color(0xFF6C63FF).withAlpha((128 * _mainController.value).round()),
                                       blurRadius: 30,
                                       spreadRadius: 5,
                                     ),
@@ -295,9 +418,12 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
                 ],
               ),
             ),
-          ],
-        ),
-      ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

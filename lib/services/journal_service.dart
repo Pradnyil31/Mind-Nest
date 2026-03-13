@@ -1,8 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/journal_entry.dart';
+import 'firestore_service.dart';
 
 class JournalService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+  final FirestoreService _firestoreService;
+
+  JournalService({FirebaseFirestore? firestore, FirestoreService? firestoreService})
+      : _firestore = firestore ?? FirebaseFirestore.instance,
+        _firestoreService = firestoreService ?? FirestoreService();
 
   // Collection reference
   CollectionReference get _journalCollection => _firestore.collection('journal_entries');
@@ -10,19 +16,12 @@ class JournalService {
   // Add a new journal entry
   Future<void> addEntry(JournalEntry entry) async {
     try {
-      // Allow Firestore to generate the ID if not provided, or Use set if ID is managed manually.
-      // Better to let Firestore generate ID for new entries.
-      /* 
-         If entry.id is empty or placeholder, we add to collection to get ID.
-         But model demands ID. 
-         Let's use doc().set() logic: 
-         Generate a new doc ref, get ID, assign to entry, then save.
-      */
-      
       DocumentReference docRef = _journalCollection.doc();
       final entryWithId = entry.copyWith(id: docRef.id);
-      
       await docRef.set(entryWithId.toMap());
+
+      // Log completion for badge system — only fires when entry is actually saved
+      _firestoreService.logActivityCompletion(entry.userId, 'journaling');
     } catch (e) {
       throw 'Failed to add journal entry: $e';
     }

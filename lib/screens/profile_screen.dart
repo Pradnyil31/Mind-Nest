@@ -6,13 +6,27 @@ import 'package:timezone/timezone.dart' as tz;
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
+import '../services/voice_service.dart';
 import '../models/user_model.dart';
 import '../config/motive_config.dart';
 import '../config/notification_content.dart';
 import 'welcome_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _voiceEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    VoiceService.getSavedPreference().then((v) => setState(() => _voiceEnabled = v));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +120,19 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         onTap: () {},
                       ),
+                       _buildActionTile(
+                         icon: Icons.record_voice_over_rounded,
+                         title: 'Voice Assistant',
+                         trailing: Switch(
+                           value: _voiceEnabled,
+                           onChanged: (val) async {
+                             await VoiceService().setEnabled(val);
+                             setState(() => _voiceEnabled = val);
+                           },
+                           activeColor: const Color(0xFF6C63FF),
+                         ),
+                         onTap: () {},
+                       ),
                       _buildActionTile(
                         icon: Icons.privacy_tip_outlined,
                         title: 'Privacy Policy',

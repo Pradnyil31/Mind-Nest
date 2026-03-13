@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/smart_goal.dart';
+import 'firestore_service.dart';
 
 class GoalService {
   final FirebaseFirestore _firestore;
+  final FirestoreService _firestoreService;
 
-  GoalService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  GoalService({FirebaseFirestore? firestore, FirestoreService? firestoreService})
+      : _firestore = firestore ?? FirebaseFirestore.instance,
+        _firestoreService = firestoreService ?? FirestoreService();
 
   CollectionReference get _goalsCollection => _firestore.collection('smart_goals');
 
@@ -37,11 +40,17 @@ class GoalService {
     }
   }
   
-  Future<void> updateCompletionStatus(String goalId, bool isCompleted) async {
+  // userId is required so we can log completion without an extra read
+  Future<void> updateCompletionStatus(String goalId, bool isCompleted, {String? userId}) async {
     try {
       await _goalsCollection.doc(goalId).update({
         'isCompleted': isCompleted,
       });
+
+      // Log completion for badge system only when goal is marked done
+      if (isCompleted && userId != null) {
+        _firestoreService.logActivityCompletion(userId, 'smart_goals');
+      }
     } catch (e) {
       throw 'Failed to update completion status: $e';
     }
