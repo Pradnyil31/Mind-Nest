@@ -5,22 +5,30 @@ import '../models/calm_technique.dart';
 import 'grounding_exercise_screen.dart';
 import 'affirmations_screen.dart';
 import 'calm_technique_screen.dart';
+import 'enhanced_calm_screen.dart';
 
 class CalmScreen extends StatefulWidget {
-  const CalmScreen({Key? key}) : super(key: key);
+  const CalmScreen({super.key});
 
   @override
   State<CalmScreen> createState() => _CalmScreenState();
 }
 
 class _CalmScreenState extends State<CalmScreen> {
-  Set<String> _activeSounds = {};
+  final Set<String> _activeSounds = {};
   double _volume = 0.7;
   int _timerMinutes = 30;
   final List<int> _timerOptions = [15, 30, 60, 90];
+  bool _useEnhancedVersion = true; // Toggle for testing
 
   @override
   Widget build(BuildContext context) {
+    // Use enhanced version by default
+    if (_useEnhancedVersion) {
+      return const EnhancedCalmScreen();
+    }
+
+    // Original implementation as fallback
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F9),
       appBar: AppBar(
@@ -38,12 +46,20 @@ class _CalmScreenState extends State<CalmScreen> {
         iconTheme: const IconThemeData(color: Color(0xFF2D2D2D)),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100), // Added bottom padding for nav bar
+        padding: const EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          100,
+        ), // Added bottom padding for nav bar
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Quick Calm Techniques Section
-            _buildSectionHeader('🆘 Quick Calm Techniques', 'Instant anxiety relief'),
+            _buildSectionHeader(
+              '🆘 Quick Calm Techniques',
+              'Instant anxiety relief',
+            ),
             const SizedBox(height: 16),
             _buildTechniquesList(),
           ],
@@ -67,10 +83,7 @@ class _CalmScreenState extends State<CalmScreen> {
         const SizedBox(height: 4),
         Text(
           subtitle,
-          style: GoogleFonts.lato(
-            fontSize: 14,
-            color: Colors.grey.shade600,
-          ),
+          style: GoogleFonts.lato(fontSize: 14, color: Colors.grey.shade600),
         ),
       ],
     );
@@ -90,7 +103,7 @@ class _CalmScreenState extends State<CalmScreen> {
       itemBuilder: (context, index) {
         final sound = AmbientSound.defaults[index];
         final isActive = _activeSounds.contains(sound.id);
-        
+
         return GestureDetector(
           onTap: () {
             setState(() {
@@ -107,7 +120,7 @@ class _CalmScreenState extends State<CalmScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: isActive 
+                  color: isActive
                       ? const Color(0xFF4DB6AC).withOpacity(0.3)
                       : Colors.black.withOpacity(0.05),
                   blurRadius: isActive ? 12 : 8,
@@ -120,9 +133,7 @@ class _CalmScreenState extends State<CalmScreen> {
               children: [
                 Text(
                   sound.emoji,
-                  style: TextStyle(
-                    fontSize: isActive ? 42 : 36,
-                  ),
+                  style: TextStyle(fontSize: isActive ? 42 : 36),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -164,9 +175,14 @@ class _CalmScreenState extends State<CalmScreen> {
             spacing: 8,
             runSpacing: 8,
             children: _activeSounds.map((soundId) {
-              final sound = AmbientSound.defaults.firstWhere((s) => s.id == soundId);
+              final sound = AmbientSound.defaults.firstWhere(
+                (s) => s.id == soundId,
+              );
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF4DB6AC).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -243,7 +259,9 @@ class _CalmScreenState extends State<CalmScreen> {
                   return DropdownMenuItem(
                     value: minutes,
                     child: Text(
-                      minutes >= 60 ? '${minutes ~/ 60} hour${minutes > 60 ? 's' : ''}' : '$minutes min',
+                      minutes >= 60
+                          ? '${minutes ~/ 60} hour${minutes > 60 ? 's' : ''}'
+                          : '$minutes min',
                       style: GoogleFonts.lato(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -271,7 +289,11 @@ class _CalmScreenState extends State<CalmScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: 18, color: Colors.amber.shade700),
+                Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: Colors.amber.shade700,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -335,7 +357,9 @@ class _CalmScreenState extends State<CalmScreen> {
           // Generic technique screen for others
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => CalmTechniqueScreen(technique: technique)),
+            MaterialPageRoute(
+              builder: (_) => CalmTechniqueScreen(technique: technique),
+            ),
           );
         }
       },
@@ -360,10 +384,7 @@ class _CalmScreenState extends State<CalmScreen> {
                 color: techniqueColor.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                technique.icon,
-                style: const TextStyle(fontSize: 28),
-              ),
+              child: Text(technique.icon, style: const TextStyle(fontSize: 28)),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -404,7 +425,11 @@ class _CalmScreenState extends State<CalmScreen> {
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey.shade400),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Colors.grey.shade400,
+            ),
           ],
         ),
       ),

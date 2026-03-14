@@ -61,6 +61,17 @@ class HomeController extends StateNotifier<HomeState> {
     }
   }
 
+  /// Re-fetches the streak from the service and updates state.
+  /// Call this after any activity toggle so the streak display stays current.
+  Future<void> refreshStreak(String uid) async {
+    try {
+      final streak = await _ref.read(routineServiceProvider).getCompletionStreak(uid);
+      state = state.copyWith(streak: streak);
+    } catch (_) {
+      // Silent fail — stale value is better than a crash.
+    }
+  }
+
   TimeOfDay _parseTime(String timeString) {
     try {
       final parts = timeString.split(' ');

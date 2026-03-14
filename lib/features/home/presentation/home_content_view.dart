@@ -15,7 +15,7 @@ import '../../../widgets/home/home_favorites_list.dart';
 import '../../../widgets/home/home_focus_card.dart';
 import '../../../widgets/home/home_header.dart';
 import '../../../widgets/home/home_routine_section.dart';
-import '../../../widgets/progress_mini_chart.dart';
+import '../../../widgets/compact_progress_insights.dart';
 import '../../../screens/daily_checkin_screen.dart';
 import '../../../screens/sleep_recovery_screen.dart';
 import '../../home/application/home_controller.dart';
@@ -77,7 +77,10 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
       final snapshot = await FirebaseFirestore.instance
           .collection('routine_completions')
           .where('userId', isEqualTo: uid)
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek))
+          .where(
+            'date',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek),
+          )
           .get();
 
       final activeDays = <int>{};
@@ -101,7 +104,9 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   }
 
   Future<void> _checkAndRegenerateDailyRoutine(
-      String uid, Map<String, dynamic> data) async {
+    String uid,
+    Map<String, dynamic> data,
+  ) async {
     final lastGenerated = data['lastGeneratedDate'] as String?;
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month}-${now.day}";
@@ -109,8 +114,7 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
     bool isNewDay = lastGenerated == null;
     if (!isNewDay) {
       final lastDate = DateTime.parse(lastGenerated!);
-      final lastDateStr =
-          "${lastDate.year}-${lastDate.month}-${lastDate.day}";
+      final lastDateStr = "${lastDate.year}-${lastDate.month}-${lastDate.day}";
       if (lastDateStr != todayStr) isNewDay = true;
     }
 
@@ -142,8 +146,11 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
 
       final pool = MotiveConfig.getFullActivityPool(motive);
       final newDaily = _generateBalancedRoutine(pool, taskCount);
-      final newSchedule =
-          _calculateDynamicSchedule(newDaily, _wakeTime, _bedTime);
+      final newSchedule = _calculateDynamicSchedule(
+        newDaily,
+        _wakeTime,
+        _bedTime,
+      );
 
       await ref.read(firestoreServiceProvider).updateUser(uid, {
         'routineActivities': newDaily,
@@ -171,9 +178,9 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
           }
         });
         if (needsFix) {
-          await ref
-              .read(firestoreServiceProvider)
-              .updateUser(uid, {'routineSchedule': schedule});
+          await ref.read(firestoreServiceProvider).updateUser(uid, {
+            'routineSchedule': schedule,
+          });
         }
       }
     }
@@ -182,13 +189,15 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   List<String> _generateBalancedRoutine(List<String> pool, int count) {
     final rng = Random();
 
-    final morningPool =
-        pool.where((a) => RoutineConfig.getTimePeriod(a) == 'Morning').toList();
+    final morningPool = pool
+        .where((a) => RoutineConfig.getTimePeriod(a) == 'Morning')
+        .toList();
     final afternoonPool = pool
         .where((a) => RoutineConfig.getTimePeriod(a) == 'Afternoon')
         .toList();
-    final eveningPool =
-        pool.where((a) => RoutineConfig.getTimePeriod(a) == 'Evening').toList();
+    final eveningPool = pool
+        .where((a) => RoutineConfig.getTimePeriod(a) == 'Evening')
+        .toList();
 
     if (morningPool.length < 4) {
       morningPool.addAll(RoutineConfig.getActivitiesForPeriod('Morning'));
@@ -225,7 +234,8 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
     pickFrom(eveningPool, eCount);
 
     if (result.length < count) {
-      final all = [...morningPool, ...afternoonPool, ...eveningPool]..shuffle(rng);
+      final all = [...morningPool, ...afternoonPool, ...eveningPool]
+        ..shuffle(rng);
       for (final a in all) {
         if (result.length >= count) break;
         result.add(a);
@@ -236,15 +246,20 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   }
 
   Future<void> _toggleActivity(
-      String userId, String activity, bool isCompleted) async {
+    String userId,
+    String activity,
+    bool isCompleted,
+  ) async {
     try {
       if (!isCompleted) {
         await ref
             .read(routineServiceProvider)
             .unmarkActivityComplete(userId, activity);
       } else {
-        final userDoc =
-            await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
         List<String> currentRoutine = [];
         if (userDoc.exists) {
           final data = userDoc.data();
@@ -256,6 +271,9 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
             .markActivityComplete(userId, activity, currentRoutine);
         if (mounted) _checkForNewBadges(userId);
       }
+
+      // Refresh streak in the controller so HomeRoutineSection sees the updated value.
+      await ref.read(homeControllerProvider.notifier).refreshStreak(userId);
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to update activity')),
@@ -264,12 +282,15 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   }
 
   Future<void> _checkForNewBadges(String userId) async {
-    final badges = await ref.read(insightsServiceProvider).detectNewBadges(userId);
+    final badges = await ref
+        .read(insightsServiceProvider)
+        .detectNewBadges(userId);
     if (badges.isNotEmpty && mounted) {
       for (final badge in badges) {
         if (badge.earnedDate != null) {
           final now = DateTime.now();
-          final isToday = badge.earnedDate!.year == now.year &&
+          final isToday =
+              badge.earnedDate!.year == now.year &&
               badge.earnedDate!.month == now.month &&
               badge.earnedDate!.day == now.day;
 
@@ -283,8 +304,9 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   }
 
   Future<void> _checkCheckInStatus(String uid) async {
-    final hasCheckedIn =
-        await ref.read(checkInServiceProvider).hasCheckedInToday(uid);
+    final hasCheckedIn = await ref
+        .read(checkInServiceProvider)
+        .hasCheckedInToday(uid);
     if (mounted) {
       setState(() {
         _checkInCompleted = hasCheckedIn;
@@ -293,14 +315,18 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   }
 
   Future<void> _handleMotiveCheck(
-      BuildContext context, List<String> goals, String? primaryMotive) async {
+    BuildContext context,
+    List<String> goals,
+    String? primaryMotive,
+  ) async {
     if (_hasCheckedMotive) return;
     _hasCheckedMotive = true;
 
     final user = ref.read(currentUserProvider);
     if (user != null) {
-      final motive =
-          await ref.read(firestoreServiceProvider).getDailyMotive(user.uid);
+      final motive = await ref
+          .read(firestoreServiceProvider)
+          .getDailyMotive(user.uid);
 
       if (motive != null) {
         if (mounted) {
@@ -319,7 +345,10 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   }
 
   void _showDailyMotivePrompt(
-      BuildContext context, List<String> goals, String? primaryMotive) {
+    BuildContext context,
+    List<String> goals,
+    String? primaryMotive,
+  ) {
     final options = _generateMotiveOptions(goals, primaryMotive);
 
     showDialog(
@@ -404,11 +433,15 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
-                            vertical: 16, horizontal: 20),
+                          vertical: 16,
+                          horizontal: 20,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF9FAFB),
                           border: Border.all(
-                              color: const Color(0xFFE5E7EB), width: 1.5),
+                            color: const Color(0xFFE5E7EB),
+                            width: 1.5,
+                          ),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Row(
@@ -432,8 +465,11 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
                                 ),
                               ),
                             ),
-                            const Icon(Icons.arrow_forward_ios_rounded,
-                                size: 14, color: Color(0xFF9CA3AF)),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 14,
+                              color: Color(0xFF9CA3AF),
+                            ),
                           ],
                         ),
                       ),
@@ -462,67 +498,65 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   }
 
   List<String> _generateMotiveOptions(
-      List<String> goals, String? primaryMotive) {
+    List<String> goals,
+    String? primaryMotive,
+  ) {
     final Map<String, List<String>> motiveMap = {
       'Improve Sleep': [
         'Sleep by 10 PM',
         'No screens after 9 PM',
-        'Read a calming book'
+        'Read a calming book',
       ],
       'Sleep': [
         'Sleep by 10 PM',
         'No screens after 9 PM',
-        'Relaxing breathing'
+        'Relaxing breathing',
       ],
       'Reduce Stress': [
         'Deep breathing breaks',
         'Walk in nature',
-        'Start the day slowly'
+        'Start the day slowly',
       ],
       'Stress': [
         'Deep breathing breaks',
         'Walk in nature',
-        'Start the day slowly'
+        'Start the day slowly',
       ],
       'Manage Anxiety': [
         'Grounding exercises',
         'Journal my worries',
-        'Limit calming tea'
+        'Limit calming tea',
       ],
       'Anxiety': [
         'Grounding exercises',
         'Journal my worries',
-        'Positive affirmations'
+        'Positive affirmations',
       ],
-      'Improve Mood': [
-        'Find one joy',
-        'Smile more',
-        'Connect with a friend'
-      ],
+      'Improve Mood': ['Find one joy', 'Smile more', 'Connect with a friend'],
       'Improve Focus': [
         'Deep work block',
         'Clear my workspace',
-        'Single-tasking today'
+        'Single-tasking today',
       ],
       'Focus': [
         'Deep work block',
         'Clear my workspace',
-        'Single-tasking today'
+        'Single-tasking today',
       ],
       'Build Confidence': [
         'Speak up today',
         'Wear something nice',
-        'Celebrate small wins'
+        'Celebrate small wins',
       ],
       'Habit Building': [
         ' Stick to the plan',
         'Review progress',
-        'Small steps today'
+        'Small steps today',
       ],
       'Control Overthinking': [
         'Write it down',
         'Focus on the present',
-        'Let go of what-ifs'
+        'Let go of what-ifs',
       ],
     };
 
@@ -536,8 +570,12 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
       options.addAll(motiveMap[primaryMotive]!);
     }
     if (options.isEmpty) {
-      options.addAll(
-          ['Find balance', 'Be present', 'Take it easy', 'Focus on today']);
+      options.addAll([
+        'Find balance',
+        'Be present',
+        'Take it easy',
+        'Focus on today',
+      ]);
     }
 
     final list = options.toList()..shuffle();
@@ -602,7 +640,10 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   }
 
   Map<String, String> _calculateDynamicSchedule(
-      List<String> activities, TimeOfDay wakeTime, TimeOfDay bedTime) {
+    List<String> activities,
+    TimeOfDay wakeTime,
+    TimeOfDay bedTime,
+  ) {
     final schedule = <String, String>{};
 
     int wakeMin = wakeTime.hour * 60 + wakeTime.minute;
@@ -690,29 +731,32 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
           goals = List<String>.from(data['primaryGoals'] ?? goals);
           routine = Map<String, dynamic>.from(data['routine'] ?? {});
 
-          final rawSchedule =
-              Map<String, String>.from(data['routineSchedule'] ?? {});
+          final rawSchedule = Map<String, String>.from(
+            data['routineSchedule'] ?? {},
+          );
           if (rawSchedule.isNotEmpty) {
             routineActivities = rawSchedule.keys.toList();
           } else {
-            routineActivities =
-                List<String>.from(data['routineActivities'] ?? []);
+            routineActivities = List<String>.from(
+              data['routineActivities'] ?? [],
+            );
           }
-          additionalActivities =
-              List<String>.from(data['additionalActivities'] ?? []);
+          additionalActivities = List<String>.from(
+            data['additionalActivities'] ?? [],
+          );
 
           final requiredFavorites = [
             'Journaling',
             'Focus Sessions',
             'Breathing',
             'Meditation',
-            'Smart Goals'
+            'Smart Goals',
           ];
           final itemsToRemove = [
             'Affirmations',
             'Mood Tracking',
             'Gentle Reminders',
-            'Recommendations'
+            'Recommendations',
           ];
           for (var item in itemsToRemove) {
             additionalActivities.remove(item);
@@ -773,10 +817,12 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
 
             if (snapshot.hasData && snapshot.data!.exists) {
               final data = snapshot.data!.data() as Map<String, dynamic>;
-              temporarySchedule =
-                  Map<String, String>.from(data['temporarySchedule'] ?? {});
-              routineSchedule =
-                  Map<String, String>.from(data['routineSchedule'] ?? {});
+              temporarySchedule = Map<String, String>.from(
+                data['temporarySchedule'] ?? {},
+              );
+              routineSchedule = Map<String, String>.from(
+                data['routineSchedule'] ?? {},
+              );
 
               if (data.containsKey('routine')) {
                 final r = data['routine'] as Map<String, dynamic>;
@@ -789,8 +835,10 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
               }
             }
 
-            final textColor =
-                _getTextColorFor(effectiveWakeTime, effectiveBedTime);
+            final textColor = _getTextColorFor(
+              effectiveWakeTime,
+              effectiveBedTime,
+            );
 
             return SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 100),
@@ -833,7 +881,8 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => const DailyCheckInScreen()),
+                              builder: (_) => const DailyCheckInScreen(),
+                            ),
                           );
                           if (result == true) {
                             _checkCheckInStatus(user.uid);
@@ -865,7 +914,7 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
                       streak: homeState.streak,
                     ),
                     const SizedBox(height: 32),
-                    ProgressMiniChart(userId: user.uid),
+                    CompactProgressInsights(userId: user.uid),
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -877,4 +926,3 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
     );
   }
 }
-
