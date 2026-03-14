@@ -67,34 +67,49 @@ class _GroundingExerciseScreenState extends State<GroundingExerciseScreen>
 
   void _startStep(int step) {
     if (step >= _steps.length) {
-      setState(() => _currentStep = _steps.length); // triggers completion view
+      setState(() => _currentStep = _steps.length);
       return;
     }
 
+    _stepTimer?.cancel();
     setState(() {
       _currentStep = step;
       _countdownSeconds = _stepDurations[step];
       _isPaused = false;
     });
 
-    // Reset and start progress animation
     _progressController.duration = Duration(seconds: _stepDurations[step]);
     _progressController.forward(from: 0.0);
 
-    // Speak the step
-    _voice.speak(_steps[step]);
+    // Speak the step fully, then chain into the next with a bridge phrase
+    _voice.onComplete(() async {
+      if (!mounted || _isPaused) return;
+      _voice.clearCompletionHandler();
 
-    // Auto-advance timer
-    _stepTimer?.cancel();
-    _stepTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_isPaused) return;
-      if (_countdownSeconds > 1) {
-        setState(() => _countdownSeconds--);
-      } else {
-        timer.cancel();
-        _startStep(step + 1);
-      }
+      // Minimum hold after speech — visual countdown runs
+      _stepTimer?.cancel();
+      _stepTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (_isPaused) return;
+        if (_countdownSeconds > 1) {
+          setState(() => _countdownSeconds--);
+        } else {
+          timer.cancel();
+          // Bridge to next step
+          final nextStep = step + 1;
+          if (nextStep < _steps.length) {
+            _voice.onComplete(() {
+              if (!mounted) return;
+              _voice.clearCompletionHandler();
+              _startStep(nextStep);
+            });
+            _voice.speak('Good. Take a breath... and continue.');
+          } else {
+            _startStep(nextStep);
+          }
+        }
+      });
     });
+    _voice.speak(_steps[step]);
   }
 
   void _togglePause() {

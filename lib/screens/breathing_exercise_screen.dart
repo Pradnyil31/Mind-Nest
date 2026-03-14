@@ -27,10 +27,12 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
   int _secondsRemaining = 0;
   String _instructionText = 'Get Ready...';
   bool _isActive = false;
+  
+  // Duration settings
+  int? _targetDurationMinutes; // null = open-ended
+  int _totalElapsedSeconds = 0;
+  bool _isSettingUp = true;
 
-  // Round tracking — 3 full rounds = 1 completed session
-  int _completedRounds = 0;
-  static const int _targetRounds = 3;
   bool _sessionLogged = false;
 
   // Voice
@@ -49,7 +51,7 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
       duration: const Duration(seconds: 14),
     )..repeat(reverse: true);
     _voice.init();
-    _startSession();
+    // Do not auto-start; wait for user to select duration
   }
 
   void _setupAnimations() {
@@ -70,10 +72,13 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
     ));
   }
 
-  void _startSession() {
+  void _startSession(int? durationMinutes) {
     setState(() {
+      _targetDurationMinutes = durationMinutes;
+      _isSettingUp = false;
       _isActive = true;
       _currentStepIndex = -1; // Start before the first step
+      _totalElapsedSeconds = 0;
     });
     
     // Initial delay before starting the loop
@@ -85,7 +90,18 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
   void _nextStep() {
     if (!mounted || !_isActive) return;
 
-    final previousIndex = _currentStepIndex;
+    // Graceful completion: check if time is up when we are about to start a NEW round (index 0)
+    // or if we just finished the last step (index 3 or previous was 2/3)
+    bool isRoundComplete = _currentStepIndex == widget.technique.pattern.length - 1 || 
+                           (_currentStepIndex == 2 && widget.technique.pattern[3] == 0);
+
+    if (isRoundComplete && _totalElapsedSeconds >= (_targetDurationMinutes ?? 0) * 60 && _targetDurationMinutes != null) {
+      _sessionLogged = true;
+      _timer?.cancel();
+      setState(() => _isActive = false);
+      _logCompletionAndShowDialog();
+      return;
+    }
 
     setState(() {
       _currentStepIndex = (_currentStepIndex + 1) % 4;
@@ -94,28 +110,16 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
         _currentStepIndex = (_currentStepIndex + 1) % 4;
       }
 
-      // A full round is completed when we wrap back past the exhale step (index 2)
-      if (previousIndex == 2 && _currentStepIndex == 0) {
-        _completedRounds++;
-      } else if (previousIndex >= 2 && _currentStepIndex < previousIndex) {
-        _completedRounds++;
-      }
-
       _secondsRemaining = widget.technique.pattern[_currentStepIndex];
     });
-
-    // After 3 full rounds, count as a completed session
-    if (_completedRounds >= _targetRounds && !_sessionLogged) {
-      _sessionLogged = true;
-      _timer?.cancel();
-      setState(() => _isActive = false);
-      _logCompletionAndShowDialog();
-      return;
-    }
 
     _updateInstruction();
     _animatePhase();
     _startTimer();
+  }
+
+  void _checkDuration() {
+    // Only update the timer. Completion check moved to _nextStep for graceful ending.
   }
 
   Future<void> _logCompletionAndShowDialog() async {
@@ -134,7 +138,9 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
         title: const Text('🌬️  Session Complete!',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: Text(
-          'You completed $_targetRounds full breathing cycles. Great work!',
+          (_targetDurationMinutes != null) 
+              ? 'You completed your $_targetDurationMinutes minute breathing session. Great work!'
+              : 'You completed a breathing session. Great work!',
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -148,22 +154,19 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              // Reset and start again
+              // Reset to setup
               setState(() {
-                _completedRounds = 0;
                 _sessionLogged = false;
-                _isActive = false;
+                _isSettingUp = true;
+                _totalElapsedSeconds = 0;
               });
-              _startSession();
             },
             child: const Text('Go Again', style: TextStyle(color: Color(0xFF26C6DA))),
           ),
         ],
       ),
     );
-  }
-
-  void _updateInstruction() {
+  }  void _updateInstruction() {
     switch (_currentStepIndex) {
       case 0:
         _instructionText = 'Inhale';
@@ -225,6 +228,9 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
       }
 
       setState(() {
+        _totalElapsedSeconds++;
+        _checkDuration();
+        
         if (_secondsRemaining > 1) {
           _secondsRemaining--;
         } else {
@@ -244,6 +250,91 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
     }
     _voice.dispose();
     super.dispose();
+  }
+
+  Widget _buildSetupView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF26C6DA).withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.air, size: 80, color: Color(0xFF26C6DA)),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              widget.technique.title,
+              style: GoogleFonts.lato(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Select session duration',
+              style: GoogleFonts.lato(
+                color: Colors.white70,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 48),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildDurationOption('1\nmin', 1),
+                _buildDurationOption('3\nmin', 3),
+                _buildDurationOption('5\nmin', 5),
+              ],
+            ),
+            const SizedBox(height: 24),
+            TextButton(
+              onPressed: () => _startSession(null), // Open-ended
+              child: Text(
+                'Open-Ended (Continuous)',
+                style: GoogleFonts.lato(
+                  color: const Color(0xFF6C63FF),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDurationOption(String label, int minutes) {
+    return GestureDetector(
+      onTap: () => _startSession(minutes),
+      child: Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white30),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.lato(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -298,9 +389,12 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
                   ),
             
             // Central Content
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            if (_isSettingUp)
+              _buildSetupView()
+            else
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     widget.technique.title,

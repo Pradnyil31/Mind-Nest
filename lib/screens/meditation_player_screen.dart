@@ -17,23 +17,52 @@ class MeditationPlayerScreen extends StatefulWidget {
   State<MeditationPlayerScreen> createState() => _MeditationPlayerScreenState();
 }
 
+enum MeditationPhase { script, breathing }
+
 class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with TickerProviderStateMixin {
   bool _isActive = false;
   int _currentStep = 0;
   int _remainingSeconds = 0;
-  Timer? _timer;
+  Timer? _sessionTimer;
   late AnimationController _breathingController;
   late AnimationController _bgController;
   final VoiceService _voice = VoiceService();
-  int _lastSpokenStep = -1;
+  
+  MeditationPhase _phase = MeditationPhase.script;
+  bool _isInhale = true;
+  String _lastSpokenPhase = '';
+  bool _isTimeUp = false;
 
   @override
   void initState() {
     super.initState();
     _breathingController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 6),
-    )..repeat(reverse: true);
+      duration: const Duration(seconds: 4),
+    )..addStatusListener((status) {
+      if (!mounted) return;
+      // During the breathing phase: speak Inhale/Exhale in sync with animation
+      // During the script phase: animation runs silently (orb still pulses)
+      if (status == AnimationStatus.completed) {
+        if (_phase == MeditationPhase.breathing) {
+          setState(() => _isInhale = false);
+          _speakPhaseInstruction('Exhale');
+        }
+        _breathingController.reverse();
+      } else if (status == AnimationStatus.dismissed) {
+        if (_phase == MeditationPhase.breathing) {
+          if (_isTimeUp) {
+            _completeMeditation();
+            return;
+          }
+          setState(() => _isInhale = true);
+          _speakPhaseInstruction('Inhale');
+        }
+        _breathingController.forward();
+      }
+    });
+    _breathingController.forward();
+    
     _bgController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 10),
@@ -41,9 +70,48 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
     _voice.init();
   }
 
+  // Speak during the continuous breathing phase (deduped)
+  void _speakPhaseInstruction(String text) {
+    if (_lastSpokenPhase != text) {
+      _lastSpokenPhase = text;
+      _voice.speak(text);
+    }
+  }
+
+  /// Await a single TTS utterance to finish. Includes a 60s safety timeout.
+  Future<void> _awaitSpeech() async {
+    final completer = Completer<void>();
+    _voice.onComplete(() {
+      if (!completer.isCompleted) completer.complete();
+    });
+    await Future.any([
+      completer.future,
+      Future.delayed(const Duration(seconds: 90)),
+    ]);
+    _voice.clearCompletionHandler();
+  }
+
+  /// Speak an inhale/exhale bridge between script steps.
+  /// Animates the orb and speaks the cue, then awaits completion.
+  Future<void> _speakBridge() async {
+    if (!mounted || !_isActive) return;
+    // Inhale cue
+    setState(() => _isInhale = true);
+    _breathingController.forward(from: 0.0);
+    await _voice.speak('Inhale deeply...');
+    await _awaitSpeech();
+    if (!mounted || !_isActive) return;
+
+    // Exhale cue
+    setState(() => _isInhale = false);
+    _breathingController.reverse(from: 1.0);
+    await _voice.speak('and exhale...');
+    await _awaitSpeech();
+  }
+
   @override
   void dispose() {
-    _timer?.cancel();
+    _sessionTimer?.cancel();
     _breathingController.dispose();
     _bgController.dispose();
     _voice.dispose();
@@ -73,37 +141,68 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
       _isActive = true;
       _remainingSeconds = widget.meditation.durationMinutes * 60;
       _currentStep = 0;
-      _lastSpokenStep = -1;
+      _phase = MeditationPhase.script;
+      _isInhale = true;
     });
 
-    // Speak the very first step immediately
-    _voice.speak(widget.meditation.scriptSteps[0]);
-    _lastSpokenStep = 0;
+    _startSessionTimer();
+    _startScriptSequence();
+  }
 
-    // Calculate seconds per step
-    final secondsPerStep = (_remainingSeconds / widget.meditation.scriptSteps.length).floor();
-
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+  void _startSessionTimer() {
+    _sessionTimer?.cancel();
+    _sessionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
       if (_remainingSeconds > 0) {
-        setState(() {
-          _remainingSeconds--;
-          // Move to next step based on time
-          final elapsed = (widget.meditation.durationMinutes * 60) - _remainingSeconds;
-          _currentStep = (elapsed / secondsPerStep).floor().clamp(0, widget.meditation.scriptSteps.length - 1);
-        });
-        // Speak whenever step index changes
-        if (_currentStep != _lastSpokenStep) {
-          _lastSpokenStep = _currentStep;
-          _voice.speak(widget.meditation.scriptSteps[_currentStep]);
-        }
+        setState(() => _remainingSeconds--);
       } else {
-        _completeMeditation();
+        timer.cancel();
+        _isTimeUp = true;
+        // If we're in script phase, it will check _isTimeUp after current step.
+        // If we're in breathing phase, it will check _isTimeUp at end of cycle.
       }
     });
   }
 
+  Future<void> _startScriptSequence() async {
+    for (int i = 0; i < widget.meditation.scriptSteps.length; i++) {
+      if (!mounted || !_isActive) return;
+      setState(() => _currentStep = i);
+
+      // Speak this step fully — wait for TTS to finish
+      await _voice.speak(widget.meditation.scriptSteps[i]);
+      await _awaitSpeech();
+      if (!mounted || !_isActive) return;
+
+      // If time is up, we can end after a script step if it was the last one,
+      // or continue to bridges if not. But usually we want to finish the whole script.
+      
+      // Insert a breathing bridge between steps (not after the last one)
+      if (i < widget.meditation.scriptSteps.length - 1) {
+        await _speakBridge();
+      }
+    }
+
+    // After script ends, check if time is already up
+    if (_isTimeUp) {
+      _completeMeditation();
+      return;
+    }
+
+    // Transition to continuous guided breathing phase
+    if (mounted && _isActive) {
+      setState(() {
+        _phase = MeditationPhase.breathing;
+        _isInhale = true;
+        _lastSpokenPhase = '';
+      });
+      _breathingController.forward(from: 0.0);
+      _speakPhaseInstruction('Inhale');
+    }
+  }
+
   Future<void> _completeMeditation() async {
-    _timer?.cancel();
+    _sessionTimer?.cancel();
     
     final user = AuthService().currentUser;
     if (user != null) {
@@ -185,7 +284,7 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
   }
 
   void _stopMeditation() {
-    _timer?.cancel();
+    _sessionTimer?.cancel();
     _voice.stop();
     setState(() => _isActive = false);
     Navigator.pop(context);
@@ -445,9 +544,11 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
 
                         // Step label — large, minimal
                         Text(
-                          (labels.length > _currentStep)
-                              ? labels[_currentStep]
-                              : '',
+                          _phase == MeditationPhase.breathing
+                              ? (_isInhale ? 'Inhale...' : 'Exhale...')
+                              : ((labels.length > _currentStep)
+                                  ? labels[_currentStep]
+                                  : ''),
                           textAlign: TextAlign.center,
                           style: GoogleFonts.lato(
                             fontSize: 28,
@@ -473,8 +574,9 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
                   ),
 
                   // --- Step dots at bottom ---
-                  Positioned(
-                    bottom: 60,
+                  if (_phase == MeditationPhase.script)
+                    Positioned(
+                      bottom: 60,
                     left: 0,
                     right: 0,
                     child: Row(

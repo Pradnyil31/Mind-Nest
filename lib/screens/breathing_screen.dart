@@ -31,20 +31,8 @@ class _BreathingScreenState extends State<BreathingScreen> {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        // 1. Forced Full-Screen Background (Matches HomeScreen pattern)
-        Positioned(
-          top: -100, // Force extend upwards behind status bar
-          left: 0,
-          right: 0,
-          bottom: -100, // Force extend downwards behind nav bar
-          child: Image.asset(
-            'assets/images/background_evening.png',
-            fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
-            color: Colors.black38,
-            colorBlendMode: BlendMode.darken,
-          ),
-        ),
+        // 1. Solid Dark Background
+        Container(color: const Color(0xFF0D1B2A)),
         
         // 2. Transparent Scaffold
         Scaffold(

@@ -2,66 +2,114 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Shared voice assistant service for all guided exercises.
-///
-/// Usage:
-///   final voice = VoiceService();
-///   await voice.init();
-///   voice.speak('Close your eyes and breathe slowly.');
-///   voice.dispose(); // call in dispose()
 class VoiceService {
   static const String _prefKey = 'voice_assistant_enabled';
+
+  // ── Singleton ──────────────────────────────────────────────────────────────
+  static final VoiceService _instance = VoiceService._internal();
+  factory VoiceService() => _instance;
+  VoiceService._internal();
 
   final FlutterTts _tts = FlutterTts();
   bool _isEnabled = true;
   bool _initialized = false;
 
+  // ── Smart resume tracking ──────────────────────────────────────────────────
+  /// The full text of the most recently started utterance.
+  String _fullText = '';
+  /// When speak() was last called (i.e., when TTS actually started).
+  DateTime? _speechStartTime;
+  /// When the user pressed mute.
+  DateTime? _muteTimestamp;
+
+  /// Approximate words-per-second at speech rate 0.45.
+  /// 0.45 rate ≈ 80 wpm ≈ 1.33 words/second.
+  static const double _wordsPerSecond = 1.33;
+
   bool get isEnabled => _isEnabled;
 
-  /// Initialise the TTS engine and load user preference.
-  /// Must be awaited before calling speak().
+  // ── init ───────────────────────────────────────────────────────────────────
   Future<void> init() async {
     if (_initialized) return;
-
-    // Load persisted preference
     final prefs = await SharedPreferences.getInstance();
     _isEnabled = prefs.getBool(_prefKey) ?? true;
 
-    // Configure engine — use device defaults for language/locale
     await _tts.setVolume(1.0);
-    await _tts.setSpeechRate(0.45); // Calm, slightly slower than default
-    await _tts.setPitch(1.0);       // Natural pitch
-
+    await _tts.setSpeechRate(0.45);
+    await _tts.setPitch(1.0);
     _initialized = true;
   }
 
-  /// Speak [text]. Cancels any ongoing speech first.
-  /// Silent no-op if voice assistant is disabled or text is empty.
+  // ── speak ──────────────────────────────────────────────────────────────────
+  /// Stops any current speech and speaks [text] from the beginning.
   Future<void> speak(String text) async {
-    if (!_isEnabled || text.trim().isEmpty) return;
+    if (text.trim().isEmpty) return;
+    _fullText = text;
+    if (!_isEnabled) return;
     await _tts.stop();
+    _speechStartTime = DateTime.now();
     await _tts.speak(text);
   }
 
-  /// Stop any currently playing speech immediately.
+  /// Registers a one-time completion callback fired when TTS finishes
+  /// the current utterance.
+  void onComplete(void Function() callback) {
+    _tts.setCompletionHandler(callback);
+  }
+
+  /// Clears any previously registered completion callback.
+  void clearCompletionHandler() {
+    _tts.setCompletionHandler(() {});
+  }
+
+  // ── stop ───────────────────────────────────────────────────────────────────
   Future<void> stop() async {
     await _tts.stop();
   }
 
-  /// Toggle and persist.
+  // ── setEnabled (smart resume) ──────────────────────────────────────────────
+  /// On mute  → immediately stop TTS, record timestamp.
+  /// On unmute → estimate which word was being spoken, resume from there.
   Future<void> setEnabled(bool enabled) async {
     _isEnabled = enabled;
-    if (!enabled) await _tts.stop();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefKey, enabled);
+
+    if (!enabled) {
+      // MUTING: record when we muted
+      _muteTimestamp = DateTime.now();
+      await _tts.stop();
+    } else {
+      // UNMUTING: resume from estimated word position
+      if (_fullText.isNotEmpty &&
+          _speechStartTime != null &&
+          _muteTimestamp != null) {
+        final elapsedMs =
+            _muteTimestamp!.difference(_speechStartTime!).inMilliseconds;
+        final secondsSpoken = elapsedMs / 1000.0;
+        final wordsSpoken = (secondsSpoken * _wordsPerSecond).floor();
+
+        final words = _fullText.split(' ');
+        final remaining = (wordsSpoken < words.length)
+            ? words.sublist(wordsSpoken).join(' ')
+            : '';
+
+        if (remaining.trim().isNotEmpty) {
+          _speechStartTime = DateTime.now();
+          _muteTimestamp = null;
+          await _tts.speak(remaining);
+        }
+      }
+    }
   }
 
-  /// Read the saved preference without instantiating the full service.
+  // ── preference helper ──────────────────────────────────────────────────────
   static Future<bool> getSavedPreference() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_prefKey) ?? true;
   }
 
-  /// Call in screen dispose().
+  // ── dispose ────────────────────────────────────────────────────────────────
   Future<void> dispose() async {
     await _tts.stop();
   }
