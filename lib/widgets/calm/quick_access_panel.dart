@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../config/motive_config.dart';
 import '../../features/calm/application/calm_recommendation_service.dart';
 import '../../models/calm_technique.dart';
+import '../../models/breathing_technique.dart';
 import '../../services/auth_service.dart';
+import '../../screens/grounding_exercise_screen.dart';
+import '../../screens/affirmations_screen.dart';
+import '../../screens/calm_technique_screen.dart';
+import '../../screens/breathing_exercise_screen.dart';
 
 /// Quick Access Emergency Panel for immediate anxiety relief
 /// Displays 3-4 fastest-acting techniques based on user's motive and effectiveness
@@ -51,9 +57,11 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
     try {
       final user = AuthService().currentUser;
       if (user != null) {
+        // Get effectiveness-based quick access techniques (under 2 minutes)
         final quickTechniques = await _recommendationService
             .getQuickAccessTechniques(user.uid, widget.userMotive);
 
+        // Get the most effective emergency technique for immediate use
         final emergencyTechnique = await _recommendationService
             .getEmergencyTechnique(user.uid, widget.userMotive);
 
@@ -66,19 +74,111 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
         }
       }
     } catch (e) {
-      // Fallback to default quick techniques
+      // Enhanced fallback with effectiveness-based selection
       if (mounted) {
         setState(() {
-          _quickTechniques = CalmTechnique.defaults
-              .where((t) => t.durationMinutes <= 5)
-              .take(4)
-              .toList();
-          _emergencyTechnique = CalmTechnique.defaults.firstWhere(
-            (t) => t.id == '5-4-3-2-1',
+          _quickTechniques = _getEffectivenessBasedQuickTechniques(
+            widget.userMotive,
+          );
+          _emergencyTechnique = _getMotiveSpecificEmergencyTechnique(
+            widget.userMotive,
           );
           _isLoading = false;
         });
       }
+    }
+  }
+
+  /// Get effectiveness-based quick techniques as enhanced fallback
+  List<CalmTechnique> _getEffectivenessBasedQuickTechniques(String? motive) {
+    final allTechniques = CalmTechnique.defaults;
+
+    // Filter techniques under 2 minutes for true emergency use (Requirement 7.2)
+    final emergencyTechniques = allTechniques.where((technique) {
+      return technique.durationMinutes <= 2;
+    }).toList();
+
+    // If we don't have enough under 2 minutes, add some 5-minute ones
+    if (emergencyTechniques.length < 3) {
+      final additionalTechniques = allTechniques
+          .where((technique) {
+            return technique.durationMinutes <= 5 &&
+                !emergencyTechniques.contains(technique);
+          })
+          .take(4 - emergencyTechniques.length);
+      emergencyTechniques.addAll(additionalTechniques);
+    }
+
+    // Apply motive-specific prioritization
+    final priorities = MotiveConfig.getCalmTechniquePriorities(motive);
+    final motiveSpecific = <CalmTechnique>[];
+    final general = <CalmTechnique>[];
+
+    for (final technique in emergencyTechniques) {
+      final techniqueTypeString = _getTechniqueTypeString(technique.type);
+      if (priorities.any(
+        (priority) =>
+            priority.toLowerCase().contains(
+              techniqueTypeString.toLowerCase(),
+            ) ||
+            techniqueTypeString.toLowerCase().contains(priority.toLowerCase()),
+      )) {
+        motiveSpecific.add(technique);
+      } else {
+        general.add(technique);
+      }
+    }
+
+    // Return motive-prioritized techniques first, then general ones
+    final result = [...motiveSpecific, ...general];
+    return result.take(4).toList();
+  }
+
+  /// Get motive-specific emergency technique as fallback
+  CalmTechnique _getMotiveSpecificEmergencyTechnique(String? motive) {
+    switch (motive) {
+      case 'Sleep':
+        return CalmTechnique.defaults.firstWhere(
+          (t) => t.id == 'body-scan',
+          orElse: () =>
+              CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1'),
+        );
+      case 'Stress':
+        return CalmTechnique.defaults.firstWhere(
+          (t) => t.id == 'deep-breathing',
+          orElse: () =>
+              CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1'),
+        );
+      case 'Anxiety':
+        return CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1');
+      case 'Focus':
+        return CalmTechnique.defaults.firstWhere(
+          (t) => t.id == 'clarity-visualization',
+          orElse: () =>
+              CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1'),
+        );
+      case 'Habit Building':
+        return CalmTechnique.defaults.firstWhere(
+          (t) => t.id == 'positive-affirmations',
+          orElse: () =>
+              CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1'),
+        );
+      default:
+        return CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1');
+    }
+  }
+
+  /// Convert TechniqueType to string for comparison with MotiveConfig
+  String _getTechniqueTypeString(TechniqueType type) {
+    switch (type) {
+      case TechniqueType.grounding:
+        return 'Grounding';
+      case TechniqueType.affirmation:
+        return 'Affirmations';
+      case TechniqueType.breathing:
+        return 'Breathing';
+      case TechniqueType.visualization:
+        return 'Visualization';
     }
   }
 
@@ -90,28 +190,28 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            widget.primaryColor.withOpacity(0.1),
-            widget.primaryColor.withOpacity(0.05),
+            widget.primaryColor.withValues(alpha: 0.1),
+            widget.primaryColor.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: widget.primaryColor.withOpacity(0.2),
+          color: widget.primaryColor.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          // Header with motive-specific messaging
           Row(
             children: [
               Icon(Icons.flash_on, color: widget.primaryColor, size: 24),
               const SizedBox(width: 8),
               Text(
-                'Quick Relief',
+                _getMotiveSpecificPanelTitle(widget.userMotive),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: widget.primaryColor,
@@ -120,10 +220,10 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
             ],
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(width: 8),
 
           Text(
-            'Immediate techniques for when you need relief right now',
+            _getMotiveSpecificPanelSubtitle(widget.userMotive),
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
@@ -177,8 +277,131 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
   }
 
   void _startTechnique(CalmTechnique technique) {
-    // Navigate directly to technique without delays
-    Navigator.of(context).pushNamed('/calm-technique', arguments: technique);
+    // Immediate activation without navigation delays (Requirement 7.3)
+    // Use PageRouteBuilder for instant navigation with no transition delays
+
+    if (technique.id == '5-4-3-2-1') {
+      // Direct grounding exercise activation
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const GroundingExerciseScreen(),
+          transitionDuration: Duration.zero, // Instant navigation
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
+    } else if (technique.id == 'positive-affirmations') {
+      // Direct affirmations activation
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const AffirmationsScreen(),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
+    } else if (technique.type == TechniqueType.breathing) {
+      // One-tap breathing exercise activation (Requirement 7.4)
+      // Navigate directly to breathing exercise with optimal technique
+      _startBreathingExercise();
+    } else {
+      // Direct technique activation for other techniques
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              CalmTechniqueScreen(technique: technique),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
+    }
+  }
+
+  /// Start breathing exercise with optimal technique for user's motive
+  void _startBreathingExercise() {
+    // Import the breathing technique model and screen
+    final BreathingTechnique optimalTechnique = _getOptimalBreathingTechnique();
+
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            BreathingExerciseScreen(technique: optimalTechnique),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
+  }
+
+  /// Get optimal breathing technique based on user's motive
+  BreathingTechnique _getOptimalBreathingTechnique() {
+    // Import BreathingTechnique defaults
+    switch (widget.userMotive) {
+      case 'Sleep':
+        // 4-7-8 is best for sleep
+        return BreathingTechnique.defaults.firstWhere(
+          (t) => t.id == '4-7-8',
+          orElse: () => BreathingTechnique.defaults.first,
+        );
+      case 'Stress':
+      case 'Anxiety':
+        // Box breathing is best for stress/anxiety
+        return BreathingTechnique.defaults.firstWhere(
+          (t) => t.id == 'box',
+          orElse: () => BreathingTechnique.defaults.first,
+        );
+      case 'Focus':
+        // Coherent breathing is best for focus
+        return BreathingTechnique.defaults.firstWhere(
+          (t) => t.id == 'coherent',
+          orElse: () => BreathingTechnique.defaults.first,
+        );
+      default:
+        // Default to box breathing as it's most versatile
+        return BreathingTechnique.defaults.firstWhere(
+          (t) => t.id == 'box',
+          orElse: () => BreathingTechnique.defaults.first,
+        );
+    }
+  }
+
+  /// Get motive-specific panel title
+  String _getMotiveSpecificPanelTitle(String? motive) {
+    switch (motive) {
+      case 'Sleep':
+        return 'Sleep Support';
+      case 'Stress':
+        return 'Stress Relief';
+      case 'Anxiety':
+        return 'Anxiety Relief';
+      case 'Focus':
+        return 'Focus Boost';
+      case 'Habit Building':
+        return 'Quick Motivation';
+      default:
+        return 'Quick Relief';
+    }
+  }
+
+  /// Get motive-specific panel subtitle
+  String _getMotiveSpecificPanelSubtitle(String? motive) {
+    switch (motive) {
+      case 'Sleep':
+        return 'Calm your mind and prepare for restful sleep';
+      case 'Stress':
+        return 'Release tension and restore inner calm';
+      case 'Anxiety':
+        return 'Ground yourself and find your center right now';
+      case 'Focus':
+        return 'Clear mental fog and sharpen concentration';
+      case 'Habit Building':
+        return 'Stay motivated and build positive momentum';
+      default:
+        return 'Immediate techniques for when you need relief right now';
+    }
   }
 }
 
@@ -193,6 +416,24 @@ class _EmergencyTechniqueCard extends StatelessWidget {
     required this.onTap,
   });
 
+  /// Get emergency label based on technique type
+  String _getEmergencyLabel(String techniqueId) {
+    switch (techniqueId) {
+      case '5-4-3-2-1':
+        return 'GROUNDING';
+      case 'deep-breathing':
+        return 'BREATHE';
+      case 'body-scan':
+        return 'RELAX';
+      case 'positive-affirmations':
+        return 'MOTIVATE';
+      case 'clarity-visualization':
+        return 'FOCUS';
+      default:
+        return 'EMERGENCY';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -202,7 +443,7 @@ class _EmergencyTechniqueCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.3),
+            color: primaryColor.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -221,7 +462,7 @@ class _EmergencyTechniqueCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -238,9 +479,9 @@ class _EmergencyTechniqueCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'EMERGENCY',
+                        _getEmergencyLabel(technique.id),
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
                         ),
@@ -262,7 +503,7 @@ class _EmergencyTechniqueCard extends StatelessWidget {
                       Text(
                         '${technique.durationMinutes} min • Tap to start immediately',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -272,7 +513,7 @@ class _EmergencyTechniqueCard extends StatelessWidget {
                 // Arrow
                 Icon(
                   Icons.arrow_forward_ios,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   size: 16,
                 ),
               ],
@@ -301,7 +542,10 @@ class _QuickTechniqueButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: primaryColor.withOpacity(0.2), width: 1),
+        border: Border.all(
+          color: primaryColor.withValues(alpha: 0.2),
+          width: 1,
+        ),
       ),
       child: Material(
         color: Colors.transparent,
@@ -309,19 +553,22 @@ class _QuickTechniqueButton extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(8.0), // Reduced from 12.0 to 8.0
             child: Row(
               children: [
                 // Icon
-                Text(technique.icon, style: const TextStyle(fontSize: 20)),
+                Text(
+                  technique.icon,
+                  style: const TextStyle(fontSize: 18),
+                ), // Reduced font size
 
-                const SizedBox(width: 8),
-
+                const SizedBox(width: 6), // Reduced from 8
                 // Content
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min, // Prevent overflow
                     children: [
                       Text(
                         technique.title,
@@ -331,7 +578,7 @@ class _QuickTechniqueButton extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-
+                      const SizedBox(height: 2), // Reduced spacing
                       Text(
                         '${technique.durationMinutes}m',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(

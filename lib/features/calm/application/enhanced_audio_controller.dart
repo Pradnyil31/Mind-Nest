@@ -1,91 +1,72 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/ambient_sound.dart';
 import '../../../services/audio_playback_service.dart';
+import '../../../screens/audio_player_screen.dart';
 
-// State for ambient sound playback
-class AmbientSoundState {
+// Enhanced state for audio playback with player screen management
+class EnhancedAudioState {
   final Set<String> activeSounds;
   final double masterVolume;
   final Map<String, double> individualVolumes;
   final int? timerMinutes;
   final bool isPlaying;
+  final AmbientSound? currentlyPlayingSound;
+  final bool isPlayerScreenOpen;
 
-  const AmbientSoundState({
+  const EnhancedAudioState({
     this.activeSounds = const {},
     this.masterVolume = 0.7,
     this.individualVolumes = const {},
     this.timerMinutes,
     this.isPlaying = false,
+    this.currentlyPlayingSound,
+    this.isPlayerScreenOpen = false,
   });
 
-  AmbientSoundState copyWith({
+  EnhancedAudioState copyWith({
     Set<String>? activeSounds,
     double? masterVolume,
     Map<String, double>? individualVolumes,
     int? timerMinutes,
     bool? isPlaying,
+    AmbientSound? currentlyPlayingSound,
+    bool clearCurrentlyPlayingSound = false,
+    bool? isPlayerScreenOpen,
   }) {
-    return AmbientSoundState(
+    return EnhancedAudioState(
       activeSounds: activeSounds ?? this.activeSounds,
       masterVolume: masterVolume ?? this.masterVolume,
       individualVolumes: individualVolumes ?? this.individualVolumes,
       timerMinutes: timerMinutes ?? this.timerMinutes,
       isPlaying: isPlaying ?? this.isPlaying,
+      currentlyPlayingSound: clearCurrentlyPlayingSound
+          ? null
+          : (currentlyPlayingSound ?? this.currentlyPlayingSound),
+      isPlayerScreenOpen: isPlayerScreenOpen ?? this.isPlayerScreenOpen,
     );
   }
 }
 
-// Controller for managing ambient sound playback
-class AmbientSoundController extends StateNotifier<AmbientSoundState> {
+// Enhanced controller for managing audio playback with full-screen player
+class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
   final AudioPlaybackService _audioService = AudioPlaybackService();
 
-  AmbientSoundController() : super(const AmbientSoundState()) {
+  EnhancedAudioController() : super(const EnhancedAudioState()) {
     _initializeAudioService();
   }
 
   Future<void> _initializeAudioService() async {
     try {
       await _audioService.initialize();
-      // Note: We don't listen to the audio service stream here to avoid race conditions
-      // The controller manages its own state and calls the audio service directly
     } catch (e) {
-      // Handle initialization error gracefully
       print('Failed to initialize audio service: $e');
     }
   }
 
-  Future<void> toggleSound(String soundId) async {
-    final individualVolume = state.individualVolumes[soundId] ?? 1.0;
-
-    try {
-      if (state.activeSounds.contains(soundId)) {
-        // If this sound is currently playing, stop it
-        await _audioService.stopSound(soundId);
-        state = state.copyWith(
-          activeSounds: const <String>{},
-          isPlaying: false,
-        );
-      } else {
-        // If this sound is not playing, stop all others and play this one
-        if (state.activeSounds.isNotEmpty) {
-          await stopAllSounds();
-        }
-
-        // Start the new sound
-        final newActiveSounds = <String>{soundId};
-        await _audioService.playSound(soundId, individualVolume);
-
-        state = state.copyWith(activeSounds: newActiveSounds, isPlaying: true);
-      }
-    } catch (e) {
-      // Handle audio errors gracefully - revert state if needed
-      print('Audio operation failed for $soundId: $e');
-      // Don't update state if audio operation failed
-    }
-  }
-
-  Future<void> playSound(String soundId) async {
-    final individualVolume = state.individualVolumes[soundId] ?? 1.0;
+  // Play sound and optionally open full-screen player
+  Future<void> playSound(AmbientSound sound, {bool openPlayer = true}) async {
+    final individualVolume = state.individualVolumes[sound.id] ?? 1.0;
 
     try {
       // ALWAYS stop other sounds first - only one sound at a time
@@ -94,16 +75,93 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
       }
 
       // Start the new sound
-      final newActiveSounds = <String>{soundId};
-      await _audioService.playSound(soundId, individualVolume);
+      final newActiveSounds = <String>{sound.id};
+      await _audioService.playSound(sound.id, individualVolume);
 
       // Update state
-      state = state.copyWith(activeSounds: newActiveSounds, isPlaying: true);
+      state = state.copyWith(
+        activeSounds: newActiveSounds,
+        isPlaying: true,
+        currentlyPlayingSound: sound,
+      );
     } catch (e) {
-      print('Audio operation failed for $soundId: $e');
+      print('Audio operation failed for ${sound.id}: $e');
     }
   }
 
+  // Toggle sound playback
+  Future<void> toggleSound(AmbientSound sound, {bool openPlayer = true}) async {
+    final individualVolume = state.individualVolumes[sound.id] ?? 1.0;
+
+    try {
+      if (state.activeSounds.contains(sound.id)) {
+        // If this sound is currently playing, stop it
+        await _audioService.stopSound(sound.id);
+
+        state = state.copyWith(
+          activeSounds: const <String>{},
+          isPlaying: false,
+          clearCurrentlyPlayingSound: true,
+        );
+      } else {
+        // If this sound is not playing, stop all others and play this one
+        if (state.activeSounds.isNotEmpty) {
+          await stopAllSounds();
+        }
+
+        // Start the new sound
+        final newActiveSounds = <String>{sound.id};
+        await _audioService.playSound(sound.id, individualVolume);
+
+        state = state.copyWith(
+          activeSounds: newActiveSounds,
+          isPlaying: true,
+          currentlyPlayingSound: sound,
+        );
+      }
+    } catch (e) {
+      print('Audio operation failed for ${sound.id}: $e');
+    }
+  }
+
+  // Open full-screen audio player
+  void openAudioPlayer(BuildContext context, AmbientSound sound) {
+    state = state.copyWith(isPlayerScreenOpen: true);
+
+    Navigator.of(context)
+        .push(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                AudioPlayerScreen(
+                  sound: sound,
+                  primaryColor: const Color(0xFF4DB6AC),
+                ),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(0.0, 1.0);
+                  const end = Offset.zero;
+                  const curve = Curves.easeInOutCubic;
+
+                  var tween = Tween(
+                    begin: begin,
+                    end: end,
+                  ).chain(CurveTween(curve: curve));
+
+                  return SlideTransition(
+                    position: animation.drive(tween),
+                    child: child,
+                  );
+                },
+            transitionDuration: const Duration(milliseconds: 400),
+          ),
+        )
+        .then((_) {
+          // Update state when player is closed
+          state = state.copyWith(isPlayerScreenOpen: false);
+        });
+  }
+
+  // Volume controls
   Future<void> setMasterVolume(double volume) async {
     state = state.copyWith(masterVolume: volume);
     try {
@@ -125,6 +183,7 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
     }
   }
 
+  // Timer controls
   Future<void> setTimer(int? minutes) async {
     state = state.copyWith(timerMinutes: minutes);
 
@@ -139,19 +198,18 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
     }
   }
 
+  // Stop all sounds
   Future<void> stopAllSounds() async {
-    state = state.copyWith(activeSounds: const {}, isPlaying: false);
+    state = state.copyWith(
+      activeSounds: const {},
+      isPlaying: false,
+      clearCurrentlyPlayingSound: true,
+    );
     try {
       await _audioService.stopAllSounds();
     } catch (e) {
       print('Failed to stop all sounds: $e');
     }
-  }
-
-  @override
-  void dispose() {
-    _audioService.dispose();
-    super.dispose();
   }
 
   // Get recommended sounds for a specific motive
@@ -206,14 +264,19 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
             .toList();
 
       default:
-        // Return a balanced mix for unknown motives
         return allSounds.take(8).toList();
     }
   }
+
+  @override
+  void dispose() {
+    _audioService.dispose();
+    super.dispose();
+  }
 }
 
-// Provider for the ambient sound controller
-final ambientSoundControllerProvider =
-    StateNotifierProvider<AmbientSoundController, AmbientSoundState>(
-      (ref) => AmbientSoundController(),
+// Provider for the enhanced audio controller
+final enhancedAudioControllerProvider =
+    StateNotifierProvider<EnhancedAudioController, EnhancedAudioState>(
+      (ref) => EnhancedAudioController(),
     );

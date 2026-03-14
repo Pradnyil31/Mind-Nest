@@ -246,11 +246,18 @@ class MoodTrackingService {
 
       return effectiveness;
     } catch (e, stackTrace) {
-      appLogger.e(
-        'Error getting technique effectiveness',
-        error: e,
-        stackTrace: stackTrace,
-      );
+      if (e.toString().contains('permission-denied')) {
+        appLogger.w(
+          'Firestore permission denied for mood_sessions. Please deploy updated security rules.',
+          error: e,
+        );
+      } else {
+        appLogger.e(
+          'Error getting technique effectiveness',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
       return {};
     }
   }

@@ -37,6 +37,7 @@ import '../widgets/home/home_routine_section.dart';
 import '../widgets/home/home_favorites_list.dart';
 import '../widgets/compact_progress_insights.dart';
 import '../widgets/badge_notification.dart';
+import '../widgets/calm/mini_audio_player.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -163,6 +164,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+        ),
+
+        // Global Mini Audio Player
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 90, // Position above bottom navigation bar
+          child: MiniAudioPlayer(primaryColor: const Color(0xFF4DB6AC)),
         ),
       ],
     );

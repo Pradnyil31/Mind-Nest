@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/ambient_sound.dart';
-import '../../features/calm/application/ambient_sound_controller.dart';
+import '../../features/calm/application/enhanced_audio_controller.dart';
 
 class InteractiveSoundscapeWidget extends ConsumerStatefulWidget {
   final String? userMotive;
@@ -47,16 +47,16 @@ class _InteractiveSoundscapeWidgetState
 
   @override
   Widget build(BuildContext context) {
-    final soundState = ref.watch(ambientSoundControllerProvider);
-    final soundController = ref.read(ambientSoundControllerProvider.notifier);
-    final recommendedSounds = soundController.getRecommendedSounds(
+    final audioState = ref.watch(enhancedAudioControllerProvider);
+    final audioController = ref.read(enhancedAudioControllerProvider.notifier);
+    final recommendedSounds = audioController.getRecommendedSounds(
       widget.userMotive ?? 'default',
     );
 
     // Start pulse animation if sounds are playing
-    if (soundState.isPlaying && !_pulseController.isAnimating) {
+    if (audioState.isPlaying && !_pulseController.isAnimating) {
       _pulseController.repeat(reverse: true);
-    } else if (!soundState.isPlaying && _pulseController.isAnimating) {
+    } else if (!audioState.isPlaying && _pulseController.isAnimating) {
       _pulseController.stop();
       _pulseController.reset();
     }
@@ -84,7 +84,7 @@ class _InteractiveSoundscapeWidgetState
                 animation: _pulseAnimation,
                 builder: (context, child) {
                   return Transform.scale(
-                    scale: soundState.isPlaying ? _pulseAnimation.value : 1.0,
+                    scale: audioState.isPlaying ? _pulseAnimation.value : 1.0,
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -92,7 +92,7 @@ class _InteractiveSoundscapeWidgetState
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        soundState.isPlaying
+                        audioState.isPlaying
                             ? Icons.volume_up
                             : Icons.music_note,
                         color: widget.primaryColor,
@@ -116,9 +116,10 @@ class _InteractiveSoundscapeWidgetState
                       ),
                     ),
                     Text(
-                      soundState.isPlaying
-                          ? '${soundState.activeSounds.length} sound${soundState.activeSounds.length != 1 ? 's' : ''} playing'
-                          : 'Tap sounds to create your mix',
+                      audioState.isPlaying &&
+                              audioState.currentlyPlayingSound != null
+                          ? 'Playing: ${audioState.currentlyPlayingSound!.name}'
+                          : 'Tap a sound to play',
                       style: GoogleFonts.lato(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -127,9 +128,9 @@ class _InteractiveSoundscapeWidgetState
                   ],
                 ),
               ),
-              if (soundState.isPlaying)
+              if (audioState.isPlaying)
                 IconButton(
-                  onPressed: soundController.stopAllSounds,
+                  onPressed: audioController.stopAllSounds,
                   icon: Icon(Icons.stop_circle, color: Colors.red.shade400),
                 ),
             ],
@@ -150,15 +151,15 @@ class _InteractiveSoundscapeWidgetState
             itemCount: recommendedSounds.length,
             itemBuilder: (context, index) {
               final sound = recommendedSounds[index];
-              final isActive = soundState.activeSounds.contains(sound.id);
+              final isActive = audioState.activeSounds.contains(sound.id);
 
-              return _buildSoundCard(sound, isActive, soundController);
+              return _buildSoundCard(sound, isActive, audioController);
             },
           ),
 
-          if (soundState.activeSounds.isNotEmpty) ...[
+          if (audioState.activeSounds.isNotEmpty) ...[
             const SizedBox(height: 20),
-            _buildAudioControls(soundState, soundController),
+            _buildAudioControls(audioState, audioController),
           ],
         ],
       ),
@@ -168,10 +169,15 @@ class _InteractiveSoundscapeWidgetState
   Widget _buildSoundCard(
     AmbientSound sound,
     bool isActive,
-    AmbientSoundController controller,
+    EnhancedAudioController controller,
   ) {
     return GestureDetector(
-      onTap: () => controller.toggleSound(sound.id),
+      onTap: () {
+        // Open full-screen player when sound is tapped
+        controller.openAudioPlayer(context, sound);
+        // Also toggle the sound playback
+        controller.toggleSound(sound, openPlayer: false);
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
@@ -215,14 +221,14 @@ class _InteractiveSoundscapeWidgetState
   }
 
   Widget _buildAudioControls(
-    AmbientSoundState soundState,
-    AmbientSoundController controller,
+    EnhancedAudioState audioState,
+    EnhancedAudioController controller,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Active sounds indicator
-        if (soundState.activeSounds.isNotEmpty) ...[
+        if (audioState.activeSounds.isNotEmpty) ...[
           Text(
             'Now Playing',
             style: GoogleFonts.lato(
@@ -235,36 +241,45 @@ class _InteractiveSoundscapeWidgetState
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: soundState.activeSounds.map((soundId) {
+            children: audioState.activeSounds.map((soundId) {
               final sound = AmbientSound.defaults.firstWhere(
                 (s) => s.id == soundId,
               );
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: widget.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: widget.primaryColor.withValues(alpha: 0.2),
+              return GestureDetector(
+                onTap: () => controller.openAudioPlayer(context, sound),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
                   ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(sound.emoji, style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 4),
-                    Text(
-                      sound.name,
-                      style: GoogleFonts.lato(
-                        fontSize: 12,
-                        color: widget.primaryColor,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  decoration: BoxDecoration(
+                    color: widget.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: widget.primaryColor.withValues(alpha: 0.2),
                     ),
-                  ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(sound.emoji, style: const TextStyle(fontSize: 14)),
+                      const SizedBox(width: 4),
+                      Text(
+                        sound.name,
+                        style: GoogleFonts.lato(
+                          fontSize: 12,
+                          color: widget.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.open_in_full,
+                        size: 12,
+                        color: widget.primaryColor,
+                      ),
+                    ],
+                  ),
                 ),
               );
             }).toList(),
@@ -278,7 +293,7 @@ class _InteractiveSoundscapeWidgetState
             Icon(Icons.volume_down, color: widget.primaryColor, size: 20),
             Expanded(
               child: Slider(
-                value: soundState.masterVolume,
+                value: audioState.masterVolume,
                 onChanged: controller.setMasterVolume,
                 activeColor: widget.primaryColor,
                 inactiveColor: widget.primaryColor.withValues(alpha: 0.2),
@@ -287,7 +302,7 @@ class _InteractiveSoundscapeWidgetState
             Icon(Icons.volume_up, color: widget.primaryColor, size: 20),
             const SizedBox(width: 8),
             Text(
-              '${(soundState.masterVolume * 100).round()}%',
+              '${(audioState.masterVolume * 100).round()}%',
               style: GoogleFonts.lato(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

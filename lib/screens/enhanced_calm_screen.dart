@@ -4,12 +4,15 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/motive_config.dart';
 import '../models/calm_technique.dart';
 import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
 import '../widgets/calm/interactive_soundscape_widget.dart';
+import '../widgets/calm/mini_audio_player.dart';
+import '../widgets/calm/quick_access_panel.dart';
+import '../features/calm/application/motive_detection_service.dart';
+import '../features/calm/application/theme_transition_service.dart';
+import '../features/calm/application/calm_recommendation_service.dart';
 import 'grounding_exercise_screen.dart';
 import 'affirmations_screen.dart';
 import 'calm_technique_screen.dart';
-import 'breathing_screen.dart';
 
 class EnhancedCalmScreen extends ConsumerStatefulWidget {
   const EnhancedCalmScreen({super.key});
@@ -19,11 +22,13 @@ class EnhancedCalmScreen extends ConsumerStatefulWidget {
 }
 
 class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
-    with TickerProviderStateMixin {
-  String? _userMotive;
-  bool _isLoading = true;
+    with TickerProviderStateMixin, ThemeTransitionMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  final CalmRecommendationService _recommendationService =
+      CalmRecommendationService();
+  List<CalmTechnique> _personalizedTechniques = [];
+  bool _isLoadingRecommendations = false;
 
   @override
   void initState() {
@@ -35,7 +40,12 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
-    _loadUserMotive();
+
+    // Start entrance animation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      startEntranceAnimation();
+      _fadeController.forward();
+    });
   }
 
   @override
@@ -44,40 +54,84 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     super.dispose();
   }
 
-  Future<void> _loadUserMotive() async {
-    final user = AuthService().currentUser;
-    if (user != null) {
-      try {
-        final userDoc = await FirestoreService().getUserStream(user.uid).first;
-        if (userDoc.exists && mounted) {
-          final data = userDoc.data() as Map<String, dynamic>;
-          setState(() {
-            _userMotive = data['primaryMotive'] as String?;
-            _isLoading = false;
-          });
-          _fadeController.forward();
-        }
-      } catch (e) {
+  /// Load personalized recommendations based on current motive
+  Future<void> _loadPersonalizedRecommendations(String? motive) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingRecommendations = true;
+    });
+
+    try {
+      final user = AuthService().currentUser;
+      if (user != null) {
+        final recommendations = await _recommendationService
+            .getPersonalizedRecommendations(user.uid, motive);
+
         if (mounted) {
           setState(() {
-            _isLoading = false;
+            _personalizedTechniques = recommendations;
+            _isLoadingRecommendations = false;
           });
-          _fadeController.forward();
         }
       }
-    } else {
-      setState(() {
-        _isLoading = false;
-      });
-      _fadeController.forward();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _personalizedTechniques = _getPrioritizedTechniques(motive);
+          _isLoadingRecommendations = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    final motiveState = ref.watch(motiveDetectionProvider);
+    final currentMotive = motiveState.currentMotive;
+    final colorTheme = MotiveColorTheme.fromMotive(currentMotive);
+
+    // Handle motive changes and interface refresh with comprehensive adaptation
+    ref.listen<MotiveDetectionState>(motiveDetectionProvider, (
+      previous,
+      current,
+    ) {
+      if (current.shouldRefreshInterface && mounted) {
+        // Trigger smooth theme transition
+        startThemeTransition();
+
+        // Load new recommendations for the changed motive
+        _loadPersonalizedRecommendations(current.currentMotive);
+
+        // Mark interface as refreshed
+        ref.read(motiveDetectionProvider.notifier).markInterfaceRefreshed();
+
+        // Show motive change notification with comprehensive adaptation info
+        if (current.motiveChangeDetected && current.previousMotive != null) {
+          _showMotiveChangeNotification(
+            current.previousMotive,
+            current.currentMotive,
+          );
+        }
+      }
+
+      // Show adaptation progress if in progress
+      if (current.adaptationInProgress &&
+          previous?.adaptationInProgress != true) {
+        _showAdaptationProgress(current.currentMotive);
+      }
+    });
+
+    // Load recommendations on first build
+    if (_personalizedTechniques.isEmpty && !_isLoadingRecommendations) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadPersonalizedRecommendations(currentMotive);
+      });
+    }
+
+    if (motiveState.isLoading) {
       return Scaffold(
-        backgroundColor: _getMotiveBackgroundColor(),
+        backgroundColor: colorTheme.backgroundColor,
         body: const Center(
           child: CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4DB6AC)),
@@ -86,56 +140,80 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
       );
     }
 
-    return Scaffold(
-      backgroundColor: _getMotiveBackgroundColor(),
-      appBar: _buildAppBar(),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Motive-specific welcome header
-              _buildMotiveWelcomeHeader(),
-              const SizedBox(height: 24),
+    return ThemeTransitionService.createAnimatedBackground(
+      theme: colorTheme,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: _buildAppBar(currentMotive, colorTheme),
+        body: Stack(
+          children: [
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Motive-specific welcome header with smooth transitions
+                    _buildMotiveWelcomeHeader(currentMotive, colorTheme),
+                    const SizedBox(height: 24),
 
-              // Quick Access Emergency Panel
-              _buildQuickAccessPanel(),
-              const SizedBox(height: 32),
+                    // Enhanced Quick Access Emergency Panel
+                    _buildEnhancedQuickAccessPanel(currentMotive, colorTheme),
+                    const SizedBox(height: 32),
 
-              // Personalized Techniques Section
-              _buildPersonalizedTechniquesSection(),
-              const SizedBox(height: 32),
+                    // Personalized Techniques Section with staggered animations
+                    _buildPersonalizedTechniquesSection(
+                      currentMotive,
+                      colorTheme,
+                    ),
+                    const SizedBox(height: 32),
 
-              // Ambient Soundscapes Section
-              _buildAmbientSoundscapesSection(),
-            ],
-          ),
+                    // Ambient Soundscapes Section
+                    _buildAmbientSoundscapesSection(currentMotive, colorTheme),
+                  ],
+                ),
+              ),
+            ),
+            // Mini Audio Player
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: MiniAudioPlayer(primaryColor: colorTheme.primaryColor),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    final profile = MotiveConfig.getProfile(_userMotive);
+  PreferredSizeWidget _buildAppBar(
+    String? motive,
+    MotiveColorTheme colorTheme,
+  ) {
+    final profile = MotiveConfig.getProfile(motive);
     final emoji = profile?.emoji ?? '🧘';
 
     return AppBar(
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 24)),
-          const SizedBox(width: 8),
-          Text(
-            'Calm',
-            style: GoogleFonts.lato(
-              color: const Color(0xFF2D2D2D),
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
+      title: ThemeTransitionService.createFadeTransition(
+        controller: entranceController,
+        delay: 0.2,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Text(
+              'Calm',
+              style: GoogleFonts.lato(
+                color: const Color(0xFF2D2D2D),
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -144,200 +222,173 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     );
   }
 
-  Widget _buildMotiveWelcomeHeader() {
-    final profile = MotiveConfig.getProfile(_userMotive);
+  Widget _buildMotiveWelcomeHeader(
+    String? motive,
+    MotiveColorTheme colorTheme,
+  ) {
+    final profile = MotiveConfig.getProfile(motive);
     final displayName = profile?.displayName ?? 'Wellness';
     final emoji = profile?.emoji ?? '🧘';
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: _getMotiveGradient(),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: _getMotivePrimaryColor().withValues(alpha: 0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 32)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Your $displayName Journey',
-                      style: GoogleFonts.lato(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _getMotiveWelcomeMessage(),
-                      style: GoogleFonts.lato(
-                        fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    final motiveDetection = ref.read(motiveDetectionProvider.notifier);
+    final welcomeMessage = motiveDetection.getMotiveWelcomeMessage(motive);
+    final encouragementMessage = motiveDetection.getMotiveEncouragementMessage(
+      motive,
     );
-  }
 
-  Widget _buildQuickAccessPanel() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return ThemeTransitionService.createAnimatedGradientContainer(
+      theme: colorTheme,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: colorTheme.primaryColor.withValues(alpha: 0.2),
+          blurRadius: 15,
+          offset: const Offset(0, 8),
+        ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: ThemeTransitionService.createFadeTransition(
+          controller: entranceController,
+          delay: 0.4,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                children: [
+                  Text(emoji, style: const TextStyle(fontSize: 32)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your $displayName Journey',
+                          style: GoogleFonts.lato(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          welcomeMessage,
+                          style: GoogleFonts.lato(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Motive-specific encouragement
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.emergency,
-                  color: Colors.red.shade600,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Quick Relief',
-                style: GoogleFonts.lato(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF2D2D2D),
+                child: Text(
+                  encouragementMessage,
+                  style: GoogleFonts.lato(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Immediate techniques for when you need them most',
-            style: GoogleFonts.lato(fontSize: 14, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 16),
-          _buildQuickAccessButtons(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickAccessButtons() {
-    final quickTechniques = _getMotiveQuickTechniques();
-
-    return Row(
-      children: quickTechniques.asMap().entries.map((entry) {
-        final index = entry.key;
-        final technique = entry.value;
-
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              right: index < quickTechniques.length - 1 ? 12 : 0,
-            ),
-            child: _buildQuickAccessButton(technique),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildQuickAccessButton(Map<String, dynamic> technique) {
-    return GestureDetector(
-      onTap: () => _handleQuickTechniqueNavigation(technique),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          color: _getMotivePrimaryColor().withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _getMotivePrimaryColor().withValues(alpha: 0.2),
-          ),
-        ),
-        child: Column(
-          children: [
-            Text(
-              technique['icon'] as String,
-              style: const TextStyle(fontSize: 24),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              technique['name'] as String,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.lato(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: _getMotivePrimaryColor(),
-              ),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  Widget _buildPersonalizedTechniquesSection() {
+  Widget _buildEnhancedQuickAccessPanel(
+    String? motive,
+    MotiveColorTheme colorTheme,
+  ) {
+    return ThemeTransitionService.createScaleTransition(
+      controller: entranceController,
+      delay: 0.6,
+      child: QuickAccessPanel(
+        userMotive: motive,
+        primaryColor: colorTheme.primaryColor,
+      ),
+    );
+  }
+
+  Widget _buildPersonalizedTechniquesSection(
+    String? motive,
+    MotiveColorTheme colorTheme,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader(
-          'Personalized Techniques',
-          'Curated for your ${MotiveConfig.getProfile(_userMotive)?.displayName ?? 'wellness'} journey',
+        ThemeTransitionService.createFadeTransition(
+          controller: entranceController,
+          delay: 0.8,
+          child: _buildSectionHeader(
+            'Personalized Techniques',
+            'Curated for your ${MotiveConfig.getProfile(motive)?.displayName ?? 'wellness'} journey',
+          ),
         ),
         const SizedBox(height: 16),
-        _buildPersonalizedTechniquesList(),
+        _buildPersonalizedTechniquesList(motive, colorTheme),
       ],
     );
   }
 
-  Widget _buildPersonalizedTechniquesList() {
-    final prioritizedTechniques = _getPrioritizedTechniques();
+  Widget _buildPersonalizedTechniquesList(
+    String? motive,
+    MotiveColorTheme colorTheme,
+  ) {
+    if (_isLoadingRecommendations) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final techniques = _personalizedTechniques.isNotEmpty
+        ? _personalizedTechniques
+        : _getPrioritizedTechniques(motive);
 
     return Column(
-      children: prioritizedTechniques.map((technique) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildTechniqueCard(technique),
+      children: techniques.asMap().entries.map((entry) {
+        final index = entry.key;
+        final technique = entry.value;
+
+        return ThemeTransitionService.createStaggeredTechniqueCard(
+          index: index,
+          controller: entranceController,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildTechniqueCard(technique, motive, colorTheme),
+          ),
         );
       }).toList(),
     );
   }
 
-  Widget _buildAmbientSoundscapesSection() {
-    return InteractiveSoundscapeWidget(
-      userMotive: _userMotive,
-      primaryColor: _getMotivePrimaryColor(),
+  Widget _buildAmbientSoundscapesSection(
+    String? motive,
+    MotiveColorTheme colorTheme,
+  ) {
+    return ThemeTransitionService.createFadeTransition(
+      controller: entranceController,
+      delay: 1.0,
+      child: InteractiveSoundscapeWidget(
+        userMotive: motive,
+        primaryColor: colorTheme.primaryColor,
+      ),
     );
   }
 
@@ -362,24 +413,19 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     );
   }
 
-  Widget _buildTechniqueCard(CalmTechnique technique) {
+  Widget _buildTechniqueCard(
+    CalmTechnique technique,
+    String? motive,
+    MotiveColorTheme colorTheme,
+  ) {
     final techniqueColor = _getTechniqueColor(technique.type);
 
     return GestureDetector(
       onTap: () => _handleTechniqueNavigation(technique),
-      child: Container(
+      child: ThemeTransitionService.createMorphingContainer(
+        theme: colorTheme,
+        borderRadius: BorderRadius.circular(16),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
         child: Row(
           children: [
             Container(
@@ -405,7 +451,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _getMotiveSpecificDescription(technique),
+                    _getMotiveSpecificDescription(technique, motive),
                     style: GoogleFonts.lato(
                       fontSize: 13,
                       color: Colors.grey.shade600,
@@ -425,14 +471,14 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                         ),
                       ),
                       const Spacer(),
-                      if (_isTechniquePrioritized(technique))
+                      if (_isTechniquePrioritized(technique, motive))
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: _getMotivePrimaryColor().withValues(
+                            color: colorTheme.primaryColor.withValues(
                               alpha: 0.1,
                             ),
                             borderRadius: BorderRadius.circular(8),
@@ -442,7 +488,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                             style: GoogleFonts.lato(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: _getMotivePrimaryColor(),
+                              color: colorTheme.primaryColor,
                             ),
                           ),
                         ),
@@ -462,109 +508,86 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     );
   }
 
+  /// Show notification when motive changes with comprehensive adaptation info
+  void _showMotiveChangeNotification(String? fromMotive, String? toMotive) {
+    final fromProfile = MotiveConfig.getProfile(fromMotive);
+    final toProfile = MotiveConfig.getProfile(toMotive);
+
+    if (fromProfile != null && toProfile != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Text(toProfile.emoji, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Switched to ${toProfile.displayName} journey',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      'Techniques, sounds, and quick access adapted',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: MotiveColorTheme.fromMotive(toMotive).primaryColor,
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Show adaptation progress indicator
+  void _showAdaptationProgress(String? motive) {
+    final profile = MotiveConfig.getProfile(motive);
+    if (profile != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Adapting to ${profile.displayName} preferences...',
+                style: const TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+          backgroundColor: MotiveColorTheme.fromMotive(motive).primaryColor,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
   // Helper methods for motive-based personalization
-  Color _getMotiveBackgroundColor() {
-    switch (_userMotive) {
-      case 'Sleep':
-        return const Color(0xFFF0F4FF);
-      case 'Stress':
-        return const Color(0xFFF0FFF4);
-      case 'Anxiety':
-        return const Color(0xFFFFF0F8);
-      case 'Focus':
-        return const Color(0xFFFFF8F0);
-      case 'Habit Building':
-        return const Color(0xFFFFF0F0);
-      default:
-        return const Color(0xFFF3F4F9);
-    }
-  }
-
-  Color _getMotivePrimaryColor() {
-    switch (_userMotive) {
-      case 'Sleep':
-        return const Color(0xFF6366F1);
-      case 'Stress':
-        return const Color(0xFF10B981);
-      case 'Anxiety':
-        return const Color(0xFF8B5CF6);
-      case 'Focus':
-        return const Color(0xFFF59E0B);
-      case 'Habit Building':
-        return const Color(0xFFEF4444);
-      default:
-        return const Color(0xFF4DB6AC);
-    }
-  }
-
-  LinearGradient _getMotiveGradient() {
-    final primaryColor = _getMotivePrimaryColor();
-    return LinearGradient(
-      colors: [primaryColor, primaryColor.withValues(alpha: 0.8)],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
-  }
-
-  String _getMotiveWelcomeMessage() {
-    switch (_userMotive) {
-      case 'Sleep':
-        return 'Find peace and prepare for restful sleep';
-      case 'Stress':
-        return 'Release tension and build resilience';
-      case 'Anxiety':
-        return 'Ground yourself and find your center';
-      case 'Focus':
-        return 'Clear your mind and sharpen concentration';
-      case 'Habit Building':
-        return 'Stay motivated and build consistency';
-      default:
-        return 'Find your calm and inner peace';
-    }
-  }
-
-  List<Map<String, dynamic>> _getMotiveQuickTechniques() {
-    switch (_userMotive) {
-      case 'Sleep':
-        return [
-          {'name': 'Body Scan', 'icon': '🧘', 'action': 'body_scan'},
-          {'name': 'Deep Breathing', 'icon': '🫁', 'action': 'breathing'},
-          {'name': 'Sleep Sounds', 'icon': '🌙', 'action': 'sounds'},
-        ];
-      case 'Stress':
-        return [
-          {'name': 'Breathing', 'icon': '🫁', 'action': 'breathing'},
-          {'name': 'Grounding', 'icon': '🌱', 'action': 'grounding'},
-          {'name': 'Meditation', 'icon': '🧘', 'action': 'meditation'},
-        ];
-      case 'Anxiety':
-        return [
-          {'name': 'Grounding', 'icon': '⚓', 'action': 'grounding'},
-          {'name': '4-7-8 Breathing', 'icon': '🫁', 'action': 'breathing'},
-          {'name': 'Safe Space', 'icon': '🏠', 'action': 'safe_space'},
-        ];
-      case 'Focus':
-        return [
-          {'name': 'Clarity', 'icon': '🎯', 'action': 'clarity'},
-          {'name': 'Breathing', 'icon': '🫁', 'action': 'breathing'},
-          {'name': 'Focus Sounds', 'icon': '🔊', 'action': 'sounds'},
-        ];
-      case 'Habit Building':
-        return [
-          {'name': 'Motivation', 'icon': '🔥', 'action': 'motivation'},
-          {'name': 'Breathing', 'icon': '🫁', 'action': 'breathing'},
-          {'name': 'Affirmations', 'icon': '💬', 'action': 'affirmations'},
-        ];
-      default:
-        return [
-          {'name': 'Breathing', 'icon': '🫁', 'action': 'breathing'},
-          {'name': 'Grounding', 'icon': '🌱', 'action': 'grounding'},
-          {'name': 'Meditation', 'icon': '🧘', 'action': 'meditation'},
-        ];
-    }
-  }
-
-  List<CalmTechnique> _getPrioritizedTechniques() {
+  List<CalmTechnique> _getPrioritizedTechniques(String? motive) {
     final allTechniques = CalmTechnique.defaults;
 
     // Sort techniques by priority
@@ -572,7 +595,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     final others = <CalmTechnique>[];
 
     for (final technique in allTechniques) {
-      if (_isTechniquePrioritized(technique)) {
+      if (_isTechniquePrioritized(technique, motive)) {
         prioritized.add(technique);
       } else {
         others.add(technique);
@@ -582,23 +605,29 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     return [...prioritized, ...others];
   }
 
-  bool _isTechniquePrioritized(CalmTechnique technique) {
-    return MotiveConfig.isTechniquePrioritized(
-      _userMotive,
-      technique.type.name,
-    );
+  bool _isTechniquePrioritized(CalmTechnique technique, String? motive) {
+    return MotiveConfig.isTechniquePrioritized(motive, technique.type.name);
   }
 
-  String _getMotiveSpecificDescription(CalmTechnique technique) {
+  String _getMotiveSpecificDescription(
+    CalmTechnique technique,
+    String? motive,
+  ) {
     // Return motive-specific benefits for techniques
-    if (_userMotive == 'Sleep' && technique.type == TechniqueType.grounding) {
+    if (motive == 'Sleep' && technique.type == TechniqueType.grounding) {
       return 'Perfect for calming racing thoughts before bed';
-    } else if (_userMotive == 'Anxiety' &&
+    } else if (motive == 'Anxiety' &&
         technique.type == TechniqueType.grounding) {
       return 'Anchor yourself in the present moment';
-    } else if (_userMotive == 'Focus' &&
+    } else if (motive == 'Focus' &&
         technique.type == TechniqueType.visualization) {
       return 'Clear mental fog and enhance concentration';
+    } else if (motive == 'Stress' &&
+        technique.type == TechniqueType.breathing) {
+      return 'Release tension and restore calm energy';
+    } else if (motive == 'Habit Building' &&
+        technique.type == TechniqueType.affirmation) {
+      return 'Build motivation and reinforce positive habits';
     }
     return technique.description;
   }
@@ -613,39 +642,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
         return const Color(0xFF64B5F6);
       case TechniqueType.visualization:
         return const Color(0xFF4DB6AC);
-    }
-  }
-
-  void _handleQuickTechniqueNavigation(Map<String, dynamic> technique) {
-    final action = technique['action'] as String;
-
-    switch (action) {
-      case 'breathing':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const BreathingScreen()),
-        );
-        break;
-      case 'grounding':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const GroundingExerciseScreen()),
-        );
-        break;
-      case 'affirmations':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AffirmationsScreen()),
-        );
-        break;
-      default:
-        // Show coming soon message for other actions
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${technique['name']} coming soon!'),
-            backgroundColor: _getMotivePrimaryColor(),
-          ),
-        );
     }
   }
 

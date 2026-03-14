@@ -1,12 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 
-
 class FirestoreService {
   final FirebaseFirestore _firestore;
 
   FirestoreService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // Collection reference
   CollectionReference get _usersCollection => _firestore.collection('users');
@@ -55,11 +54,11 @@ class FirestoreService {
   Future<void> updateLastLogin(String uid) async {
     try {
       final now = DateTime.now();
-      
+
       // Get current user data to check login dates
       final doc = await _usersCollection.doc(uid).get();
       List<DateTime> currentLoginDates = [];
-      
+
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
         if (data['loginDates'] != null) {
@@ -73,8 +72,8 @@ class FirestoreService {
       bool alreadyLoggedInToday = false;
       if (currentLoginDates.isNotEmpty) {
         final lastDate = currentLoginDates.last;
-        if (lastDate.year == now.year && 
-            lastDate.month == now.month && 
+        if (lastDate.year == now.year &&
+            lastDate.month == now.month &&
             lastDate.day == now.day) {
           alreadyLoggedInToday = true;
         }
@@ -84,13 +83,15 @@ class FirestoreService {
         currentLoginDates.add(now);
         // Keep only last 30 days to avoid document size limits
         if (currentLoginDates.length > 30) {
-           currentLoginDates.removeAt(0);
+          currentLoginDates.removeAt(0);
         }
       }
 
       await _usersCollection.doc(uid).update({
         'lastLogin': Timestamp.fromDate(now),
-        'loginDates': currentLoginDates.map((e) => Timestamp.fromDate(e)).toList(),
+        'loginDates': currentLoginDates
+            .map((e) => Timestamp.fromDate(e))
+            .toList(),
       });
     } catch (e) {
       throw 'Failed to update last login: $e';
@@ -125,6 +126,7 @@ class FirestoreService {
       return false;
     }
   }
+
   // Stream of user document
   Stream<DocumentSnapshot> getUserStream(String uid) {
     return _usersCollection.doc(uid).snapshots();
@@ -133,8 +135,9 @@ class FirestoreService {
   // Save Daily Motive
   Future<void> saveDailyMotive(String uid, String motive) async {
     final today = DateTime.now();
-    final dateId = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
-    
+    final dateId =
+        "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+
     await _usersCollection.doc(uid).collection('dailyMotives').doc(dateId).set({
       'motive': motive,
       'timestamp': FieldValue.serverTimestamp(),
@@ -144,23 +147,32 @@ class FirestoreService {
   // Get Daily Motive
   Future<String?> getDailyMotive(String uid) async {
     final today = DateTime.now();
-    final dateId = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+    final dateId =
+        "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
 
-    final doc = await _usersCollection.doc(uid).collection('dailyMotives').doc(dateId).get();
+    final doc = await _usersCollection
+        .doc(uid)
+        .collection('dailyMotives')
+        .doc(dateId)
+        .get();
     if (doc.exists && doc.data() != null) {
       return (doc.data() as Map<String, dynamic>)['motive'] as String?;
     }
     return null;
   }
+
   // Save Sleep Data
-  Future<void> logSleepData(String uid, DateTime date, Map<String, dynamic> data) async {
-    final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    
+  Future<void> logSleepData(
+    String uid,
+    DateTime date,
+    Map<String, dynamic> data,
+  ) async {
+    final dateKey =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
     try {
       await _usersCollection.doc(uid).set({
-        'sleepData': {
-          dateKey: data
-        }
+        'sleepData': {dateKey: data},
       }, SetOptions(merge: true));
     } catch (e) {
       throw 'Failed to log sleep data: $e';
@@ -169,8 +181,9 @@ class FirestoreService {
 
   // Get Sleep Data for a specific date
   Future<Map<String, dynamic>?> getSleepData(String uid, DateTime date) async {
-    final dateKey = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    
+    final dateKey =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
     try {
       final doc = await _usersCollection.doc(uid).get();
       if (doc.exists) {
@@ -200,9 +213,9 @@ class FirestoreService {
           .collection('activity_stats')
           .doc(activityKey)
           .set({
-        'completionCount': FieldValue.increment(1),
-        'lastCompleted': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+            'completionCount': FieldValue.increment(1),
+            'lastCompleted': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
     } catch (e) {
       // Silent fail — never block the user's main action for analytics
     }
@@ -224,5 +237,48 @@ class FirestoreService {
       return 0;
     }
   }
-}
 
+  // ── Generic Collection Methods ─────────────────────────────────────────
+  // Generic methods for working with any Firestore collection
+
+  /// Set a document in any collection
+  Future<void> setDocument({
+    required String collection,
+    required String docId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      await _firestore.collection(collection).doc(docId).set(data);
+    } catch (e) {
+      throw 'Failed to set document: $e';
+    }
+  }
+
+  /// Get documents from a collection where a field equals a value
+  Future<QuerySnapshot> getDocumentsWhere({
+    required String collection,
+    required String field,
+    required dynamic value,
+  }) async {
+    try {
+      return await _firestore
+          .collection(collection)
+          .where(field, isEqualTo: value)
+          .get();
+    } catch (e) {
+      throw 'Failed to get documents: $e';
+    }
+  }
+
+  /// Delete a document from any collection
+  Future<void> deleteDocument({
+    required String collection,
+    required String docId,
+  }) async {
+    try {
+      await _firestore.collection(collection).doc(docId).delete();
+    } catch (e) {
+      throw 'Failed to delete document: $e';
+    }
+  }
+}

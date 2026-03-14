@@ -54,6 +54,7 @@ class CalmRecommendationService {
 
   /// Get techniques optimized for Quick Access Emergency Panel
   /// Returns 3-4 fastest-acting techniques (under 2 minutes) for immediate relief
+  /// Enhanced with effectiveness-based ranking and motive adaptation
   Future<List<CalmTechnique>> getQuickAccessTechniques(
     String userId,
     String? motive,
@@ -64,7 +65,7 @@ class CalmRecommendationService {
         userId,
       );
 
-      // Filter techniques that are 2 minutes or less
+      // Filter techniques that are 2 minutes or less (Requirement 7.2)
       final quickTechniques = CalmTechnique.defaults
           .where((t) => t.durationMinutes <= 2)
           .toList();
@@ -79,15 +80,14 @@ class CalmRecommendationService {
         quickTechniques.addAll(additionalTechniques);
       }
 
-      // Score and rank techniques for emergency use
+      // Score and rank techniques for emergency use with enhanced scoring
       final scoredTechniques = <_ScoredTechnique>[];
 
       for (final technique in quickTechniques) {
-        final score = _calculateTechniqueScore(
+        final score = _calculateEmergencyTechniqueScore(
           technique,
           motive,
           effectiveness,
-          RecommendationType.emergency,
         );
 
         scoredTechniques.add(_ScoredTechnique(technique, score));
@@ -101,8 +101,8 @@ class CalmRecommendationService {
           .map((scored) => scored.technique)
           .toList();
     } catch (e) {
-      // Fallback to basic emergency techniques
-      return _getEmergencyFallback(motive);
+      // Enhanced fallback with effectiveness consideration
+      return _getEnhancedEmergencyFallback(motive);
     }
   }
 
@@ -118,6 +118,99 @@ class CalmRecommendationService {
     } catch (e) {
       // Fallback to 5-4-3-2-1 grounding as it's universally effective
       return CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1');
+    }
+  }
+
+  /// Calculate enhanced emergency technique score with focus on immediate effectiveness
+  double _calculateEmergencyTechniqueScore(
+    CalmTechnique technique,
+    String? motive,
+    Map<String, double> effectiveness,
+  ) {
+    double score = 0.0;
+
+    // 1. Personal effectiveness (50% weight - most important for emergency)
+    score += _getEffectivenessScore(technique, effectiveness) * 0.5;
+
+    // 2. Motive-based emergency priority (30% weight)
+    score += _getEmergencyMotivePriorityScore(technique, motive) * 0.3;
+
+    // 3. Speed bonus for ultra-fast techniques (15% weight)
+    score += _getSpeedBonusScore(technique) * 0.15;
+
+    // 4. Universal effectiveness bonus (5% weight)
+    score += _getUniversalEffectivenessScore(technique) * 0.05;
+
+    return score;
+  }
+
+  /// Get emergency-specific motive priority score
+  double _getEmergencyMotivePriorityScore(
+    CalmTechnique technique,
+    String? motive,
+  ) {
+    if (motive == null) return 0.5;
+
+    switch (motive.toLowerCase()) {
+      case 'anxiety':
+        // Grounding techniques are most effective for anxiety emergencies
+        if (technique.id == '5-4-3-2-1') return 1.0;
+        if (technique.type == TechniqueType.grounding) return 0.9;
+        if (technique.type == TechniqueType.breathing) return 0.8;
+        break;
+
+      case 'stress':
+        // Breathing and quick affirmations for stress
+        if (technique.type == TechniqueType.breathing) return 1.0;
+        if (technique.id == 'positive-affirmations') return 0.9;
+        if (technique.type == TechniqueType.grounding) return 0.8;
+        break;
+
+      case 'sleep':
+        // Quick visualization and affirmations for sleep
+        if (technique.id == 'cold-water-visualization') return 1.0;
+        if (technique.type == TechniqueType.visualization) return 0.9;
+        if (technique.type == TechniqueType.breathing) return 0.8;
+        break;
+
+      case 'focus':
+        // Grounding and breathing for focus emergencies
+        if (technique.type == TechniqueType.grounding) return 1.0;
+        if (technique.type == TechniqueType.breathing) return 0.9;
+        break;
+
+      case 'habit building':
+        // Affirmations and quick motivation
+        if (technique.type == TechniqueType.affirmation) return 1.0;
+        if (technique.type == TechniqueType.grounding) return 0.8;
+        break;
+    }
+
+    return 0.5; // Default neutral score
+  }
+
+  /// Get speed bonus for ultra-fast techniques
+  double _getSpeedBonusScore(CalmTechnique technique) {
+    if (technique.durationMinutes <= 2) return 1.0;
+    if (technique.durationMinutes <= 3) return 0.8;
+    if (technique.durationMinutes <= 5) return 0.6;
+    return 0.3;
+  }
+
+  /// Get universal effectiveness score based on technique research
+  double _getUniversalEffectivenessScore(CalmTechnique technique) {
+    // Based on clinical research and user feedback patterns
+    switch (technique.id) {
+      case '5-4-3-2-1':
+        return 1.0; // Most universally effective grounding technique
+      case 'positive-affirmations':
+        return 0.9; // High effectiveness across all motives
+      case 'cold-water-visualization':
+        return 0.8; // Strong physiological response
+      case 'worry-banking':
+        return 0.7; // Good for cognitive anxiety
+      default:
+        return 0.6; // Default score
     }
   }
 
@@ -344,14 +437,14 @@ class CalmRecommendationService {
     return techniques;
   }
 
-  /// Emergency fallback techniques when personalization fails
-  List<CalmTechnique> _getEmergencyFallback(String? motive) {
+  /// Enhanced emergency fallback techniques with effectiveness consideration
+  List<CalmTechnique> _getEnhancedEmergencyFallback(String? motive) {
     // Always include 5-4-3-2-1 grounding as it's universally effective
     final emergency = [
       CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1'),
     ];
 
-    // Add motive-specific emergency techniques
+    // Add motive-specific emergency techniques with effectiveness priority
     switch (motive?.toLowerCase()) {
       case 'anxiety':
         emergency.addAll([
@@ -373,8 +466,41 @@ class CalmRecommendationService {
         ]);
         break;
 
+      case 'sleep':
+        emergency.addAll([
+          CalmTechnique.defaults.firstWhere(
+            (t) => t.id == 'cold-water-visualization',
+          ),
+          CalmTechnique.defaults.firstWhere(
+            (t) => t.id == 'positive-affirmations',
+          ),
+        ]);
+        break;
+
+      case 'focus':
+        emergency.addAll([
+          CalmTechnique.defaults.firstWhere(
+            (t) => t.id == 'positive-affirmations',
+          ),
+          CalmTechnique.defaults.firstWhere(
+            (t) => t.id == 'cold-water-visualization',
+          ),
+        ]);
+        break;
+
+      case 'habit building':
+        emergency.addAll([
+          CalmTechnique.defaults.firstWhere(
+            (t) => t.id == 'positive-affirmations',
+          ),
+          CalmTechnique.defaults.firstWhere(
+            (t) => t.id == 'cold-water-visualization',
+          ),
+        ]);
+        break;
+
       default:
-        // Generic emergency techniques
+        // Generic emergency techniques prioritized by universal effectiveness
         emergency.addAll([
           CalmTechnique.defaults.firstWhere(
             (t) => t.id == 'positive-affirmations',

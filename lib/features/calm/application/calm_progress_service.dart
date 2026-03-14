@@ -140,34 +140,26 @@ class CalmProgressService {
     }
   }
 
-  /// Get user's calm technique usage statistics with mood tracking integration
-  Future<Map<String, dynamic>> getUserStats(String userId) async {
+  /// Get user's calm technique usage statistics with motive-specific insights
+  /// Enhanced for task 3.3: comprehensive user statistics dashboard
+  Future<Map<String, dynamic>> getUserStats(
+    String userId, {
+    String? userMotive,
+  }) async {
     try {
       final snapshot = await _sessionsCollection
           .where('userId', isEqualTo: userId)
           .get();
 
       if (snapshot.docs.isEmpty) {
-        return {
-          'totalSessions': 0,
-          'totalMinutes': 0,
-          'averageMoodImprovement': 0.0,
-          'favoritesTechnique': null,
-          'currentStreak': 0,
-          'moodTrends': await _moodTrackingService.getMoodTrends(userId),
-          'advancedAnalytics': {
-            'weeklyProgress': <Map<String, dynamic>>[],
-            'monthlyTrends': <Map<String, dynamic>>[],
-            'techniqueComparison': <Map<String, dynamic>>[],
-          },
-        };
+        return _getEmptyStatsWithMotiveInsights(userId, userMotive);
       }
 
       final sessions = snapshot.docs
           .map((doc) => doc.data() as Map<String, dynamic>)
           .toList();
 
-      // Calculate statistics
+      // Calculate basic statistics
       final totalSessions = sessions.length;
       final totalMinutes = sessions.fold<int>(
         0,
@@ -193,8 +185,12 @@ class CalmProgressService {
                 .key
           : null;
 
-      // Calculate current streak
+      // Calculate current streak with motive-appropriate messaging
       final currentStreak = await _calculateCurrentStreak(userId);
+      final streakMessage = _getMotiveSpecificStreakMessage(
+        userMotive,
+        currentStreak,
+      );
 
       // Get detailed mood trends
       final moodTrends = await _moodTrackingService.getMoodTrends(userId);
@@ -205,31 +201,584 @@ class CalmProgressService {
         sessions,
       );
 
+      // Generate motive-specific insights
+      final motiveInsights = await _generateMotiveSpecificInsights(
+        userId,
+        userMotive,
+        sessions,
+        currentStreak,
+        averageMoodImprovement,
+      );
+
+      // Create technique usage pattern analysis
+      final usagePatterns = await _analyzeUsagePatterns(sessions, userMotive);
+
+      // Generate weekly and monthly statistics (Requirements 6.2)
+      final weeklyStats = await _calculateWeeklyStats(sessions);
+      final monthlyStats = await _calculateMonthlyStats(sessions);
+
       return {
         'totalSessions': totalSessions,
         'totalMinutes': totalMinutes,
         'averageMoodImprovement': averageMoodImprovement,
         'favoriteTechnique': favoriteTechnique,
         'currentStreak': currentStreak,
+        'streakMessage': streakMessage,
         'moodTrends': moodTrends,
         'advancedAnalytics': advancedAnalytics,
+        'motiveInsights': motiveInsights,
+        'usagePatterns': usagePatterns,
+        'weeklyStats': weeklyStats,
+        'monthlyStats': monthlyStats,
+        'userMotive': userMotive,
+        'motiveProfile': MotiveConfig.getProfile(userMotive),
       };
     } catch (e, stackTrace) {
       appLogger.e('Error getting calm stats', error: e, stackTrace: stackTrace);
+      return _getEmptyStatsWithMotiveInsights(userId, userMotive);
+    }
+  }
+
+  /// Get empty stats structure with motive insights for new users
+  Future<Map<String, dynamic>> _getEmptyStatsWithMotiveInsights(
+    String userId,
+    String? userMotive,
+  ) async {
+    final motiveProfile = MotiveConfig.getProfile(userMotive);
+    final streakMessage = _getMotiveSpecificStreakMessage(userMotive, 0);
+
+    return {
+      'totalSessions': 0,
+      'totalMinutes': 0,
+      'averageMoodImprovement': 0.0,
+      'favoriteTechnique': null,
+      'currentStreak': 0,
+      'streakMessage': streakMessage,
+      'moodTrends': await _moodTrackingService.getMoodTrends(userId),
+      'advancedAnalytics': {
+        'weeklyProgress': <Map<String, dynamic>>[],
+        'monthlyTrends': <Map<String, dynamic>>[],
+        'techniqueComparison': <Map<String, dynamic>>[],
+      },
+      'motiveInsights': {
+        'welcomeMessage': _getMotiveWelcomeMessage(userMotive),
+        'recommendedTechniques': MotiveConfig.getCalmTechniquePriorities(
+          userMotive,
+        ),
+        'motivationalMessage': _getMotivationalMessage(userMotive),
+        'nextSteps': _getNextStepsForNewUser(userMotive),
+      },
+      'usagePatterns': {
+        'preferredTimes': <String>[],
+        'techniqueDistribution': <Map<String, dynamic>>[],
+        'effectivenessRanking': <Map<String, dynamic>>[],
+        'motiveAlignment': 0.0,
+      },
+      'weeklyStats': <Map<String, dynamic>>[],
+      'monthlyStats': <Map<String, dynamic>>[],
+      'userMotive': userMotive,
+      'motiveProfile': motiveProfile,
+    };
+  }
+
+  /// Generate motive-specific insights for user dashboard
+  Future<Map<String, dynamic>> _generateMotiveSpecificInsights(
+    String userId,
+    String? userMotive,
+    List<Map<String, dynamic>> sessions,
+    int currentStreak,
+    double averageMoodImprovement,
+  ) async {
+    try {
+      final motiveProfile = MotiveConfig.getProfile(userMotive);
+      final insights = <String>[];
+      final achievements = <Map<String, dynamic>>[];
+
+      // Welcome message using MotiveConfig.getInsightMessage() patterns (Requirement 20.1)
+      final welcomeMessage = _getMotiveWelcomeMessage(userMotive);
+
+      // Streak insights with motive-appropriate messaging (Requirement 20.2)
+      if (currentStreak > 0) {
+        final streakMessage = MotiveConfig.getInsightMessage(
+          userMotive,
+          'streak',
+          count: currentStreak,
+        );
+        insights.add(streakMessage);
+      }
+
+      // Technique effectiveness insights
+      final effectiveness = await _moodTrackingService
+          .getTechniqueEffectiveness(userId);
+      if (effectiveness.isNotEmpty) {
+        final bestTechnique = effectiveness.entries.reduce(
+          (a, b) => a.value > b.value ? a : b,
+        );
+
+        if (bestTechnique.value > 2.0) {
+          insights.add(
+            '🌟 ${bestTechnique.key} is your most effective technique with an average improvement of ${bestTechnique.value.toStringAsFixed(1)} points!',
+          );
+        }
+      }
+
+      // Motive-specific progress insights
+      if (averageMoodImprovement > 1.5) {
+        final encouragementMessage = MotiveConfig.getInsightMessage(
+          userMotive,
+          'encouragement',
+        );
+        insights.add(encouragementMessage);
+      }
+
+      // Generate motive-specific achievements
+      achievements.addAll(
+        await _generateMotiveAchievements(
+          userMotive,
+          sessions.length,
+          currentStreak,
+          averageMoodImprovement,
+        ),
+      );
+
       return {
-        'totalSessions': 0,
-        'totalMinutes': 0,
-        'averageMoodImprovement': 0.0,
-        'favoriteTechnique': null,
-        'currentStreak': 0,
-        'moodTrends': await _moodTrackingService.getMoodTrends(userId),
-        'advancedAnalytics': {
-          'weeklyProgress': <Map<String, dynamic>>[],
-          'monthlyTrends': <Map<String, dynamic>>[],
-          'techniqueComparison': <Map<String, dynamic>>[],
-        },
+        'welcomeMessage': welcomeMessage,
+        'insights': insights,
+        'achievements': achievements,
+        'motiveEmoji': motiveProfile?.emoji ?? '🌱',
+        'motiveDisplayName': motiveProfile?.displayName ?? 'Wellness',
+        'recommendedTechniques': MotiveConfig.getCalmTechniquePriorities(
+          userMotive,
+        ),
+        'motivationalMessage': _getMotivationalMessage(userMotive),
+      };
+    } catch (e, stackTrace) {
+      appLogger.e(
+        'Error generating motive-specific insights',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return {
+        'welcomeMessage': 'Welcome to your calm practice! 🌱',
+        'insights': <String>[],
+        'achievements': <Map<String, dynamic>>[],
+        'motiveEmoji': '🌱',
+        'motiveDisplayName': 'Wellness',
+        'recommendedTechniques': ['Breathing', 'Meditation'],
+        'motivationalMessage': 'Keep up the great work!',
       };
     }
+  }
+
+  /// Get motive-specific welcome message using MotiveConfig patterns
+  String _getMotiveWelcomeMessage(String? userMotive) {
+    final motiveProfile = MotiveConfig.getProfile(userMotive);
+    if (motiveProfile != null) {
+      return '${motiveProfile.emoji} Welcome to your ${motiveProfile.displayName} journey!';
+    }
+    return '🌱 Welcome to your wellness journey!';
+  }
+
+  /// Get motive-specific streak message with appropriate messaging
+  String _getMotiveSpecificStreakMessage(String? userMotive, int streak) {
+    if (streak == 0) {
+      final motiveProfile = MotiveConfig.getProfile(userMotive);
+      if (motiveProfile != null) {
+        return '${motiveProfile.emoji} Ready to start your ${motiveProfile.displayName.toLowerCase()} streak?';
+      }
+      return '🌱 Ready to start your wellness streak?';
+    }
+
+    return MotiveConfig.getInsightMessage(userMotive, 'streak', count: streak);
+  }
+
+  /// Get motivational message based on user's motive
+  String _getMotivationalMessage(String? userMotive) {
+    final motiveProfile = MotiveConfig.getProfile(userMotive);
+    if (motiveProfile != null) {
+      switch (userMotive) {
+        case 'Sleep':
+          return 'Quality rest leads to quality days! 🌙';
+        case 'Stress':
+          return 'Every breath brings you closer to calm! 🧘';
+        case 'Anxiety':
+          return 'You are stronger than your worries! 💜';
+        case 'Focus':
+          return 'Clarity comes with consistent practice! 🎯';
+        case 'Habit Building':
+          return 'Small steps create big changes! 🔥';
+        default:
+          return 'Your wellness journey is unique and valuable! 🌱';
+      }
+    }
+    return 'Your wellness journey is unique and valuable! 🌱';
+  }
+
+  /// Generate motive-specific achievements
+  Future<List<Map<String, dynamic>>> _generateMotiveAchievements(
+    String? userMotive,
+    int totalSessions,
+    int currentStreak,
+    double averageMoodImprovement,
+  ) async {
+    final achievements = <Map<String, dynamic>>[];
+    final motiveProfile = MotiveConfig.getProfile(userMotive);
+    final emoji = motiveProfile?.emoji ?? '🌱';
+
+    // Session milestones with motive-specific messaging
+    if (totalSessions >= 10 && totalSessions < 15) {
+      achievements.add({
+        'title': 'Getting Started',
+        'description':
+            '10 ${motiveProfile?.displayName.toLowerCase() ?? 'wellness'} sessions completed',
+        'icon': emoji,
+        'type': 'session_milestone',
+      });
+    } else if (totalSessions >= 25 && totalSessions < 30) {
+      achievements.add({
+        'title': 'Building Momentum',
+        'description':
+            '25 ${motiveProfile?.displayName.toLowerCase() ?? 'wellness'} sessions completed',
+        'icon': emoji,
+        'type': 'session_milestone',
+      });
+    } else if (totalSessions >= 50 && totalSessions < 55) {
+      achievements.add({
+        'title': 'Dedicated Practitioner',
+        'description':
+            '50 ${motiveProfile?.displayName.toLowerCase() ?? 'wellness'} sessions completed',
+        'icon': emoji,
+        'type': 'session_milestone',
+      });
+    }
+
+    // Streak milestones with motive-specific celebration messages (Requirement 20.2)
+    if (currentStreak == 7) {
+      final message = MotiveConfig.getInsightMessage(userMotive, 'milestone');
+      achievements.add({
+        'title': 'Week Warrior',
+        'description': message,
+        'icon': '🔥',
+        'type': 'streak_milestone',
+      });
+    } else if (currentStreak == 30) {
+      final message = MotiveConfig.getInsightMessage(userMotive, 'milestone');
+      achievements.add({
+        'title': 'Monthly Master',
+        'description': message,
+        'icon': '🏆',
+        'type': 'streak_milestone',
+      });
+    }
+
+    // Effectiveness achievements
+    if (averageMoodImprovement >= 3.0) {
+      achievements.add({
+        'title': 'Mood Master',
+        'description': 'Achieving excellent mood improvements!',
+        'icon': '✨',
+        'type': 'effectiveness_milestone',
+      });
+    }
+
+    return achievements;
+  }
+
+  /// Analyze technique usage patterns with motive alignment
+  Future<Map<String, dynamic>> _analyzeUsagePatterns(
+    List<Map<String, dynamic>> sessions,
+    String? userMotive,
+  ) async {
+    try {
+      // Analyze preferred times of day
+      final timePatterns = _analyzeTimePatterns(sessions);
+
+      // Analyze technique distribution
+      final techniqueDistribution = _analyzeTechniqueDistribution(sessions);
+
+      // Rank techniques by effectiveness
+      final effectivenessRanking = await _rankTechniquesByEffectiveness(
+        sessions,
+      );
+
+      // Calculate motive alignment score
+      final motiveAlignment = _calculateMotiveAlignment(sessions, userMotive);
+
+      return {
+        'preferredTimes': timePatterns,
+        'techniqueDistribution': techniqueDistribution,
+        'effectivenessRanking': effectivenessRanking,
+        'motiveAlignment': motiveAlignment,
+        'totalSessions': sessions.length,
+        'analysisDate': DateTime.now().toIso8601String(),
+      };
+    } catch (e, stackTrace) {
+      appLogger.e(
+        'Error analyzing usage patterns',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return {
+        'preferredTimes': <String>[],
+        'techniqueDistribution': <Map<String, dynamic>>[],
+        'effectivenessRanking': <Map<String, dynamic>>[],
+        'motiveAlignment': 0.0,
+        'totalSessions': 0,
+        'analysisDate': DateTime.now().toIso8601String(),
+      };
+    }
+  }
+
+  /// Analyze time patterns for technique usage
+  List<String> _analyzeTimePatterns(List<Map<String, dynamic>> sessions) {
+    final timeSlots = <String, int>{
+      'Morning (6-12)': 0,
+      'Afternoon (12-18)': 0,
+      'Evening (18-24)': 0,
+      'Night (0-6)': 0,
+    };
+
+    for (final session in sessions) {
+      final completedAt = (session['completedAt'] as Timestamp).toDate();
+      final hour = completedAt.hour;
+
+      if (hour >= 6 && hour < 12) {
+        timeSlots['Morning (6-12)'] = timeSlots['Morning (6-12)']! + 1;
+      } else if (hour >= 12 && hour < 18) {
+        timeSlots['Afternoon (12-18)'] = timeSlots['Afternoon (12-18)']! + 1;
+      } else if (hour >= 18 && hour < 24) {
+        timeSlots['Evening (18-24)'] = timeSlots['Evening (18-24)']! + 1;
+      } else {
+        timeSlots['Night (0-6)'] = timeSlots['Night (0-6)']! + 1;
+      }
+    }
+
+    // Return time slots sorted by usage frequency
+    final sortedSlots = timeSlots.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return sortedSlots.map((e) => e.key).toList();
+  }
+
+  /// Analyze technique distribution and usage frequency
+  List<Map<String, dynamic>> _analyzeTechniqueDistribution(
+    List<Map<String, dynamic>> sessions,
+  ) {
+    final techniqueCount = <String, int>{};
+    final techniqueMinutes = <String, int>{};
+
+    for (final session in sessions) {
+      final technique = session['techniqueName'] as String?;
+      final minutes = session['durationMinutes'] as int? ?? 0;
+
+      if (technique != null) {
+        techniqueCount[technique] = (techniqueCount[technique] ?? 0) + 1;
+        techniqueMinutes[technique] =
+            (techniqueMinutes[technique] ?? 0) + minutes;
+      }
+    }
+
+    return techniqueCount.entries
+        .map(
+          (entry) => {
+            'technique': entry.key,
+            'sessionCount': entry.value,
+            'totalMinutes': techniqueMinutes[entry.key] ?? 0,
+            'percentage': sessions.isNotEmpty
+                ? (entry.value / sessions.length * 100).round()
+                : 0,
+            'averageMinutes': entry.value > 0
+                ? ((techniqueMinutes[entry.key] ?? 0) / entry.value).round()
+                : 0,
+          },
+        )
+        .toList()
+      ..sort(
+        (a, b) =>
+            (b['sessionCount'] as int).compareTo(a['sessionCount'] as int),
+      );
+  }
+
+  /// Rank techniques by effectiveness (mood improvement)
+  Future<List<Map<String, dynamic>>> _rankTechniquesByEffectiveness(
+    List<Map<String, dynamic>> sessions,
+  ) async {
+    final techniqueImprovements = <String, List<int>>{};
+
+    for (final session in sessions) {
+      final technique = session['techniqueName'] as String?;
+      final improvement = session['moodImprovement'] as int?;
+
+      if (technique != null && improvement != null) {
+        techniqueImprovements[technique] ??= [];
+        techniqueImprovements[technique]!.add(improvement);
+      }
+    }
+
+    final effectivenessRanking =
+        techniqueImprovements.entries.map((entry) {
+          final improvements = entry.value;
+          final averageImprovement = improvements.isNotEmpty
+              ? improvements.reduce((a, b) => a + b) / improvements.length
+              : 0.0;
+
+          return {
+            'technique': entry.key,
+            'averageImprovement': averageImprovement,
+            'sessionCount': improvements.length,
+            'totalImprovement': improvements.fold<int>(
+              0,
+              (sum, val) => sum + val,
+            ),
+            'effectivenessScore':
+                averageImprovement * improvements.length, // Weight by usage
+          };
+        }).toList()..sort(
+          (a, b) => (b['effectivenessScore'] as double).compareTo(
+            a['effectivenessScore'] as double,
+          ),
+        );
+
+    return effectivenessRanking;
+  }
+
+  /// Calculate how well user's technique usage aligns with their motive
+  double _calculateMotiveAlignment(
+    List<Map<String, dynamic>> sessions,
+    String? userMotive,
+  ) {
+    if (userMotive == null || sessions.isEmpty) return 0.0;
+
+    final prioritizedTechniques = MotiveConfig.getCalmTechniquePriorities(
+      userMotive,
+    );
+    if (prioritizedTechniques.isEmpty) return 0.0;
+
+    int alignedSessions = 0;
+    for (final session in sessions) {
+      final technique = session['techniqueName'] as String?;
+      if (technique != null && prioritizedTechniques.contains(technique)) {
+        alignedSessions++;
+      }
+    }
+
+    return (alignedSessions / sessions.length * 100).clamp(0.0, 100.0);
+  }
+
+  /// Calculate weekly statistics (Requirement 6.2)
+  Future<List<Map<String, dynamic>>> _calculateWeeklyStats(
+    List<Map<String, dynamic>> sessions,
+  ) async {
+    final weeklyData = <Map<String, dynamic>>[];
+    final now = DateTime.now();
+
+    for (int week = 0; week < 4; week++) {
+      final weekStart = now.subtract(Duration(days: (week + 1) * 7));
+      final weekEnd = now.subtract(Duration(days: week * 7));
+
+      final weekSessions = sessions.where((session) {
+        final completedAt = (session['completedAt'] as Timestamp).toDate();
+        return completedAt.isAfter(weekStart) && completedAt.isBefore(weekEnd);
+      }).toList();
+
+      final sessionCount = weekSessions.length;
+      final totalMinutes = weekSessions.fold<int>(
+        0,
+        (total, session) => total + (session['durationMinutes'] as int? ?? 0),
+      );
+
+      final moodImprovements = weekSessions
+          .where((s) => s['moodImprovement'] != null)
+          .map((s) => s['moodImprovement'] as int)
+          .toList();
+
+      final avgMoodImprovement = moodImprovements.isNotEmpty
+          ? moodImprovements.reduce((a, b) => a + b) / moodImprovements.length
+          : 0.0;
+
+      weeklyData.add({
+        'weekStart': weekStart.toIso8601String(),
+        'weekEnd': weekEnd.toIso8601String(),
+        'sessionCount': sessionCount,
+        'totalMinutes': totalMinutes,
+        'averageMoodImprovement': avgMoodImprovement,
+        'weekNumber': week + 1,
+        'weekLabel': 'Week ${week + 1}',
+      });
+    }
+
+    return weeklyData.reversed.toList();
+  }
+
+  /// Calculate monthly statistics (Requirement 6.2)
+  Future<List<Map<String, dynamic>>> _calculateMonthlyStats(
+    List<Map<String, dynamic>> sessions,
+  ) async {
+    final monthlyData = <Map<String, dynamic>>[];
+    final now = DateTime.now();
+
+    for (int month = 0; month < 6; month++) {
+      final monthStart = DateTime(now.year, now.month - month, 1);
+      final monthEnd = DateTime(now.year, now.month - month + 1, 1);
+
+      final monthSessions = sessions.where((session) {
+        final completedAt = (session['completedAt'] as Timestamp).toDate();
+        return completedAt.isAfter(monthStart) &&
+            completedAt.isBefore(monthEnd);
+      }).toList();
+
+      final sessionCount = monthSessions.length;
+      final totalMinutes = monthSessions.fold<int>(
+        0,
+        (total, session) => total + (session['durationMinutes'] as int? ?? 0),
+      );
+
+      final moodImprovements = monthSessions
+          .where((s) => s['moodImprovement'] != null)
+          .map((s) => s['moodImprovement'] as int)
+          .toList();
+
+      final avgMoodImprovement = moodImprovements.isNotEmpty
+          ? moodImprovements.reduce((a, b) => a + b) / moodImprovements.length
+          : 0.0;
+
+      monthlyData.add({
+        'month': monthStart.month,
+        'year': monthStart.year,
+        'monthName': _getMonthName(monthStart.month),
+        'sessionCount': sessionCount,
+        'totalMinutes': totalMinutes,
+        'averageMoodImprovement': avgMoodImprovement,
+        'monthLabel': '${_getMonthName(monthStart.month)} ${monthStart.year}',
+      });
+    }
+
+    return monthlyData.reversed.toList();
+  }
+
+  /// Get next steps recommendations for new users
+  List<String> _getNextStepsForNewUser(String? userMotive) {
+    final prioritizedTechniques = MotiveConfig.getCalmTechniquePriorities(
+      userMotive,
+    );
+    final motiveProfile = MotiveConfig.getProfile(userMotive);
+
+    final nextSteps = <String>[];
+
+    if (prioritizedTechniques.isNotEmpty) {
+      nextSteps.add('Try your first ${prioritizedTechniques.first} technique');
+    }
+
+    if (motiveProfile != null) {
+      nextSteps.add(
+        'Explore ${motiveProfile.displayName.toLowerCase()} focused activities',
+      );
+      nextSteps.add('Set a daily practice reminder');
+    }
+
+    nextSteps.add('Track your mood before and after sessions');
+
+    return nextSteps;
   }
 
   /// Generate advanced analytics for user stats
@@ -951,125 +1500,26 @@ class CalmProgressService {
     }
   }
 
-  /// Get motive-specific insights and achievements
+  /// Get motive-specific insights and achievements (Enhanced for task 3.3)
   Future<Map<String, dynamic>> getMotiveSpecificInsights(
     String userId,
     String? currentMotive,
   ) async {
     try {
-      final stats = await getUserStats(userId);
-      final effectiveness = await getAdvancedTechniqueEffectiveness(
-        userId,
-        currentMotive,
-      );
+      // Use the enhanced getUserStats method
+      final stats = await getUserStats(userId, userMotive: currentMotive);
 
-      // Generate motive-specific insights
-      final insights = <String>[];
-      final achievements = <Map<String, dynamic>>[];
-
-      // Streak insights with motive-specific messaging
-      final currentStreak = stats['currentStreak'] as int;
-      if (currentStreak > 0) {
-        final streakMessage = MotiveConfig.getInsightMessage(
-          currentMotive,
-          'streak',
-          count: currentStreak,
-        );
-        insights.add(streakMessage);
-      }
-
-      // Technique effectiveness insights
-      final effectivenessData =
-          effectiveness['effectiveness'] as Map<String, double>;
-      if (effectivenessData.isNotEmpty) {
-        final bestTechnique = effectivenessData.entries.reduce(
-          (a, b) => a.value > b.value ? a : b,
-        );
-
-        if (bestTechnique.value > 2.0) {
-          insights.add(
-            '🌟 ${bestTechnique.key} is your most effective technique with an average improvement of ${bestTechnique.value.toStringAsFixed(1)} points!',
-          );
-        }
-      }
-
-      // Cross-motive insights
-      final crossMotive =
-          effectiveness['crossMotiveComparison']
-              as Map<String, Map<String, double>>;
-      if (crossMotive.isNotEmpty && currentMotive != null) {
-        crossMotive.forEach((technique, motiveData) {
-          final currentMotiveScore = motiveData[currentMotive];
-          final otherScores = motiveData.entries
-              .where((e) => e.key != currentMotive)
-              .toList();
-
-          if (currentMotiveScore != null && otherScores.isNotEmpty) {
-            final bestOtherScore = otherScores.reduce(
-              (a, b) => a.value > b.value ? a : b,
-            );
-
-            if (currentMotiveScore > bestOtherScore.value + 1.0) {
-              insights.add(
-                '💡 $technique works particularly well for your $currentMotive goals!',
-              );
-            }
-          }
-        });
-      }
-
-      // Generate achievements based on milestones
-      final totalSessions = stats['totalSessions'] as int;
-      final totalMinutes = stats['totalMinutes'] as int;
-
-      // Session milestones
-      if (totalSessions >= 50 && totalSessions < 55) {
-        achievements.add({
-          'title': 'Calm Master',
-          'description': '50 calm technique sessions completed',
-          'icon': '🧘‍♀️',
-          'type': 'session_milestone',
-        });
-      }
-
-      // Time milestones
-      if (totalMinutes >= 300 && totalMinutes < 320) {
-        // ~5 hours
-        achievements.add({
-          'title': 'Mindful Hours',
-          'description': '5 hours of calm practice',
-          'icon': '⏰',
-          'type': 'time_milestone',
-        });
-      }
-
-      // Streak milestones
-      if (currentStreak == 7) {
-        achievements.add({
-          'title': 'Week Warrior',
-          'description': '7-day calm practice streak',
-          'icon': '🔥',
-          'type': 'streak_milestone',
-        });
-      } else if (currentStreak == 30) {
-        achievements.add({
-          'title': 'Monthly Master',
-          'description': '30-day calm practice streak',
-          'icon': '🏆',
-          'type': 'streak_milestone',
-        });
-      }
-
-      return {
-        'insights': insights,
-        'achievements': achievements,
-        'motiveSpecificStats': {
-          'currentMotive': currentMotive,
-          'motiveEmoji': MotiveConfig.getProfile(currentMotive)?.emoji ?? '🌱',
-          'motiveDisplayName':
-              MotiveConfig.getProfile(currentMotive)?.displayName ?? 'Wellness',
-        },
-      };
+      // Return the motive insights from the enhanced stats
+      return stats['motiveInsights'] as Map<String, dynamic>? ??
+          {
+            'welcomeMessage': 'Welcome to your calm practice! 🌱',
+            'insights': <String>[],
+            'achievements': <Map<String, dynamic>>[],
+            'motiveEmoji': '🌱',
+            'motiveDisplayName': 'Wellness',
+            'recommendedTechniques': ['Breathing', 'Meditation'],
+            'motivationalMessage': 'Keep up the great work!',
+          };
     } catch (e, stackTrace) {
       appLogger.e(
         'Error getting motive-specific insights',
@@ -1077,9 +1527,13 @@ class CalmProgressService {
         stackTrace: stackTrace,
       );
       return {
+        'welcomeMessage': 'Welcome to your calm practice! 🌱',
         'insights': <String>[],
         'achievements': <Map<String, dynamic>>[],
-        'motiveSpecificStats': {},
+        'motiveEmoji': '🌱',
+        'motiveDisplayName': 'Wellness',
+        'recommendedTechniques': ['Breathing', 'Meditation'],
+        'motivationalMessage': 'Keep up the great work!',
       };
     }
   }
