@@ -33,6 +33,15 @@ class FirestoreService {
     }
   }
 
+  // Get raw user document once (used by feature controllers)
+  Future<DocumentSnapshot> getUserOnce(String uid) async {
+    try {
+      return await _usersCollection.doc(uid).get();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Update user
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
     try {

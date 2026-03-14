@@ -22,6 +22,9 @@ import '../providers/app_providers.dart';
 import '../config/routine_config.dart';
 import '../config/motive_config.dart';
 
+// Home feature controller (architecture refactor step 1)
+import '../features/home/application/home_controller.dart';
+
 // Theme & Config
 import '../theme/app_colors.dart';
 import '../widgets/common/safe_image.dart';
@@ -670,6 +673,12 @@ class _HomeContentState extends ConsumerState<HomeContent> {
       
       if (user == null) return const SizedBox();
 
+      // Kick off the new HomeController loading in the background.
+      // This does not change existing UI behavior yet; it just prepares
+      // a feature-scoped state that we will progressively adopt.
+      ref.read(homeControllerProvider.notifier).loadInitial(user.uid);
+      final homeState = ref.watch(homeControllerProvider);
+
       return StreamBuilder<DocumentSnapshot>(
         stream: ref.watch(firestoreServiceProvider).getUserStream(user.uid),
         builder: (context, snapshot) {
@@ -860,7 +869,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                                   _toggleActivity(user.uid, activity, checked);
                                }, 
                                textColor: textColor,
-                               streak: _streak,
+                               streak: homeState.streak,
                              ),
                              
                              const SizedBox(height: 32),
