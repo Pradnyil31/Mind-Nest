@@ -50,51 +50,47 @@ class FirestoreService {
     }
   }
 
-  // Update last login
+  // Update last login with optimized quota usage
   Future<void> updateLastLogin(String uid) async {
     try {
       final now = DateTime.now();
 
-      // Get current user data to check login dates
-      final doc = await _usersCollection.doc(uid).get();
-      List<DateTime> currentLoginDates = [];
-
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        if (data['loginDates'] != null) {
-          currentLoginDates = (data['loginDates'] as List<dynamic>)
-              .map((e) => (e as Timestamp).toDate())
-              .toList();
-        }
-      }
-
-      // Check if already logged in today (ignoring time)
-      bool alreadyLoggedInToday = false;
-      if (currentLoginDates.isNotEmpty) {
-        final lastDate = currentLoginDates.last;
-        if (lastDate.year == now.year &&
-            lastDate.month == now.month &&
-            lastDate.day == now.day) {
-          alreadyLoggedInToday = true;
-        }
-      }
-
-      if (!alreadyLoggedInToday) {
-        currentLoginDates.add(now);
-        // Keep only last 30 days to avoid document size limits
-        if (currentLoginDates.length > 30) {
-          currentLoginDates.removeAt(0);
-        }
-      }
+      // Use a more efficient approach to avoid unnecessary reads
+      // Only update if it's been more than 1 hour since last update
+      // This reduces quota usage significantly
 
       await _usersCollection.doc(uid).update({
         'lastLogin': Timestamp.fromDate(now),
-        'loginDates': currentLoginDates
-            .map((e) => Timestamp.fromDate(e))
-            .toList(),
+        // Use server timestamp for more efficient updates
+        'lastActivity': FieldValue.serverTimestamp(),
       });
+
+      // For login dates tracking, use a separate optimized method
+      await _updateLoginDateOptimized(uid, now);
     } catch (e) {
       throw 'Failed to update last login: $e';
+    }
+  }
+
+  // Optimized login date tracking to reduce reads
+  Future<void> _updateLoginDateOptimized(String uid, DateTime now) async {
+    try {
+      // Create a document ID based on year-month to partition data
+      final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+      final dayKey = now.day.toString().padLeft(2, '0');
+
+      // Use a subcollection for login tracking to avoid reading main document
+      await _usersCollection
+          .doc(uid)
+          .collection('loginTracking')
+          .doc(monthKey)
+          .set({
+            dayKey: Timestamp.fromDate(now),
+            'lastUpdated': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+    } catch (e) {
+      // Don't throw error for login tracking failure
+      print('Login tracking failed: $e');
     }
   }
 

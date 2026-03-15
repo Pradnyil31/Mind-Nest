@@ -66,6 +66,15 @@ dependencies:
   
   # Audio playback for ambient sounds
   just_audio: ^0.9.40
+  
+  # Network connectivity checking
+  connectivity_plus: ^6.0.5
+  
+  # Encryption for security features
+  encrypt: ^5.0.3
+  
+  # Device information
+  device_info_plus: ^10.1.2
 
 
 dev_dependencies:

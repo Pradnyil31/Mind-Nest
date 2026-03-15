@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/app_providers.dart';
+import '../features/calm/application/ecosystem_integration_service.dart';
 import 'dart:math' as math;
 
 /// Compact progress insights widget - single card with dynamic content that auto-updates
@@ -26,6 +27,15 @@ class _CompactProgressInsightsState
   int _weeklyActivities = 0;
   int _totalActivities = 0;
   double _completionRate = 0.0;
+
+  // Enhanced with calm progress data
+  int _calmSessions = 0;
+  int _calmStreak = 0;
+  String _displayTitle = '';
+  String _displayMessage = '';
+  String _progressColor = '#6B7280';
+  final EcosystemIntegrationService _ecosystemService =
+      EcosystemIntegrationService();
 
   late AnimationController _animController;
   late Animation<double> _progressAnimation;
@@ -92,7 +102,9 @@ class _CompactProgressInsightsState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _getTitle(),
+                          _displayTitle.isNotEmpty
+                              ? _displayTitle
+                              : _getTitle(),
                           style: GoogleFonts.lato(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -101,7 +113,9 @@ class _CompactProgressInsightsState
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _getMessage(),
+                          _displayMessage.isNotEmpty
+                              ? _displayMessage
+                              : _getMessage(),
                           style: GoogleFonts.lato(
                             fontSize: 13,
                             color: const Color(0xFF6B7280),
@@ -123,7 +137,7 @@ class _CompactProgressInsightsState
                   Container(width: 1, height: 30, color: Colors.grey.shade300),
                   _buildStat('📊', _weeklyActivities.toString(), 'This Week'),
                   Container(width: 1, height: 30, color: Colors.grey.shade300),
-                  _buildStat('⭐', _totalActivities.toString(), 'Total'),
+                  _buildStat('🧘', _calmSessions.toString(), 'Calm'),
                 ],
               ),
             ],
@@ -138,7 +152,7 @@ class _CompactProgressInsightsState
       final now = DateTime.now();
       final weekAgo = now.subtract(const Duration(days: 7));
 
-      // Get weekly data
+      // Get weekly routine data
       final weekSnapshot = await FirebaseFirestore.instance
           .collection('routine_completions')
           .where('userId', isEqualTo: widget.userId)
@@ -206,6 +220,11 @@ class _CompactProgressInsightsState
 
       final rate = totalPossible > 0 ? totalCompleted / totalPossible : 0.0;
 
+      // Get enhanced calm insights for dashboard integration
+      final calmInsights = await _ecosystemService.getCalmInsightsForDashboard(
+        widget.userId,
+      );
+
       if (mounted) {
         setState(() {
           _streak = currentStreak;
@@ -213,6 +232,17 @@ class _CompactProgressInsightsState
           _weeklyActivities = weeklyCount;
           _totalActivities = allTimeTotal;
           _completionRate = rate;
+
+          // Enhanced with calm data
+          _calmSessions = calmInsights['totalSessions'] as int? ?? 0;
+          _calmStreak = calmInsights['currentStreak'] as int? ?? 0;
+          _displayTitle =
+              calmInsights['displayTitle'] as String? ?? _getTitle();
+          _displayMessage =
+              calmInsights['displayMessage'] as String? ?? _getMessage();
+          _progressColor =
+              calmInsights['progressColor'] as String? ?? '#6B7280';
+
           _isLoading = false;
         });
 
@@ -318,6 +348,14 @@ class _CompactProgressInsightsState
   }
 
   Color _getProgressColor() {
+    // Use enhanced color from calm insights if available
+    if (_progressColor != '#6B7280') {
+      return Color(
+        int.parse(_progressColor.substring(1), radix: 16) + 0xFF000000,
+      );
+    }
+
+    // Fallback to original logic
     if (_completionRate >= 0.71) return const Color(0xFF10B981);
     if (_completionRate >= 0.31) return const Color(0xFFF59E0B);
     return const Color(0xFFEF4444);

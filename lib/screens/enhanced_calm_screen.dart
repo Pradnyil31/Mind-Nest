@@ -7,9 +7,14 @@ import '../services/auth_service.dart';
 import '../widgets/calm/interactive_soundscape_widget.dart';
 import '../widgets/calm/mini_audio_player.dart';
 import '../widgets/calm/quick_access_panel.dart';
+import '../widgets/calm/navigation_integration_widget.dart';
 import '../features/calm/application/motive_detection_service.dart';
 import '../features/calm/application/theme_transition_service.dart';
 import '../features/calm/application/calm_recommendation_service.dart';
+import '../features/calm/application/technique_library_service.dart';
+import '../features/calm/application/visual_design_service.dart';
+import '../features/calm/application/accessibility_service.dart';
+import '../features/calm/application/responsive_layout_service.dart';
 import 'grounding_exercise_screen.dart';
 import 'affirmations_screen.dart';
 import 'calm_technique_screen.dart';
@@ -41,11 +46,19 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
 
+    // Initialize accessibility service
+    _initializeAccessibility();
+
     // Start entrance animation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       startEntranceAnimation();
       _fadeController.forward();
     });
+  }
+
+  /// Initialize accessibility service
+  Future<void> _initializeAccessibility() async {
+    await AccessibilityService.instance.initialize();
   }
 
   @override
@@ -91,6 +104,12 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     final currentMotive = motiveState.currentMotive;
     final colorTheme = MotiveColorTheme.fromMotive(currentMotive);
 
+    // Get accessibility settings
+    final accessibilitySettings = AccessibilityService.instance.settings;
+    final reduceMotion =
+        VisualDesignService.shouldReduceMotion(context) ||
+        accessibilitySettings.reducedMotion;
+
     // Handle motive changes and interface refresh with comprehensive adaptation
     ref.listen<MotiveDetectionState>(motiveDetectionProvider, (
       previous,
@@ -102,6 +121,9 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
 
         // Load new recommendations for the changed motive
         _loadPersonalizedRecommendations(current.currentMotive);
+
+        // Refresh technique library for new motive
+        ref.read(techniqueLibraryProvider.notifier).refreshLibrary();
 
         // Mark interface as refreshed
         ref.read(motiveDetectionProvider.notifier).markInterfaceRefreshed();
@@ -132,57 +154,101 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     if (motiveState.isLoading) {
       return Scaffold(
         backgroundColor: colorTheme.backgroundColor,
-        body: const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4DB6AC)),
+        body: Center(
+          child: VisualDesignService.createAccessibleLoadingIndicator(
+            semanticLabel: 'Loading calm interface',
+            color: colorTheme.primaryColor,
+            highContrast: accessibilitySettings.highContrast,
           ),
         ),
       );
     }
 
-    return ThemeTransitionService.createAnimatedBackground(
-      theme: colorTheme,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: _buildAppBar(currentMotive, colorTheme),
-        body: Stack(
-          children: [
-            FadeTransition(
-              opacity: _fadeAnimation,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Motive-specific welcome header with smooth transitions
-                    _buildMotiveWelcomeHeader(currentMotive, colorTheme),
-                    const SizedBox(height: 24),
+    return ResponsiveLayoutService.createResponsiveContainer(
+      context: context,
+      child: ThemeTransitionService.createAnimatedBackground(
+        theme: colorTheme,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: _buildAppBar(
+            currentMotive,
+            colorTheme,
+            accessibilitySettings,
+          ),
+          body: Stack(
+            children: [
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    0,
+                    ResponsiveLayoutService.getSpacing(context).md,
+                    0,
+                    100,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Motive-specific welcome header with smooth transitions
+                      _buildMotiveWelcomeHeader(
+                        currentMotive,
+                        colorTheme,
+                        accessibilitySettings,
+                      ),
+                      SizedBox(
+                        height: ResponsiveLayoutService.getSpacing(context).lg,
+                      ),
 
-                    // Enhanced Quick Access Emergency Panel
-                    _buildEnhancedQuickAccessPanel(currentMotive, colorTheme),
-                    const SizedBox(height: 32),
+                      // Enhanced Quick Access Emergency Panel
+                      _buildEnhancedQuickAccessPanel(
+                        currentMotive,
+                        colorTheme,
+                        accessibilitySettings,
+                      ),
+                      SizedBox(
+                        height: ResponsiveLayoutService.getSpacing(context).xl,
+                      ),
 
-                    // Personalized Techniques Section with staggered animations
-                    _buildPersonalizedTechniquesSection(
-                      currentMotive,
-                      colorTheme,
-                    ),
-                    const SizedBox(height: 32),
+                      // Personalized Techniques Section with staggered animations
+                      _buildPersonalizedTechniquesSection(
+                        currentMotive,
+                        colorTheme,
+                        accessibilitySettings,
+                        reduceMotion,
+                      ),
+                      SizedBox(
+                        height: ResponsiveLayoutService.getSpacing(context).xl,
+                      ),
 
-                    // Ambient Soundscapes Section
-                    _buildAmbientSoundscapesSection(currentMotive, colorTheme),
-                  ],
+                      // Ambient Soundscapes Section
+                      _buildAmbientSoundscapesSection(
+                        currentMotive,
+                        colorTheme,
+                        accessibilitySettings,
+                      ),
+                      SizedBox(
+                        height: ResponsiveLayoutService.getSpacing(context).xl,
+                      ),
+
+                      // Navigation Integration Section
+                      _buildNavigationIntegrationSection(
+                        currentMotive,
+                        colorTheme,
+                        accessibilitySettings,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            // Mini Audio Player
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: MiniAudioPlayer(primaryColor: colorTheme.primaryColor),
-            ),
-          ],
+              // Mini Audio Player
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: MiniAudioPlayer(primaryColor: colorTheme.primaryColor),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -191,9 +257,11 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   PreferredSizeWidget _buildAppBar(
     String? motive,
     MotiveColorTheme colorTheme,
+    AccessibilitySettings accessibilitySettings,
   ) {
     final profile = MotiveConfig.getProfile(motive);
     final emoji = profile?.emoji ?? '🧘';
+    final fontSizes = ResponsiveLayoutService.getFontSizes(context);
 
     return AppBar(
       title: ThemeTransitionService.createFadeTransition(
@@ -202,14 +270,19 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 24)),
-            const SizedBox(width: 8),
-            Text(
-              'Calm',
+            Semantics(
+              label: '${profile?.displayName ?? 'Calm'} mode indicator',
+              child: Text(emoji, style: TextStyle(fontSize: fontSizes.title)),
+            ),
+            SizedBox(width: ResponsiveLayoutService.getSpacing(context).sm),
+            AccessibilityService.instance.createAccessibleText(
+              text: 'Calm',
               style: GoogleFonts.lato(
-                color: const Color(0xFF2D2D2D),
+                color: accessibilitySettings.highContrast
+                    ? Colors.black
+                    : const Color(0xFF2D2D2D),
                 fontWeight: FontWeight.bold,
-                fontSize: 24,
+                fontSize: fontSizes.title,
               ),
             ),
           ],
@@ -218,13 +291,37 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
       backgroundColor: Colors.transparent,
       elevation: 0,
       centerTitle: true,
-      iconTheme: const IconThemeData(color: Color(0xFF2D2D2D)),
+      iconTheme: IconThemeData(
+        color: accessibilitySettings.highContrast
+            ? Colors.black
+            : const Color(0xFF2D2D2D),
+      ),
+      actions: [
+        // Accessibility settings button
+        Padding(
+          padding: EdgeInsets.only(
+            right: ResponsiveLayoutService.getSpacing(context).sm,
+          ),
+          child: AccessibilityService.instance.createAccessibleButton(
+            semanticLabel: 'Open accessibility settings',
+            semanticHint: 'Adjust text size, contrast, and motion preferences',
+            onPressed: () => _showAccessibilitySettings(context),
+            child: Icon(
+              Icons.accessibility,
+              color: accessibilitySettings.highContrast
+                  ? Colors.black
+                  : const Color(0xFF2D2D2D),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildMotiveWelcomeHeader(
     String? motive,
     MotiveColorTheme colorTheme,
+    AccessibilitySettings accessibilitySettings,
   ) {
     final profile = MotiveConfig.getProfile(motive);
     final displayName = profile?.displayName ?? 'Wellness';
@@ -234,75 +331,101 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     final encouragementMessage = motiveDetection.getMotiveEncouragementMessage(
       motive,
     );
+    final fontSizes = ResponsiveLayoutService.getFontSizes(context);
+    final spacing = ResponsiveLayoutService.getSpacing(context);
 
-    return ThemeTransitionService.createAnimatedGradientContainer(
-      theme: colorTheme,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: colorTheme.primaryColor.withValues(alpha: 0.2),
-          blurRadius: 15,
-          offset: const Offset(0, 8),
-        ),
-      ],
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ThemeTransitionService.createFadeTransition(
-          controller: entranceController,
-          delay: 0.4,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    return Padding(
+      padding: ResponsiveLayoutService.getResponsivePadding(context),
+      child: VisualDesignService.createEnhancedGradientContainer(
+        theme: colorTheme,
+        borderRadius: BorderRadius.circular(20),
+        isAccessible: accessibilitySettings.highContrast,
+        boxShadow: [
+          BoxShadow(
+            color: colorTheme.primaryColor.withValues(alpha: 0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        child: Padding(
+          padding: EdgeInsets.all(spacing.lg),
+          child: ThemeTransitionService.createFadeTransition(
+            controller: entranceController,
+            delay: 0.4,
+            child: Semantics(
+              label: 'Welcome to your $displayName journey',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(emoji, style: const TextStyle(fontSize: 32)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Your $displayName Journey',
-                          style: GoogleFonts.lato(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                  Row(
+                    children: [
+                      Semantics(
+                        label: '$displayName mode',
+                        child: Text(
+                          emoji,
+                          style: TextStyle(fontSize: fontSizes.headline),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          welcomeMessage,
-                          style: GoogleFonts.lato(
-                            fontSize: 14,
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
+                      ),
+                      SizedBox(width: spacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AccessibilityService.instance.createAccessibleText(
+                              text: 'Your $displayName Journey',
+                              style: GoogleFonts.lato(
+                                fontSize: fontSizes.subtitle,
+                                fontWeight: FontWeight.bold,
+                                color: accessibilitySettings.highContrast
+                                    ? Colors.black
+                                    : Colors.white,
+                              ),
+                            ),
+                            SizedBox(height: spacing.xs),
+                            AccessibilityService.instance.createAccessibleText(
+                              text: welcomeMessage,
+                              style: GoogleFonts.lato(
+                                fontSize: fontSizes.body,
+                                color: accessibilitySettings.highContrast
+                                    ? Colors.black87
+                                    : Colors.white.withValues(alpha: 0.9),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: spacing.md),
+                  // Motive-specific encouragement
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: spacing.md,
+                      vertical: spacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: accessibilitySettings.highContrast
+                          ? Colors.grey.shade200
+                          : Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: accessibilitySettings.highContrast
+                          ? Border.all(color: Colors.black, width: 1)
+                          : null,
+                    ),
+                    child: AccessibilityService.instance.createAccessibleText(
+                      text: encouragementMessage,
+                      style: GoogleFonts.lato(
+                        fontSize: fontSizes.caption,
+                        color: accessibilitySettings.highContrast
+                            ? Colors.black
+                            : Colors.white.withValues(alpha: 0.9),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // Motive-specific encouragement
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  encouragementMessage,
-                  style: GoogleFonts.lato(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -312,13 +435,19 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   Widget _buildEnhancedQuickAccessPanel(
     String? motive,
     MotiveColorTheme colorTheme,
+    AccessibilitySettings accessibilitySettings,
   ) {
-    return ThemeTransitionService.createScaleTransition(
-      controller: entranceController,
-      delay: 0.6,
-      child: QuickAccessPanel(
-        userMotive: motive,
-        primaryColor: colorTheme.primaryColor,
+    return Padding(
+      padding: ResponsiveLayoutService.getResponsivePadding(context),
+      child: ThemeTransitionService.createScaleTransition(
+        controller: entranceController,
+        delay: 0.6,
+        child: QuickAccessPanel(
+          userMotive: motive,
+          primaryColor: accessibilitySettings.highContrast
+              ? Colors.black
+              : colorTheme.primaryColor,
+        ),
       ),
     );
   }
@@ -326,52 +455,86 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   Widget _buildPersonalizedTechniquesSection(
     String? motive,
     MotiveColorTheme colorTheme,
+    AccessibilitySettings accessibilitySettings,
+    bool reduceMotion,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ThemeTransitionService.createFadeTransition(
-          controller: entranceController,
-          delay: 0.8,
-          child: _buildSectionHeader(
-            'Personalized Techniques',
-            'Curated for your ${MotiveConfig.getProfile(motive)?.displayName ?? 'wellness'} journey',
+    final spacing = ResponsiveLayoutService.getSpacing(context);
+
+    return Padding(
+      padding: ResponsiveLayoutService.getResponsivePadding(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ThemeTransitionService.createFadeTransition(
+            controller: entranceController,
+            delay: 0.8,
+            child: _buildSectionHeader(
+              'More Techniques',
+              'Additional ${MotiveConfig.getProfile(motive)?.displayName ?? 'wellness'} practices to explore',
+              accessibilitySettings,
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        _buildPersonalizedTechniquesList(motive, colorTheme),
-      ],
+          SizedBox(height: spacing.lg),
+          _buildPersonalizedTechniquesList(
+            motive,
+            colorTheme,
+            accessibilitySettings,
+            reduceMotion,
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildPersonalizedTechniquesList(
     String? motive,
     MotiveColorTheme colorTheme,
+    AccessibilitySettings accessibilitySettings,
+    bool reduceMotion,
   ) {
-    if (_isLoadingRecommendations) {
-      return const Center(
+    final techniqueLibraryState = ref.watch(techniqueLibraryProvider);
+
+    if (_isLoadingRecommendations || techniqueLibraryState.isLoading) {
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: CircularProgressIndicator(),
+          padding: EdgeInsets.all(
+            ResponsiveLayoutService.getSpacing(context).lg,
+          ),
+          child: VisualDesignService.createAccessibleLoadingIndicator(
+            semanticLabel: 'Loading personalized techniques',
+            color: colorTheme.primaryColor,
+            highContrast: accessibilitySettings.highContrast,
+          ),
         ),
       );
     }
 
-    final techniques = _personalizedTechniques.isNotEmpty
-        ? _personalizedTechniques
-        : _getPrioritizedTechniques(motive);
+    // Get techniques from library service, excluding quick access techniques
+    final quickAccessIds = _getQuickAccessTechniqueIds(motive);
+    final displayTechniques = techniqueLibraryState.allTechniques
+        .where((technique) => !quickAccessIds.contains(technique.id))
+        .toList();
 
-    return Column(
-      children: techniques.asMap().entries.map((entry) {
+    return ResponsiveLayoutService.createResponsiveGrid(
+      context: context,
+      spacing: ResponsiveLayoutService.getSpacing(context).md,
+      runSpacing: ResponsiveLayoutService.getSpacing(context).md,
+      children: displayTechniques.asMap().entries.map((entry) {
         final index = entry.key;
         final technique = entry.value;
+        final techniqueInfo = ref
+            .read(techniqueLibraryProvider.notifier)
+            .getTechniqueWithMotiveInfo(technique.id);
 
-        return ThemeTransitionService.createStaggeredTechniqueCard(
+        return VisualDesignService.createEnhancedStaggeredCard(
           index: index,
           controller: entranceController,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildTechniqueCard(technique, motive, colorTheme),
+          reduceMotion: reduceMotion,
+          child: _buildEnhancedTechniqueCard(
+            technique,
+            techniqueInfo,
+            colorTheme,
+            accessibilitySettings,
           ),
         );
       }).toList(),
@@ -381,128 +544,267 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   Widget _buildAmbientSoundscapesSection(
     String? motive,
     MotiveColorTheme colorTheme,
+    AccessibilitySettings accessibilitySettings,
   ) {
-    return ThemeTransitionService.createFadeTransition(
-      controller: entranceController,
-      delay: 1.0,
-      child: InteractiveSoundscapeWidget(
-        userMotive: motive,
-        primaryColor: colorTheme.primaryColor,
+    return Padding(
+      padding: ResponsiveLayoutService.getResponsivePadding(context),
+      child: ThemeTransitionService.createFadeTransition(
+        controller: entranceController,
+        delay: 1.0,
+        child: InteractiveSoundscapeWidget(
+          userMotive: motive,
+          primaryColor: accessibilitySettings.highContrast
+              ? Colors.black
+              : colorTheme.primaryColor,
+        ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.lato(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF2D2D2D),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: GoogleFonts.lato(fontSize: 14, color: Colors.grey.shade600),
-        ),
-      ],
+  Widget _buildNavigationIntegrationSection(
+    String? motive,
+    MotiveColorTheme colorTheme,
+    AccessibilitySettings accessibilitySettings,
+  ) {
+    return ThemeTransitionService.createFadeTransition(
+      controller: entranceController,
+      delay: 1.2,
+      child: NavigationIntegrationWidget(
+        userMotive: motive,
+        primaryColor: accessibilitySettings.highContrast
+            ? Colors.black
+            : colorTheme.primaryColor,
+      ),
     );
   }
 
-  Widget _buildTechniqueCard(
+  Widget _buildSectionHeader(
+    String title,
+    String subtitle,
+    AccessibilitySettings accessibilitySettings,
+  ) {
+    final fontSizes = ResponsiveLayoutService.getFontSizes(context);
+    final spacing = ResponsiveLayoutService.getSpacing(context);
+
+    return Semantics(
+      header: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AccessibilityService.instance.createAccessibleText(
+            text: title,
+            style: GoogleFonts.lato(
+              fontSize: fontSizes.title,
+              fontWeight: FontWeight.bold,
+              color: accessibilitySettings.highContrast
+                  ? Colors.black
+                  : const Color(0xFF2D2D2D),
+            ),
+          ),
+          SizedBox(height: spacing.xs),
+          AccessibilityService.instance.createAccessibleText(
+            text: subtitle,
+            style: GoogleFonts.lato(
+              fontSize: fontSizes.body,
+              color: accessibilitySettings.highContrast
+                  ? Colors.black87
+                  : Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEnhancedTechniqueCard(
     CalmTechnique technique,
-    String? motive,
+    TechniqueWithMotiveInfo techniqueInfo,
     MotiveColorTheme colorTheme,
+    AccessibilitySettings accessibilitySettings,
   ) {
     final techniqueColor = _getTechniqueColor(technique.type);
+    final fontSizes = ResponsiveLayoutService.getFontSizes(context);
+    final spacing = ResponsiveLayoutService.getSpacing(context);
+    final iconSizes = ResponsiveLayoutService.getIconSizes(context);
 
-    return GestureDetector(
+    final semanticLabel =
+        '${technique.title}, ${technique.durationMinutes} minutes. '
+        '${techniqueInfo.motiveDescription}. '
+        '${techniqueInfo.isPrimary ? 'Recommended for your current motive.' : ''}';
+
+    return VisualDesignService.createAccessibleTechniqueCard(
+      semanticLabel: semanticLabel,
       onTap: () => _handleTechniqueNavigation(technique),
-      child: ThemeTransitionService.createMorphingContainer(
-        theme: colorTheme,
-        borderRadius: BorderRadius.circular(16),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: techniqueColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+      isRecommended: techniqueInfo.isPrimary,
+      highContrast: accessibilitySettings.highContrast,
+      child: Container(
+        constraints: ResponsiveLayoutService.getTechniqueCardConstraints(
+          context,
+        ),
+        child: ThemeTransitionService.createMorphingContainer(
+          theme: colorTheme,
+          borderRadius: BorderRadius.circular(16),
+          padding: EdgeInsets.all(spacing.lg),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(spacing.md),
+                decoration: BoxDecoration(
+                  color: accessibilitySettings.highContrast
+                      ? Colors.grey.shade200
+                      : techniqueColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: accessibilitySettings.highContrast
+                      ? Border.all(color: Colors.black, width: 1)
+                      : null,
+                ),
+                child: Text(
+                  technique.icon,
+                  style: TextStyle(fontSize: iconSizes.large),
+                ),
               ),
-              child: Text(technique.icon, style: const TextStyle(fontSize: 28)),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    technique.title,
-                    style: GoogleFonts.lato(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF2D2D2D),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _getMotiveSpecificDescription(technique, motive),
-                    style: GoogleFonts.lato(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time, size: 14, color: techniqueColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${technique.durationMinutes} min',
-                        style: GoogleFonts.lato(
-                          fontSize: 12,
-                          color: techniqueColor,
-                          fontWeight: FontWeight.w600,
+              SizedBox(width: spacing.lg),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AccessibilityService.instance
+                              .createAccessibleText(
+                                text: technique.title,
+                                style: GoogleFonts.lato(
+                                  fontSize: fontSizes.subtitle,
+                                  fontWeight: FontWeight.bold,
+                                  color: accessibilitySettings.highContrast
+                                      ? Colors.black
+                                      : const Color(0xFF2D2D2D),
+                                ),
+                              ),
                         ),
+                        if (techniqueInfo.isPrimary)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: spacing.sm,
+                              vertical: spacing.xs / 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: accessibilitySettings.highContrast
+                                  ? Colors.black
+                                  : colorTheme.primaryColor,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: AccessibilityService.instance
+                                .createAccessibleText(
+                                  text: 'Recommended',
+                                  style: GoogleFonts.lato(
+                                    fontSize: fontSizes.caption,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                          ),
+                      ],
+                    ),
+                    SizedBox(height: spacing.xs),
+                    AccessibilityService.instance.createAccessibleText(
+                      text: techniqueInfo.motiveDescription,
+                      style: GoogleFonts.lato(
+                        fontSize: fontSizes.body,
+                        color: accessibilitySettings.highContrast
+                            ? Colors.black87
+                            : Colors.grey.shade600,
                       ),
-                      const Spacer(),
-                      if (_isTechniquePrioritized(technique, motive))
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colorTheme.primaryColor.withValues(
-                              alpha: 0.1,
+                    ),
+                    if (techniqueInfo.motiveBenefits.isNotEmpty) ...[
+                      SizedBox(height: spacing.xs),
+                      Wrap(
+                        spacing: spacing.xs,
+                        runSpacing: spacing.xs / 2,
+                        children: techniqueInfo.motiveBenefits.take(2).map((
+                          benefit,
+                        ) {
+                          return Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: spacing.xs,
+                              vertical: spacing.xs / 2,
                             ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Recommended',
-                            style: GoogleFonts.lato(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: colorTheme.primaryColor,
+                            decoration: BoxDecoration(
+                              color: accessibilitySettings.highContrast
+                                  ? Colors.grey.shade300
+                                  : colorTheme.accentColor.withValues(
+                                      alpha: 0.1,
+                                    ),
+                              borderRadius: BorderRadius.circular(6),
+                              border: accessibilitySettings.highContrast
+                                  ? Border.all(color: Colors.black, width: 1)
+                                  : null,
                             ),
+                            child: AccessibilityService.instance
+                                .createAccessibleText(
+                                  text: benefit,
+                                  style: GoogleFonts.lato(
+                                    fontSize: fontSizes.caption,
+                                    color: accessibilitySettings.highContrast
+                                        ? Colors.black
+                                        : colorTheme.accentColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                    SizedBox(height: spacing.sm),
+                    Row(
+                      children: [
+                        AccessibilityService.instance.createAccessibleIcon(
+                          icon: Icons.access_time,
+                          semanticLabel: 'Duration',
+                          color: accessibilitySettings.highContrast
+                              ? Colors.black
+                              : techniqueColor,
+                          size: iconSizes.small,
+                        ),
+                        SizedBox(width: spacing.xs),
+                        AccessibilityService.instance.createAccessibleText(
+                          text: '${technique.durationMinutes} min',
+                          style: GoogleFonts.lato(
+                            fontSize: fontSizes.caption,
+                            color: accessibilitySettings.highContrast
+                                ? Colors.black
+                                : techniqueColor,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                    ],
-                  ),
-                ],
+                        const Spacer(),
+                        AccessibilityService.instance.createAccessibleText(
+                          text: 'Priority: ${techniqueInfo.priorityScore}/3',
+                          style: GoogleFonts.lato(
+                            fontSize: fontSizes.caption,
+                            color: accessibilitySettings.highContrast
+                                ? Colors.black87
+                                : Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Colors.grey.shade400,
-            ),
-          ],
+              SizedBox(width: spacing.sm),
+              AccessibilityService.instance.createAccessibleIcon(
+                icon: Icons.arrow_forward_ios,
+                semanticLabel: 'Open technique',
+                color: accessibilitySettings.highContrast
+                    ? Colors.black
+                    : Colors.grey.shade400,
+                size: iconSizes.small,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -605,31 +907,39 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     return [...prioritized, ...others];
   }
 
-  bool _isTechniquePrioritized(CalmTechnique technique, String? motive) {
-    return MotiveConfig.isTechniquePrioritized(motive, technique.type.name);
+  /// Get technique IDs that are shown in Quick Access Panel to avoid duplication
+  Set<String> _getQuickAccessTechniqueIds(String? motive) {
+    // These are the techniques typically shown in Quick Access Panel
+    // based on motive and effectiveness (≤2 minutes duration)
+    final quickTechniques = CalmTechnique.defaults
+        .where((t) => t.durationMinutes <= 2)
+        .map((t) => t.id)
+        .toSet();
+
+    // Add motive-specific emergency techniques
+    switch (motive) {
+      case 'Sleep':
+        quickTechniques.add('body-scan');
+        break;
+      case 'Stress':
+        quickTechniques.add('deep-breathing');
+        break;
+      case 'Anxiety':
+        quickTechniques.add('5-4-3-2-1');
+        break;
+      case 'Focus':
+        quickTechniques.add('mindful-observation');
+        break;
+      case 'Habit Building':
+        quickTechniques.add('positive-affirmations');
+        break;
+    }
+
+    return quickTechniques;
   }
 
-  String _getMotiveSpecificDescription(
-    CalmTechnique technique,
-    String? motive,
-  ) {
-    // Return motive-specific benefits for techniques
-    if (motive == 'Sleep' && technique.type == TechniqueType.grounding) {
-      return 'Perfect for calming racing thoughts before bed';
-    } else if (motive == 'Anxiety' &&
-        technique.type == TechniqueType.grounding) {
-      return 'Anchor yourself in the present moment';
-    } else if (motive == 'Focus' &&
-        technique.type == TechniqueType.visualization) {
-      return 'Clear mental fog and enhance concentration';
-    } else if (motive == 'Stress' &&
-        technique.type == TechniqueType.breathing) {
-      return 'Release tension and restore calm energy';
-    } else if (motive == 'Habit Building' &&
-        technique.type == TechniqueType.affirmation) {
-      return 'Build motivation and reinforce positive habits';
-    }
-    return technique.description;
+  bool _isTechniquePrioritized(CalmTechnique technique, String? motive) {
+    return MotiveConfig.isTechniquePrioritized(motive, technique.type.name);
   }
 
   Color _getTechniqueColor(TechniqueType type) {
@@ -646,6 +956,11 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   }
 
   void _handleTechniqueNavigation(CalmTechnique technique) {
+    // Provide haptic feedback for accessibility
+    AccessibilityService.instance.provideHapticFeedback(
+      type: HapticFeedbackType.medium,
+    );
+
     if (technique.id == '5-4-3-2-1') {
       Navigator.push(
         context,
@@ -664,5 +979,216 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
         ),
       );
     }
+  }
+
+  /// Show accessibility settings dialog
+  void _showAccessibilitySettings(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => _AccessibilitySettingsDialog(),
+    );
+  }
+}
+
+/// Accessibility settings dialog widget
+class _AccessibilitySettingsDialog extends StatefulWidget {
+  @override
+  _AccessibilitySettingsDialogState createState() =>
+      _AccessibilitySettingsDialogState();
+}
+
+class _AccessibilitySettingsDialogState
+    extends State<_AccessibilitySettingsDialog> {
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<AccessibilitySettings>(
+      valueListenable: AccessibilityService.instance.settingsNotifier,
+      builder: (context, settings, child) {
+        final fontSizes = ResponsiveLayoutService.getFontSizes(context);
+        final spacing = ResponsiveLayoutService.getSpacing(context);
+
+        return AlertDialog(
+          title: AccessibilityService.instance.createAccessibleText(
+            text: 'Accessibility Settings',
+            style: GoogleFonts.lato(
+              fontSize: fontSizes.title,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // High Contrast Toggle
+                _buildAccessibilityToggle(
+                  title: 'High Contrast',
+                  subtitle: 'Increase contrast for better visibility',
+                  value: settings.highContrast,
+                  onChanged: (value) {
+                    AccessibilityService.instance.setHighContrast(value);
+                  },
+                  settings: settings,
+                ),
+                SizedBox(height: spacing.md),
+
+                // Reduced Motion Toggle
+                _buildAccessibilityToggle(
+                  title: 'Reduce Motion',
+                  subtitle: 'Minimize animations and transitions',
+                  value: settings.reducedMotion,
+                  onChanged: (value) {
+                    AccessibilityService.instance.setReducedMotion(value);
+                  },
+                  settings: settings,
+                ),
+                SizedBox(height: spacing.md),
+
+                // Text Scale Slider
+                _buildTextScaleSlider(settings),
+                SizedBox(height: spacing.md),
+
+                // Audio Guidance Toggle
+                _buildAccessibilityToggle(
+                  title: 'Audio Guidance Only',
+                  subtitle: 'Use audio cues instead of visual elements',
+                  value: settings.audioGuidanceOnly,
+                  onChanged: (value) {
+                    AccessibilityService.instance.setAudioGuidanceOnly(value);
+                  },
+                  settings: settings,
+                ),
+                SizedBox(height: spacing.md),
+
+                // Voice Control Toggle
+                _buildAccessibilityToggle(
+                  title: 'Voice Control',
+                  subtitle: 'Enable voice commands for navigation',
+                  value: settings.voiceControlEnabled,
+                  onChanged: (value) {
+                    AccessibilityService.instance.setVoiceControlEnabled(value);
+                  },
+                  settings: settings,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            AccessibilityService.instance.createAccessibleButton(
+              semanticLabel: 'Reset to defaults',
+              semanticHint:
+                  'Reset all accessibility settings to default values',
+              onPressed: () {
+                AccessibilityService.instance.resetToDefaults();
+              },
+              child: AccessibilityService.instance.createAccessibleText(
+                text: 'Reset',
+                style: TextStyle(
+                  color: settings.highContrast
+                      ? Colors.black
+                      : Colors.grey.shade600,
+                ),
+              ),
+            ),
+            AccessibilityService.instance.createAccessibleButton(
+              semanticLabel: 'Close settings',
+              onPressed: () => Navigator.of(context).pop(),
+              child: AccessibilityService.instance.createAccessibleText(
+                text: 'Done',
+                style: TextStyle(
+                  color: settings.highContrast
+                      ? Colors.black
+                      : const Color(0xFF4DB6AC),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAccessibilityToggle({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required AccessibilitySettings settings,
+  }) {
+    return Semantics(
+      toggled: value,
+      label: '$title. $subtitle',
+      child: SwitchListTile(
+        title: AccessibilityService.instance.createAccessibleText(
+          text: title,
+          style: GoogleFonts.lato(
+            fontWeight: FontWeight.w600,
+            color: settings.highContrast ? Colors.black : null,
+          ),
+        ),
+        subtitle: AccessibilityService.instance.createAccessibleText(
+          text: subtitle,
+          style: GoogleFonts.lato(
+            fontSize: 12,
+            color: settings.highContrast
+                ? Colors.black87
+                : Colors.grey.shade600,
+          ),
+        ),
+        value: value,
+        onChanged: (newValue) {
+          AccessibilityService.instance.provideHapticFeedback(
+            type: HapticFeedbackType.selection,
+          );
+          onChanged(newValue);
+        },
+        activeColor: settings.highContrast
+            ? Colors.black
+            : const Color(0xFF4DB6AC),
+        contentPadding: EdgeInsets.zero,
+      ),
+    );
+  }
+
+  Widget _buildTextScaleSlider(AccessibilitySettings settings) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AccessibilityService.instance.createAccessibleText(
+          text: 'Text Size',
+          style: GoogleFonts.lato(
+            fontWeight: FontWeight.w600,
+            color: settings.highContrast ? Colors.black : null,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Semantics(
+          label:
+              'Text size slider. Current value: ${(settings.textScale * 100).round()}%',
+          child: Slider(
+            value: settings.textScale,
+            min: 0.8,
+            max: 2.0,
+            divisions: 12,
+            label: '${(settings.textScale * 100).round()}%',
+            onChanged: (value) {
+              AccessibilityService.instance.setTextScale(value);
+            },
+            activeColor: settings.highContrast
+                ? Colors.black
+                : const Color(0xFF4DB6AC),
+          ),
+        ),
+        AccessibilityService.instance.createAccessibleText(
+          text: 'Preview text at ${(settings.textScale * 100).round()}% size',
+          style: GoogleFonts.lato(
+            fontSize: 14 * settings.textScale,
+            color: settings.highContrast
+                ? Colors.black87
+                : Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'firebase_options.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_flow_screen.dart';
@@ -12,36 +12,99 @@ import 'providers/user_provider.dart';
 import 'services/notification_service.dart';
 
 void main() async {
-  // Force rebuild timestamp 2
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Notifications
-  await NotificationService().init();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp();
-  
-  // Enable Firestore offline persistence
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-  );
-  
-  // Set edge-to-edge display
-  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.transparent,
-    ),
-  );
-  
-  runApp(
-    // Wrap the entire app with ProviderScope to enable Riverpod
-    const ProviderScope(
-      child: MindNestApp(),
-    ),
-  );
+  try {
+    // Force rebuild timestamp 2
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Initialize Firebase with proper configuration
+    // Check if Firebase is already initialized to prevent duplicate app error
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } else {
+      debugPrint('Firebase already initialized');
+    }
+
+    // Initialize Notifications
+    try {
+      await NotificationService().init();
+    } catch (e) {
+      // Notification initialization failure shouldn't block app startup
+      debugPrint('Notification initialization failed: $e');
+    }
+
+    // Enable Firestore offline persistence
+    try {
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      );
+    } catch (e) {
+      // Firestore settings failure shouldn't block app startup
+      debugPrint('Firestore settings failed: $e');
+    }
+
+    // Set edge-to-edge display
+    try {
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          systemNavigationBarColor: Colors.transparent,
+        ),
+      );
+    } catch (e) {
+      // UI settings failure shouldn't block app startup
+      debugPrint('System UI settings failed: $e');
+    }
+
+    runApp(
+      // Wrap the entire app with ProviderScope to enable Riverpod
+      const ProviderScope(child: MindNestApp()),
+    );
+  } catch (e, stackTrace) {
+    // If Firebase initialization fails, show error screen
+    debugPrint('App initialization failed: $e');
+    debugPrint('Stack trace: $stackTrace');
+
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text(
+                  'App Initialization Failed',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Error: $e',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    // Restart the app
+                    main();
+                  },
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MindNestApp extends StatelessWidget {
@@ -74,35 +137,34 @@ class MindNestApp extends StatelessWidget {
 
 // Authentication wrapper using Riverpod
 class AuthWrapper extends ConsumerWidget {
-  const AuthWrapper({Key? key}) : super(key: key);
+  const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch auth state using Riverpod
     final authState = ref.watch(authStateProvider);
-    
+
     return authState.when(
       data: (user) {
         if (user == null) {
           // User not signed in -> show welcome screen
           return const WelcomeScreen();
         }
-        
+
         // User signed in -> check onboarding status
         final userProfile = ref.watch(userProfileProvider);
-        
+
         return userProfile.when(
           data: (profile) {
             if (profile == null) {
               // Profile doesn't exist yet (shouldn't happen, but handle gracefully)
               return const WelcomeScreen();
             }
-            
+
             // Check if user has completed onboarding
             // For now, we check if displayName is set (set during onboarding)
-            final hasCompletedOnboarding = profile.displayName != null && 
-                                          profile.displayName!.isNotEmpty;
-            
+            final hasCompletedOnboarding = profile.displayName.isNotEmpty;
+
             if (hasCompletedOnboarding) {
               return const HomeScreen();
             } else {
@@ -111,48 +173,118 @@ class AuthWrapper extends ConsumerWidget {
           },
           loading: () => const Scaffold(
             body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          ),
-          error: (error, stack) => Scaffold(
-            body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Error loading profile: $error'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Retry by invalidating the provider
-                      ref.invalidate(userProfileProvider);
-                    },
-                    child: const Text('Retry'),
-                  ),
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading profile...'),
                 ],
               ),
             ),
           ),
+          error: (error, stack) {
+            debugPrint('User profile error: $error');
+            debugPrint('Stack trace: $stack');
+            return Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Error loading profile'),
+                    const SizedBox(height: 8),
+                    Text(
+                      error.toString(),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Retry by invalidating the provider
+                        ref.invalidate(userProfileProvider);
+                      },
+                      child: const Text('Retry'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () {
+                        // Fallback to welcome screen
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => const WelcomeScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text('Go to Welcome'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
       loading: () => const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      ),
-      error: (error, stack) => Scaffold(
-        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('Authentication error: $error'),
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Initializing...'),
             ],
           ),
         ),
       ),
+      error: (error, stack) {
+        debugPrint('Auth state error: $error');
+        debugPrint('Stack trace: $stack');
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text('Authentication Error'),
+                const SizedBox(height: 8),
+                Text(
+                  error.toString(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    // Retry by invalidating the provider
+                    ref.invalidate(authStateProvider);
+                  },
+                  child: const Text('Retry'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () {
+                    // Fallback to welcome screen
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (context) => const WelcomeScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('Continue Offline'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

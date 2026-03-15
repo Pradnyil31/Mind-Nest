@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../config/motive_config.dart';
 import '../../features/calm/application/calm_recommendation_service.dart';
+import '../../features/calm/application/technique_library_service.dart';
 import '../../models/calm_technique.dart';
 import '../../models/breathing_technique.dart';
 import '../../services/auth_service.dart';
@@ -55,6 +55,20 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
     });
 
     try {
+      // Use technique library service for motive-specific emergency techniques
+      final libraryService = ref.read(techniqueLibraryProvider.notifier);
+      final emergencyTechniques = libraryService.getEmergencyTechniques();
+
+      if (emergencyTechniques.isNotEmpty) {
+        setState(() {
+          _quickTechniques = emergencyTechniques.take(3).toList();
+          _emergencyTechnique = emergencyTechniques.first;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Fallback to recommendation service
       final user = AuthService().currentUser;
       if (user != null) {
         // Get effectiveness-based quick access techniques (under 2 minutes)
@@ -91,51 +105,18 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
 
   /// Get effectiveness-based quick techniques as enhanced fallback
   List<CalmTechnique> _getEffectivenessBasedQuickTechniques(String? motive) {
-    final allTechniques = CalmTechnique.defaults;
-
-    // Filter techniques under 2 minutes for true emergency use (Requirement 7.2)
-    final emergencyTechniques = allTechniques.where((technique) {
-      return technique.durationMinutes <= 2;
-    }).toList();
-
-    // If we don't have enough under 2 minutes, add some 5-minute ones
-    if (emergencyTechniques.length < 3) {
-      final additionalTechniques = allTechniques
-          .where((technique) {
-            return technique.durationMinutes <= 5 &&
-                !emergencyTechniques.contains(technique);
-          })
-          .take(4 - emergencyTechniques.length);
-      emergencyTechniques.addAll(additionalTechniques);
-    }
-
-    // Apply motive-specific prioritization
-    final priorities = MotiveConfig.getCalmTechniquePriorities(motive);
-    final motiveSpecific = <CalmTechnique>[];
-    final general = <CalmTechnique>[];
-
-    for (final technique in emergencyTechniques) {
-      final techniqueTypeString = _getTechniqueTypeString(technique.type);
-      if (priorities.any(
-        (priority) =>
-            priority.toLowerCase().contains(
-              techniqueTypeString.toLowerCase(),
-            ) ||
-            techniqueTypeString.toLowerCase().contains(priority.toLowerCase()),
-      )) {
-        motiveSpecific.add(technique);
-      } else {
-        general.add(technique);
-      }
-    }
-
-    // Return motive-prioritized techniques first, then general ones
-    final result = [...motiveSpecific, ...general];
-    return result.take(4).toList();
+    // Use the new technique library methods for better motive-specific selection
+    return CalmTechnique.getEmergencyTechniques(motive);
   }
 
   /// Get motive-specific emergency technique as fallback
   CalmTechnique _getMotiveSpecificEmergencyTechnique(String? motive) {
+    final emergencyTechniques = CalmTechnique.getEmergencyTechniques(motive);
+    if (emergencyTechniques.isNotEmpty) {
+      return emergencyTechniques.first;
+    }
+
+    // Ultimate fallback
     switch (motive) {
       case 'Sleep':
         return CalmTechnique.defaults.firstWhere(
@@ -150,10 +131,15 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
               CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1'),
         );
       case 'Anxiety':
-        return CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1');
+        return CalmTechnique.defaults.firstWhere(
+          (t) => t.id == '5-4-3-2-1',
+          orElse: () => CalmTechnique.defaults.firstWhere(
+            (t) => t.id == 'deep-breathing',
+          ),
+        );
       case 'Focus':
         return CalmTechnique.defaults.firstWhere(
-          (t) => t.id == 'clarity-visualization',
+          (t) => t.id == 'mindful-observation',
           orElse: () =>
               CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1'),
         );
@@ -165,20 +151,6 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
         );
       default:
         return CalmTechnique.defaults.firstWhere((t) => t.id == '5-4-3-2-1');
-    }
-  }
-
-  /// Convert TechniqueType to string for comparison with MotiveConfig
-  String _getTechniqueTypeString(TechniqueType type) {
-    switch (type) {
-      case TechniqueType.grounding:
-        return 'Grounding';
-      case TechniqueType.affirmation:
-        return 'Affirmations';
-      case TechniqueType.breathing:
-        return 'Breathing';
-      case TechniqueType.visualization:
-        return 'Visualization';
     }
   }
 
@@ -256,7 +228,8 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 2.5,
+                  childAspectRatio:
+                      2.6, // Increased from 2.5 to 2.6 to prevent overflow
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
@@ -553,37 +526,42 @@ class _QuickTechniqueButton extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(8.0), // Reduced from 12.0 to 8.0
+            padding: const EdgeInsets.symmetric(
+              horizontal: 8.0,
+              vertical: 6.0,
+            ), // Optimized padding
             child: Row(
               children: [
                 // Icon
                 Text(
                   technique.icon,
-                  style: const TextStyle(fontSize: 18),
-                ), // Reduced font size
+                  style: const TextStyle(fontSize: 16), // Slightly smaller icon
+                ),
 
-                const SizedBox(width: 6), // Reduced from 8
+                const SizedBox(width: 6),
                 // Content
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min, // Prevent overflow
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         technique.title,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          // Changed from bodyMedium to bodySmall
                           fontWeight: FontWeight.bold,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2), // Reduced spacing
+                      const SizedBox(height: 1), // Reduced spacing further
                       Text(
                         '${technique.durationMinutes}m',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: primaryColor,
                           fontWeight: FontWeight.bold,
+                          fontSize: 11, // Explicit smaller font size
                         ),
                       ),
                     ],
