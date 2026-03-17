@@ -6,9 +6,10 @@
 import 'dart:async' as _i4;
 
 import 'package:cloud_firestore/cloud_firestore.dart' as _i2;
-import 'package:firebase_auth/firebase_auth.dart' as _i7;
+import 'package:firebase_auth/firebase_auth.dart' as _i8;
+import 'package:fy_project/models/badge.dart' as _i6;
 import 'package:fy_project/models/user_model.dart' as _i5;
-import 'package:fy_project/services/auth_service.dart' as _i6;
+import 'package:fy_project/services/auth_service.dart' as _i7;
 import 'package:fy_project/services/firestore_service.dart' as _i3;
 import 'package:mockito/mockito.dart' as _i1;
 
@@ -167,13 +168,15 @@ class MockFirestoreService extends _i1.Mock implements _i3.FirestoreService {
           as _i4.Future<Map<String, dynamic>?>);
 
   @override
-  _i4.Future<void> logActivityCompletion(String? uid, String? activityKey) =>
+  _i4.Future<List<_i6.Badge>> logActivityCompletion(
+    String? uid,
+    String? activityKey,
+  ) =>
       (super.noSuchMethod(
             Invocation.method(#logActivityCompletion, [uid, activityKey]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i4.Future<List<_i6.Badge>>.value(<_i6.Badge>[]),
           )
-          as _i4.Future<void>);
+          as _i4.Future<List<_i6.Badge>>);
 
   @override
   _i4.Future<int> getActivityCompletionCount(
@@ -247,21 +250,21 @@ class MockFirestoreService extends _i1.Mock implements _i3.FirestoreService {
 /// A class which mocks [AuthService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockAuthService extends _i1.Mock implements _i6.AuthService {
+class MockAuthService extends _i1.Mock implements _i7.AuthService {
   MockAuthService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.Stream<_i7.User?> get authStateChanges =>
+  _i4.Stream<_i8.User?> get authStateChanges =>
       (super.noSuchMethod(
             Invocation.getter(#authStateChanges),
-            returnValue: _i4.Stream<_i7.User?>.empty(),
+            returnValue: _i4.Stream<_i8.User?>.empty(),
           )
-          as _i4.Stream<_i7.User?>);
+          as _i4.Stream<_i8.User?>);
 
   @override
-  _i4.Future<_i7.UserCredential?> signUpWithEmail({
+  _i4.Future<_i8.UserCredential?> signUpWithEmail({
     required String? email,
     required String? password,
   }) =>
@@ -270,12 +273,12 @@ class MockAuthService extends _i1.Mock implements _i6.AuthService {
               #email: email,
               #password: password,
             }),
-            returnValue: _i4.Future<_i7.UserCredential?>.value(),
+            returnValue: _i4.Future<_i8.UserCredential?>.value(),
           )
-          as _i4.Future<_i7.UserCredential?>);
+          as _i4.Future<_i8.UserCredential?>);
 
   @override
-  _i4.Future<_i7.UserCredential?> signInWithEmail({
+  _i4.Future<_i8.UserCredential?> signInWithEmail({
     required String? email,
     required String? password,
   }) =>
@@ -284,17 +287,17 @@ class MockAuthService extends _i1.Mock implements _i6.AuthService {
               #email: email,
               #password: password,
             }),
-            returnValue: _i4.Future<_i7.UserCredential?>.value(),
+            returnValue: _i4.Future<_i8.UserCredential?>.value(),
           )
-          as _i4.Future<_i7.UserCredential?>);
+          as _i4.Future<_i8.UserCredential?>);
 
   @override
-  _i4.Future<_i7.UserCredential?> signInWithGoogle() =>
+  _i4.Future<_i8.UserCredential?> signInWithGoogle() =>
       (super.noSuchMethod(
             Invocation.method(#signInWithGoogle, []),
-            returnValue: _i4.Future<_i7.UserCredential?>.value(),
+            returnValue: _i4.Future<_i8.UserCredential?>.value(),
           )
-          as _i4.Future<_i7.UserCredential?>);
+          as _i4.Future<_i8.UserCredential?>);
 
   @override
   _i4.Future<void> signOut() =>

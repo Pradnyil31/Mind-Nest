@@ -3,7 +3,10 @@ import '../core/logger.dart';
 import 'firestore_service.dart';
 
 class MeditationAnalyticsService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  MeditationAnalyticsService({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference get _sessionsCollection => _firestore.collection('meditation_sessions');
   
@@ -14,20 +17,33 @@ class MeditationAnalyticsService {
   /// Calculate current meditation streak for a user
   Future<int> getCurrentStreak(String userId) async {
     try {
-      final sessions = await _sessionsCollection
+      final snapshot = await _sessionsCollection
           .where('userId', isEqualTo: userId)
-          .where('completed', isEqualTo: true)
-          .orderBy('startTime', descending: true)
           .get();
 
-      if (sessions.docs.isEmpty) return 0;
+      if (snapshot.docs.isEmpty) return 0;
+      
+      final validSessions = snapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return data['completed'] == true && data['startTime'] != null;
+      }).toList();
+      
+      validSessions.sort((a, b) {
+        final dataA = a.data() as Map<String, dynamic>;
+        final dataB = b.data() as Map<String, dynamic>;
+        final timeA = (dataA['startTime'] as Timestamp).toDate();
+        final timeB = (dataB['startTime'] as Timestamp).toDate();
+        return timeB.compareTo(timeA); // descending
+      });
+
+      if (validSessions.isEmpty) return 0;
 
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       int streak = 0;
       DateTime? lastDate;
 
-      for (var doc in sessions.docs) {
+      for (var doc in validSessions) {
         final data = doc.data() as Map<String, dynamic>;
         final sessionDate = (data['startTime'] as Timestamp).toDate();
         final sessionDay = DateTime(sessionDate.year, sessionDate.month, sessionDate.day);
@@ -69,12 +85,19 @@ class MeditationAnalyticsService {
       
       final snapshot = await _sessionsCollection
           .where('userId', isEqualTo: userId)
-          .where('completed', isEqualTo: true)
-          .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .limit(1)
           .get();
+          
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['completed'] == true && data['startTime'] != null) {
+          final sessionDate = (data['startTime'] as Timestamp).toDate();
+          if (sessionDate.isAfter(startOfDay) || sessionDate.isAtSameMomentAs(startOfDay)) {
+            return true;
+          }
+        }
+      }
       
-      return snapshot.docs.isNotEmpty;
+      return false;
     } catch (e, stackTrace) {
       appLogger.e('Error checking today\'s meditation', error: e, stackTrace: stackTrace);
       return false;
@@ -89,18 +112,19 @@ class MeditationAnalyticsService {
       
       final snapshot = await _sessionsCollection
           .where('userId', isEqualTo: userId)
-          .where('completed', isEqualTo: true)
-          .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(thirtyDaysAgo))
           .get();
 
       Map<DateTime, int> calendar = {};
       
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        final sessionDate = (data['startTime'] as Timestamp).toDate();
-        final day = DateTime(sessionDate.year, sessionDate.month, sessionDate.day);
-        
-        calendar[day] = (calendar[day] ?? 0) + 1;
+        if (data['completed'] == true && data['startTime'] != null) {
+          final sessionDate = (data['startTime'] as Timestamp).toDate();
+          if (sessionDate.isAfter(thirtyDaysAgo) || sessionDate.isAtSameMomentAs(thirtyDaysAgo)) {
+            final day = DateTime(sessionDate.year, sessionDate.month, sessionDate.day);
+            calendar[day] = (calendar[day] ?? 0) + 1;
+          }
+        }
       }
 
       return calendar;

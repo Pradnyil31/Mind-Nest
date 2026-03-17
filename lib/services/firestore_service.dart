@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import 'badge_service.dart';
+import '../models/badge.dart';
+import 'dart:async';
 
 class FirestoreService {
   final FirebaseFirestore _firestore;
@@ -208,7 +211,10 @@ class FirestoreService {
   //
   // activityKey values: 'journaling' | 'focus_session' | 'meditation'
   //                     | 'smart_goals' | 'daily_checkin' | 'breathing'
-  Future<void> logActivityCompletion(String uid, String activityKey) async {
+  //
+  // Returns a List of newly unlocked badges. Will return empty if none unlocked
+  // or if error.
+  Future<List<Badge>> logActivityCompletion(String uid, String activityKey) async {
     try {
       await _usersCollection
           .doc(uid)
@@ -218,8 +224,14 @@ class FirestoreService {
             'completionCount': FieldValue.increment(1),
             'lastCompleted': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
+
+      // After logging the activity, check if they earned any badges!
+      final badgeService = BadgeService();
+      final newBadges = await badgeService.checkAndAwardBadges(uid);
+      return newBadges;
     } catch (e) {
       // Silent fail — never block the user's main action for analytics
+      return [];
     }
   }
 

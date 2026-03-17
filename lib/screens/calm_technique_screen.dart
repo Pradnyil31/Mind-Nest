@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/calm_technique.dart';
 import '../services/voice_service.dart';
+import '../services/firestore_service.dart';
+import '../services/auth_service.dart';
+import '../widgets/activity_completion_dialog.dart';
 
 class CalmTechniqueScreen extends StatefulWidget {
   final CalmTechnique technique;
@@ -499,7 +502,19 @@ class _CalmTechniqueScreenState extends State<CalmTechniqueScreen>
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () async {
+                      final user = AuthService().currentUser;
+                      if (user != null) {
+                        await ActivityCompletionDialog.show(
+                          context,
+                          savingText: 'Saving progress...',
+                          onComplete: () async {
+                            await FirestoreService().logActivityCompletion(user.uid, 'calm_technique');
+                          },
+                        );
+                      }
+                      if (mounted) Navigator.pop(context);
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _techniqueColor,
                       padding: const EdgeInsets.symmetric(vertical: 16),

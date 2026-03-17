@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart' hide Badge;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../models/badge.dart';
 import '../services/progress_insights_service.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/badge_service.dart';
 import '../config/motive_config.dart';
 
 class BadgesScreen extends StatefulWidget {
@@ -18,7 +20,10 @@ class _BadgesScreenState extends State<BadgesScreen> {
   final ProgressInsightsService _insightsService = ProgressInsightsService();
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
+  final BadgeService _badgeService = BadgeService();
+  
   List<Badge> _earnedBadges = [];
+  Map<String, BadgeProgress> _badgeProgress = {};
   String? _userMotive;
   bool _isLoading = true;
 
@@ -72,9 +77,13 @@ class _BadgesScreenState extends State<BadgesScreen> {
           print('Error loading user motive: $e');
         }
         
+        // Load Live Progress for locked badges
+        final progress = await _badgeService.getAllBadgesProgress(user.uid);
+
         if (mounted) {
           setState(() {
             _earnedBadges = earnedBadges;
+            _badgeProgress = progress;
             _userMotive = motive;
             _isLoading = false;
           });
@@ -172,7 +181,17 @@ class _BadgesScreenState extends State<BadgesScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      ...(_earnedBadges.map((badge) => _buildBadgeCard(_themeBadge(badge), true))),
+                      MasonryGridView.count(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _earnedBadges.length,
+                        itemBuilder: (context, index) {
+                          return _buildBadgeCard(_themeBadge(_earnedBadges[index]), true);
+                        },
+                      ),
                       const SizedBox(height: 32),
                     ],
                     
@@ -186,9 +205,23 @@ class _BadgesScreenState extends State<BadgesScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ...(Badge.allBadges
-                        .where((b) => !_earnedBadges.any((e) => e.id == b.id))
-                        .map((badge) => _buildBadgeCard(_themeBadge(badge), false))),
+                    Builder(builder: (context) {
+                      final lockedBadges = Badge.allBadges
+                          .where((b) => !_earnedBadges.any((e) => e.id == b.id))
+                          .toList();
+                          
+                      return MasonryGridView.count(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: lockedBadges.length,
+                        itemBuilder: (context, index) {
+                          return _buildBadgeCard(_themeBadge(lockedBadges[index]), false);
+                        },
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -197,119 +230,139 @@ class _BadgesScreenState extends State<BadgesScreen> {
   }
 
   Widget _buildBadgeCard(Badge badge, bool isEarned) {
+    final progress = _badgeProgress[badge.id];
+    final progressPercent = progress?.progressPercentage ?? 0.0;
+    final current = progress?.current ?? 0;
+    final target = progress?.target ?? 1;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isEarned
-              ? const Color(0xFF4CAF50).withOpacity(0.3)
-              : Colors.grey.shade300,
+              ? const Color(0xFF6C63FF).withOpacity(0.3)
+              : Colors.grey.shade200,
           width: isEarned ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: isEarned 
+                ? const Color(0xFF6C63FF).withOpacity(0.1) 
+                : Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Badge Icon
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: isEarned
-                  ? const Color(0xFF4CAF50).withOpacity(0.1)
-                  : Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                badge.emoji,
-                style: TextStyle(
-                  fontSize: 32,
-                  color: isEarned ? null : Colors.grey.shade400,
+          // Badge Icon with progress ring
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              if (!isEarned && target > 1) 
+                SizedBox(
+                  width: 72,
+                  height: 72,
+                  child: CircularProgressIndicator(
+                    value: progressPercent,
+                    backgroundColor: Colors.grey.shade200,
+                    color: const Color(0xFF6C63FF),
+                    strokeWidth: 4,
+                  ),
+                ),
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: isEarned
+                      ? const Color(0xFF6C63FF).withOpacity(0.1)
+                      : Colors.grey.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    badge.emoji,
+                    style: TextStyle(
+                      fontSize: 32,
+                      color: isEarned ? null : Colors.grey.shade400,
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 16),
+          const SizedBox(height: 16),
           
           // Badge Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        badge.name,
-                        style: GoogleFonts.lato(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isEarned
-                              ? const Color(0xFF2D2D2D)
-                              : Colors.grey.shade500,
-                        ),
-                      ),
-                    ),
-                    if (isEarned)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4CAF50),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'Earned',
-                          style: GoogleFonts.lato(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      )
-                    else
-                      const Icon(
-                        Icons.lock_outline,
-                        color: Colors.grey,
-                        size: 20,
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  badge.description,
-                  style: GoogleFonts.lato(
-                    fontSize: 14,
-                    color: isEarned ? Colors.grey.shade700 : Colors.grey.shade400,
-                  ),
-                ),
-                if (isEarned && badge.earnedDate != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Earned on ${_formatDate(badge.earnedDate!)}',
-                      style: GoogleFonts.lato(
-                        fontSize: 12,
-                        color: const Color(0xFF4CAF50),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-              ],
+          Text(
+            badge.name,
+            style: GoogleFonts.lato(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: isEarned
+                  ? const Color(0xFF2D2D2D)
+                  : Colors.grey.shade600,
             ),
+            textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 8),
+          
+          Text(
+            badge.description,
+            style: GoogleFonts.lato(
+              fontSize: 12,
+              color: isEarned ? Colors.grey.shade700 : Colors.grey.shade400,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Status/Progress Footer
+          if (isEarned)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6C63FF).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                badge.earnedDate != null ? _formatDate(badge.earnedDate!) : 'Earned',
+                style: GoogleFonts.lato(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF6C63FF),
+                ),
+              ),
+            )
+          else if (target > 1)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.track_changes, size: 12, color: Colors.grey.shade500),
+                const SizedBox(width: 4),
+                Text(
+                  '$current / $target',
+                  style: GoogleFonts.lato(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+              ],
+            )
+          else
+            const Icon(
+              Icons.lock_outline_rounded,
+              color: Colors.grey,
+              size: 18,
+            ),
         ],
       ),
     );

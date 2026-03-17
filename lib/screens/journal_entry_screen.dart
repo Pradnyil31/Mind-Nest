@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/journal_entry.dart';
 import '../services/journal_service.dart';
 import '../services/auth_service.dart';
+import '../widgets/activity_completion_dialog.dart';
 
 class JournalEntryScreen extends StatefulWidget {
   final JournalEntry? entry; // Null if creating a new entry
@@ -73,11 +74,17 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
       );
 
       final service = JournalService();
-      if (widget.entry == null) {
-        await service.addEntry(entry);
-      } else {
-        await service.updateEntry(entry);
-      }
+      await ActivityCompletionDialog.show(
+        context,
+        savingText: 'Saving entry...',
+        onComplete: () async {
+          if (widget.entry == null) {
+            await service.addEntry(entry);
+          } else {
+            await service.updateEntry(entry);
+          }
+        },
+      );
 
       if (mounted) Navigator.pop(context);
     } catch (e) {

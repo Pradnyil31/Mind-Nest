@@ -32,9 +32,28 @@ class GoalService {
 
   Future<void> updateProgress(String goalId, double newValue) async {
     try {
-      await _goalsCollection.doc(goalId).update({
-        'currentValue': newValue,
-      });
+      final docRef = _goalsCollection.doc(goalId);
+      final doc = await docRef.get();
+      
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        final targetValue = (data['targetValue'] as num?)?.toDouble() ?? 0.0;
+        final wasCompleted = data['isCompleted'] as bool? ?? false;
+        
+        final isNowCompleted = newValue >= targetValue;
+
+        await docRef.update({
+          'currentValue': newValue,
+          'isCompleted': isNowCompleted,
+        });
+
+        if (isNowCompleted && !wasCompleted) {
+          final userId = data['userId'] as String?;
+          if (userId != null) {
+            _firestoreService.logActivityCompletion(userId, 'smart_goals');
+          }
+        }
+      }
     } catch (e) {
       throw 'Failed to update progress: $e';
     }

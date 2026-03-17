@@ -5,6 +5,7 @@ import '../models/smart_goal.dart';
 import '../services/checkin_service.dart';
 import '../services/auth_service.dart';
 import '../services/goal_service.dart';
+import '../widgets/activity_completion_dialog.dart';
 
 class DailyCheckInScreen extends StatefulWidget {
   const DailyCheckInScreen({Key? key}) : super(key: key);
@@ -79,21 +80,29 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
           notes: _notes,
         );
 
-        final addedActivities = await CheckInService()
-            .submitCheckIn(checkIn)
-            .timeout(const Duration(seconds: 10), onTimeout: () {
-              throw 'Connection timed out. Please check internet.';
-            });
+        final addedActivities = await ActivityCompletionDialog.show<List<String>?>(
+          context,
+          savingText: 'Saving check-in...',
+          onComplete: () async {
+            return await CheckInService()
+                .submitCheckIn(checkIn)
+                .timeout(const Duration(seconds: 10), onTimeout: () {
+                  throw 'Connection timed out. Please check internet.';
+                });
+          },
+        );
+        
+        final safeActivities = addedActivities ?? <String>[];
         
         if (mounted) {
            await showDialog(
              context: context,
              builder: (context) => AlertDialog(
-               title: Text(addedActivities.isNotEmpty ? 'Routine Updated' : 'Check-in Complete'),
+               title: Text(safeActivities.isNotEmpty ? 'Routine Updated' : 'Check-in Complete'),
                content: Text(
-                 addedActivities.isNotEmpty 
+                 safeActivities.isNotEmpty 
                    ? 'Based on your check-in, we added the following to your routine:\n\n' + 
-                     addedActivities.map((e) => '• $e').join('\n')
+                     safeActivities.map((e) => '• $e').join('\n')
                    : 'Great job checking in! Your routine looks good for today.'
                ),
                actions: [

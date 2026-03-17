@@ -4,7 +4,10 @@ import '../core/logger.dart';
 import 'progress_insights_service.dart';
 
 class RoutineTrackingService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  RoutineTrackingService({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference get _completionsCollection =>
       _firestore.collection('routine_completions');

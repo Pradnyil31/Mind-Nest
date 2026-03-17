@@ -5,6 +5,7 @@ import '../models/smart_goal.dart';
 import '../services/goal_service.dart';
 import '../services/auth_service.dart';
 import 'create_goal_screen.dart';
+import '../widgets/activity_completion_dialog.dart';
 
 class SmartGoalsScreen extends StatelessWidget {
   const SmartGoalsScreen({Key? key}) : super(key: key);
@@ -244,16 +245,19 @@ class SmartGoalsScreen extends StatelessWidget {
                      color: Colors.grey.shade400,
                    ),
                  ),
-                 InkWell(
-                   onTap: () {
-                      final newVal = goal.currentValue + 1;
-                      if (newVal <= goal.targetValue) {
-                        GoalService().updateProgress(goal.id, newVal);
-                        if (newVal == goal.targetValue) {
-                           // Celebration or mark complete logic could go here
+                   InkWell(
+                     onTap: () async {
+                        final newVal = goal.currentValue + 1;
+                        if (newVal <= goal.targetValue) {
+                           await ActivityCompletionDialog.show(
+                             context,
+                             savingText: 'Logging progress...',
+                             onComplete: () async {
+                               await GoalService().updateProgress(goal.id, newVal);
+                             },
+                           );
                         }
-                      }
-                   },
+                     },
                    borderRadius: BorderRadius.circular(20),
                    child: Container(
                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

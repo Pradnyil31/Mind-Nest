@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/badge.dart' as import_badge;
 
 import 'dart:math';
 import 'dart:ui';
@@ -36,7 +37,7 @@ import '../widgets/home/home_focus_card.dart';
 import '../widgets/home/home_routine_section.dart';
 import '../widgets/home/home_favorites_list.dart';
 import '../widgets/compact_progress_insights.dart';
-import '../widgets/badge_notification.dart';
+import '../widgets/badge_unlock_dialog.dart';
 import '../widgets/calm/mini_audio_player.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -463,7 +464,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
               badge.earnedDate!.day == now.day;
 
           if (isToday) {
-            showBadgeNotification(context, badge);
+            BadgeUnlockDialog.show(context, badge);
             break;
           }
         }
@@ -574,6 +575,24 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                 ),
               ),
               const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // DEMO: Show Badge Unlock Dialog for Testing
+                    // Using full path due to `hide Badge` at top of file
+                    import_badge.Badge testBadge = import_badge.Badge.allBadges.first;
+                    BadgeUnlockDialog.show(context, testBadge);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C63FF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Test Badge UI'),
+                ),
+              ),
+              const SizedBox(height: 12),
               ...options
                   .map(
                     (option) => Padding(
