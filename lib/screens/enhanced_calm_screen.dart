@@ -164,91 +164,88 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
       );
     }
 
-    return ResponsiveLayoutService.createResponsiveContainer(
-      context: context,
-      child: ThemeTransitionService.createAnimatedBackground(
-        theme: colorTheme,
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          appBar: _buildAppBar(
-            currentMotive,
-            colorTheme,
-            accessibilitySettings,
-          ),
-          body: Stack(
-            children: [
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(
-                    0,
-                    ResponsiveLayoutService.getSpacing(context).md,
-                    0,
-                    100,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Motive-specific welcome header with smooth transitions
-                      _buildMotiveWelcomeHeader(
-                        currentMotive,
-                        colorTheme,
-                        accessibilitySettings,
-                      ),
-                      SizedBox(
-                        height: ResponsiveLayoutService.getSpacing(context).lg,
-                      ),
+    return ThemeTransitionService.createAnimatedBackground(
+      theme: colorTheme,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: _buildAppBar(
+          currentMotive,
+          colorTheme,
+          accessibilitySettings,
+        ),
+        body: Stack(
+          children: [
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  0,
+                  ResponsiveLayoutService.getSpacing(context).md,
+                  0,
+                  100,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Motive-specific welcome header with smooth transitions
+                    _buildMotiveWelcomeHeader(
+                      currentMotive,
+                      colorTheme,
+                      accessibilitySettings,
+                    ),
+                    SizedBox(
+                      height: ResponsiveLayoutService.getSpacing(context).lg,
+                    ),
 
-                      // Enhanced Quick Access Emergency Panel
-                      _buildEnhancedQuickAccessPanel(
-                        currentMotive,
-                        colorTheme,
-                        accessibilitySettings,
-                      ),
-                      SizedBox(
-                        height: ResponsiveLayoutService.getSpacing(context).xl,
-                      ),
+                    // Enhanced Quick Access Emergency Panel
+                    _buildEnhancedQuickAccessPanel(
+                      currentMotive,
+                      colorTheme,
+                      accessibilitySettings,
+                    ),
+                    SizedBox(
+                      height: ResponsiveLayoutService.getSpacing(context).xl,
+                    ),
 
-                      // Personalized Techniques Section with staggered animations
-                      _buildPersonalizedTechniquesSection(
-                        currentMotive,
-                        colorTheme,
-                        accessibilitySettings,
-                        reduceMotion,
-                      ),
-                      SizedBox(
-                        height: ResponsiveLayoutService.getSpacing(context).xl,
-                      ),
+                    // Personalized Techniques Section with staggered animations
+                    _buildPersonalizedTechniquesSection(
+                      currentMotive,
+                      colorTheme,
+                      accessibilitySettings,
+                      reduceMotion,
+                    ),
+                    SizedBox(
+                      height: ResponsiveLayoutService.getSpacing(context).xl,
+                    ),
 
-                      // Ambient Soundscapes Section
-                      _buildAmbientSoundscapesSection(
-                        currentMotive,
-                        colorTheme,
-                        accessibilitySettings,
-                      ),
-                      SizedBox(
-                        height: ResponsiveLayoutService.getSpacing(context).xl,
-                      ),
+                    // Ambient Soundscapes Section
+                    _buildAmbientSoundscapesSection(
+                      currentMotive,
+                      colorTheme,
+                      accessibilitySettings,
+                    ),
+                    SizedBox(
+                      height: ResponsiveLayoutService.getSpacing(context).xl,
+                    ),
 
-                      // Navigation Integration Section
-                      _buildNavigationIntegrationSection(
-                        currentMotive,
-                        colorTheme,
-                        accessibilitySettings,
-                      ),
-                    ],
-                  ),
+                    // Navigation Integration Section
+                    _buildNavigationIntegrationSection(
+                      currentMotive,
+                      colorTheme,
+                      accessibilitySettings,
+                    ),
+                  ],
                 ),
               ),
-              // Mini Audio Player
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: MiniAudioPlayer(primaryColor: colorTheme.primaryColor),
-              ),
-            ],
-          ),
+            ),
+            // Mini Audio Player
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: MiniAudioPlayer(primaryColor: colorTheme.primaryColor),
+            ),
+          ],
         ),
       ),
     );
@@ -568,7 +565,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   ) {
     return ThemeTransitionService.createFadeTransition(
       controller: entranceController,
-      delay: 1.2,
+      delay: 1.0,
       child: NavigationIntegrationWidget(
         userMotive: motive,
         primaryColor: accessibilitySettings.highContrast

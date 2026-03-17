@@ -40,6 +40,9 @@ class _CompactProgressInsightsState
   late AnimationController _animController;
   late Animation<double> _progressAnimation;
 
+  // Prevent build-triggered reload loops when the stream updates.
+  int? _lastTodayCompletionsCount;
+
   @override
   void initState() {
     super.initState();
@@ -67,10 +70,12 @@ class _CompactProgressInsightsState
           .watch(routineServiceProvider)
           .getTodayCompletedActivitiesStream(widget.userId),
       builder: (context, completionSnapshot) {
-        // Reload data when completions change
-        if (completionSnapshot.hasData) {
+        // Reload only when the completion count actually changes.
+        final currentCount = completionSnapshot.data?.length;
+        if (currentCount != null && currentCount != _lastTodayCompletionsCount) {
+          _lastTodayCompletionsCount = currentCount;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _loadData();
+            if (mounted) _loadData();
           });
         }
 

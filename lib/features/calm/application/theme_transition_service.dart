@@ -6,6 +6,16 @@ import 'motive_detection_service.dart';
 class ThemeTransitionService {
   static const Duration _transitionDuration = Duration(milliseconds: 800);
   static const Curve _transitionCurve = Curves.easeInOutCubic;
+  static const double _minIntervalSpan = 0.001;
+
+  static ({double begin, double end}) _safeInterval(double begin, double end) {
+    final b = begin.clamp(0.0, 1.0);
+    final e = end.clamp(0.0, 1.0);
+    if (e > b) return (begin: b, end: e);
+    // Ensure begin < end to satisfy Interval assertions.
+    if (b >= 1.0) return (begin: 1.0 - _minIntervalSpan, end: 1.0);
+    return (begin: b, end: (b + _minIntervalSpan).clamp(0.0, 1.0));
+  }
 
   /// Create animated color transition between motive themes
   static AnimatedContainer createAnimatedBackground({
@@ -70,12 +80,13 @@ class ThemeTransitionService {
     required int index,
     required AnimationController controller,
   }) {
+    final interval = _safeInterval(index * 0.1, (index * 0.1) + 0.3);
     final animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: controller,
         curve: Interval(
-          (index * 0.1).clamp(0.0, 0.8),
-          ((index * 0.1) + 0.3).clamp(0.3, 1.0),
+          interval.begin,
+          interval.end,
           curve: Curves
               .easeOutCubic, // Changed from easeOutBack to prevent values > 1.0
         ),
@@ -101,12 +112,13 @@ class ThemeTransitionService {
     required AnimationController controller,
     double delay = 0.0,
   }) {
+    final interval = _safeInterval(delay, delay + 0.4);
     final animation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(
         parent: controller,
         curve: Interval(
-          delay,
-          (delay + 0.4).clamp(0.0, 1.0),
+          interval.begin,
+          interval.end,
           curve: Curves.elasticOut,
         ),
       ),
@@ -126,12 +138,13 @@ class ThemeTransitionService {
     required AnimationController controller,
     double delay = 0.0,
   }) {
+    final interval = _safeInterval(delay, delay + 0.6);
     final animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: controller,
         curve: Interval(
-          delay,
-          (delay + 0.6).clamp(0.0, 1.0),
+          interval.begin,
+          interval.end,
           curve: Curves.easeInOut,
         ),
       ),

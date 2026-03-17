@@ -7,6 +7,15 @@ import 'motive_detection_service.dart';
 class VisualDesignService {
   static const Duration _standardDuration = Duration(milliseconds: 600);
   static const Curve _standardCurve = Curves.easeOutCubic;
+  static const double _minIntervalSpan = 0.001;
+
+  static ({double begin, double end}) _safeInterval(double begin, double end) {
+    final b = begin.clamp(0.0, 1.0);
+    final e = end.clamp(0.0, 1.0);
+    if (e > b) return (begin: b, end: e);
+    if (b >= 1.0) return (begin: 1.0 - _minIntervalSpan, end: 1.0);
+    return (begin: b, end: (b + _minIntervalSpan).clamp(0.0, 1.0));
+  }
 
   /// Create staggered entrance animations for technique cards with enhanced effects
   static Widget createEnhancedStaggeredCard({
@@ -25,8 +34,8 @@ class VisualDesignService {
           CurvedAnimation(
             parent: controller,
             curve: Interval(
-              (index * 0.1).clamp(0.0, 0.8),
-              ((index * 0.1) + 0.4).clamp(0.4, 1.0),
+              _safeInterval(index * 0.1, (index * 0.1) + 0.4).begin,
+              _safeInterval(index * 0.1, (index * 0.1) + 0.4).end,
               curve: _standardCurve,
             ),
           ),
@@ -36,8 +45,8 @@ class VisualDesignService {
       CurvedAnimation(
         parent: controller,
         curve: Interval(
-          (index * 0.1).clamp(0.0, 0.8),
-          ((index * 0.1) + 0.3).clamp(0.3, 1.0),
+          _safeInterval(index * 0.1, (index * 0.1) + 0.3).begin,
+          _safeInterval(index * 0.1, (index * 0.1) + 0.3).end,
           curve: Curves.easeOut,
         ),
       ),
@@ -47,8 +56,8 @@ class VisualDesignService {
       CurvedAnimation(
         parent: controller,
         curve: Interval(
-          (index * 0.1).clamp(0.0, 0.8),
-          ((index * 0.1) + 0.4).clamp(0.4, 1.0),
+          _safeInterval(index * 0.1, (index * 0.1) + 0.4).begin,
+          _safeInterval(index * 0.1, (index * 0.1) + 0.4).end,
           curve: Curves.elasticOut,
         ),
       ),
@@ -110,13 +119,15 @@ class VisualDesignService {
     List<BoxShadow>? boxShadow,
     bool isAccessible = false,
   }) {
+    final colors =
+        isAccessible ? _getHighContrastGradient(theme) : theme.gradientColors;
+    final stops = _gradientStopsFor(colors.length);
+
     final gradient = LinearGradient(
-      colors: isAccessible
-          ? _getHighContrastGradient(theme)
-          : theme.gradientColors,
+      colors: colors,
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      stops: const [0.0, 0.3, 0.7, 1.0],
+      stops: stops,
     );
 
     return AnimatedContainer(
@@ -138,6 +149,15 @@ class VisualDesignService {
       ),
       child: child,
     );
+  }
+
+  static List<double>? _gradientStopsFor(int colorCount) {
+    if (colorCount <= 1) return null;
+    if (colorCount == 2) return const [0.0, 1.0];
+    if (colorCount == 3) return const [0.0, 0.5, 1.0];
+    if (colorCount == 4) return const [0.0, 0.3, 0.7, 1.0];
+    // For any other count, let Flutter distribute stops evenly.
+    return null;
   }
 
   /// Create accessible technique card with proper semantics

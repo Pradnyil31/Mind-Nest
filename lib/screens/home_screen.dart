@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Scaffold(
           backgroundColor: Colors.transparent,
           resizeToAvoidBottomInset: false,
-          extendBody: true,
+          extendBody: false,
           body: IndexedStack(index: _currentIndex, children: _screens),
           bottomNavigationBar: Container(
             decoration: BoxDecoration(
@@ -170,7 +170,9 @@ class _HomeScreenState extends State<HomeScreen> {
         Positioned(
           left: 0,
           right: 0,
-          bottom: 90, // Position above bottom navigation bar
+          // Keep this *above* the bottom navigation bar so it never blocks taps.
+          bottom:
+              kBottomNavigationBarHeight + MediaQuery.of(context).padding.bottom,
           child: MiniAudioPlayer(primaryColor: const Color(0xFF4DB6AC)),
         ),
       ],
@@ -490,9 +492,14 @@ class _HomeContentState extends ConsumerState<HomeContent> {
 
     final user = ref.read(currentUserProvider);
     if (user != null) {
-      final motive = await ref
-          .read(firestoreServiceProvider)
-          .getDailyMotive(user.uid);
+      String? motive;
+      try {
+        motive = await ref.read(firestoreServiceProvider).getDailyMotive(
+          user.uid,
+        );
+      } catch (_) {
+        motive = null;
+      }
 
       if (motive != null) {
         if (mounted) setState(() => _todaysMotive = motive);
@@ -936,8 +943,13 @@ class _HomeContentState extends ConsumerState<HomeContent> {
               effectiveBedTime,
             );
 
+            final bottomSafe =
+                kBottomNavigationBarHeight + MediaQuery.of(context).padding.bottom;
+            // Reserve space so scroll content never sits under the nav bar or mini player.
+            final scrollBottomPadding = bottomSafe + 160;
+
             return SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 100),
+              padding: EdgeInsets.only(bottom: scrollBottomPadding),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(

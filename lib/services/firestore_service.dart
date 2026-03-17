@@ -146,15 +146,21 @@ class FirestoreService {
     final dateId =
         "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
 
-    final doc = await _usersCollection
-        .doc(uid)
-        .collection('dailyMotives')
-        .doc(dateId)
-        .get();
-    if (doc.exists && doc.data() != null) {
-      return (doc.data() as Map<String, dynamic>)['motive'] as String?;
+    try {
+      final doc = await _usersCollection
+          .doc(uid)
+          .collection('dailyMotives')
+          .doc(dateId)
+          .get();
+      if (doc.exists && doc.data() != null) {
+        return (doc.data() as Map<String, dynamic>)['motive'] as String?;
+      }
+      return null;
+    } on FirebaseException catch (e) {
+      // If rules/indexes aren't deployed yet, don't crash the UI.
+      if (e.code == 'permission-denied') return null;
+      rethrow;
     }
-    return null;
   }
 
   // Save Sleep Data

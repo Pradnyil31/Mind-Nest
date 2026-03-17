@@ -16,12 +16,20 @@ void main() async {
     // Force rebuild timestamp 2
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Initialize Firebase with proper configuration
-    // Check if Firebase is already initialized to prevent duplicate app error
+    // Initialize Firebase with proper configuration.
+    //
+    // In rare cases (hot restart / plugin pre-init), the native layer may have
+    // already created the default app even if `Firebase.apps` is not yet
+    // populated on the Dart side. Treat duplicate-app as a no-op.
     if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      try {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      } on FirebaseException catch (e) {
+        if (e.code != 'duplicate-app') rethrow;
+        debugPrint('Firebase default app already exists; continuing.');
+      }
     } else {
       debugPrint('Firebase already initialized');
     }

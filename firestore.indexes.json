@@ -26,6 +26,15 @@
       ]
     },
     {
+      "collectionGroup": "mood_sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "moodImprovement", "order": "ASCENDING"},
+        {"fieldPath": "startTime", "order": "DESCENDING"}
+      ]
+    },
+    {
       "collectionGroup": "routine_completions",
       "queryScope": "COLLECTION",
       "fields": [
@@ -64,6 +73,14 @@
       "fields": [
         {"fieldPath": "userId", "order": "ASCENDING"},
         {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "calm_sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "completedAt", "order": "DESCENDING"}
       ]
     }
   ],
