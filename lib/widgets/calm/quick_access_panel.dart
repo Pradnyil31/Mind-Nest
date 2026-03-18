@@ -61,7 +61,7 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
 
       if (emergencyTechniques.isNotEmpty) {
         setState(() {
-          _quickTechniques = emergencyTechniques.take(3).toList();
+          _quickTechniques = emergencyTechniques.take(4).toList();
           _emergencyTechnique = emergencyTechniques.first;
           _isLoading = false;
         });
@@ -229,7 +229,7 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   childAspectRatio:
-                      2.6, // Increased from 2.5 to 2.6 to prevent overflow
+                      2.4, // Adjusted ratio to comfortably fit 4 buttons
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),

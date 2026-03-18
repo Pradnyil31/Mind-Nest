@@ -15,6 +15,12 @@ import 'badges_screen.dart';
 import 'sleep_recovery_screen.dart';
 import 'manage_routine_screen.dart';
 import 'daily_checkin_screen.dart';
+import 'breathing_screen.dart';
+import 'grounding_exercise_screen.dart';
+import 'meditation_library_screen.dart';
+import 'meditation_player_screen.dart';
+import 'journaling_screen.dart';
+import 'smart_goals_screen.dart';
 
 // Services & Providers
 import '../services/auth_service.dart';
@@ -25,6 +31,9 @@ import '../config/motive_config.dart';
 
 // Home feature controller (architecture refactor step 1)
 import '../features/home/application/home_controller.dart';
+
+// Personalization
+import '../services/personalization_service.dart';
 
 // Theme & Config
 import '../theme/app_colors.dart';
@@ -883,6 +892,13 @@ class _HomeContentState extends ConsumerState<HomeContent> {
 
           primaryMotive = data['primaryMotive'] as String?;
 
+          // ── Personalization data ──
+          final supportAreas = data['supportAreas'] != null
+              ? List<String>.from(data['supportAreas'])
+              : <String>[];
+          final experienceLevel = data['experienceLevel'] as String?;
+          final preferredTime = data['preferredTime'] as String?;
+
           if (data['loginDates'] != null) {
             loginDates = (data['loginDates'] as List<dynamic>)
                 .map((e) => (e as Timestamp).toDate())
@@ -980,6 +996,12 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                       displayName: displayName,
                       greeting: _getGreetingFor(effectiveWakeTime),
                       textColor: textColor,
+                      motiveHint: PersonalizationService.getMotiveGreetingHint(
+                        primaryMotive,
+                        snapshot.hasData && snapshot.data!.exists
+                            ? (snapshot.data!.data() as Map<String, dynamic>)['preferredTime'] as String?
+                            : null,
+                      ),
                     ),
 
                     const SizedBox(height: 32),
@@ -1036,6 +1058,22 @@ class _HomeContentState extends ConsumerState<HomeContent> {
 
                     const SizedBox(height: 24),
 
+                    // ── Recommended for You ──
+                    _buildRecommendedSection(
+                      textColor: textColor,
+                      motive: primaryMotive,
+                      experienceLevel: snapshot.hasData && snapshot.data!.exists
+                          ? ((snapshot.data!.data() as Map<String, dynamic>)['experienceLevel'] as String?)
+                          : null,
+                      supportAreas: snapshot.hasData && snapshot.data!.exists
+                          ? (((snapshot.data!.data() as Map<String, dynamic>)['supportAreas']) != null
+                              ? List<String>.from((snapshot.data!.data() as Map<String, dynamic>)['supportAreas'])
+                              : <String>[])
+                          : <String>[],
+                    ),
+
+                    const SizedBox(height: 24),
+
                     HomeRoutineSection(
                       selectedActivities: routineActivities,
                       temporarySchedule: temporarySchedule,
@@ -1063,6 +1101,158 @@ class _HomeContentState extends ConsumerState<HomeContent> {
         );
       },
     );
+  }
+
+  // ── Recommended for You Section ──────────────────────────────────────────
+  Widget _buildRecommendedSection({
+    required Color textColor,
+    String? motive,
+    String? experienceLevel,
+    List<String> supportAreas = const [],
+  }) {
+    final recommendations = PersonalizationService.getRecommendations(
+      motive: motive,
+      experienceLevel: experienceLevel,
+      supportAreas: supportAreas,
+    );
+
+    if (recommendations.isEmpty) return const SizedBox.shrink();
+
+    final beginnerNudge = PersonalizationService.getBeginnerNudge(experienceLevel);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Recommended for You',
+          style: GoogleFonts.lato(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+          ),
+        ),
+        if (beginnerNudge != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            beginnerNudge,
+            style: GoogleFonts.lato(
+              fontSize: 13,
+              color: textColor.withOpacity(0.65),
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+        ...recommendations.map((rec) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildRecommendedCard(rec, textColor),
+        )),
+      ],
+    );
+  }
+
+  Widget _buildRecommendedCard(RecommendedExercise rec, Color textColor) {
+    return GestureDetector(
+      onTap: () => _navigateToExercise(rec),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.85),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.6)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0EAFF),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Center(
+                child: Text(rec.emoji, style: const TextStyle(fontSize: 24)),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rec.title,
+                    style: GoogleFonts.lato(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2D2D2D),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    rec.subtitle,
+                    style: GoogleFonts.lato(
+                      fontSize: 13,
+                      color: const Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: Color(0xFF9CA3AF),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToExercise(RecommendedExercise rec) {
+    Widget? screen;
+    switch (rec.routeKey) {
+      case 'meditation':
+        if (rec.meditation != null) {
+          screen = MeditationPlayerScreen(meditation: rec.meditation!);
+        } else {
+          screen = const MeditationLibraryScreen();
+        }
+        break;
+      case 'breathing':
+        screen = const BreathingScreen();
+        break;
+      case 'grounding':
+        screen = const GroundingExerciseScreen();
+        break;
+      case 'journaling':
+        screen = const JournalingScreen();
+        break;
+      case 'goals':
+        screen = const SmartGoalsScreen();
+        break;
+      case 'calm':
+        // Navigate to the Calm tab (index 1)
+        final homeState = context.findAncestorStateOfType<_HomeScreenState>();
+        if (homeState != null) {
+          homeState.setState(() => homeState._currentIndex = 1);
+        }
+        return;
+      case 'checkin':
+        screen = const DailyCheckInScreen();
+        break;
+      default:
+        return;
+    }
+    if (screen != null) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => screen!));
+    }
   }
 
   TimeOfDay _parseTime(String timeString) {

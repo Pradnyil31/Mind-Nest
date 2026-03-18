@@ -6,7 +6,7 @@ import '../models/badge.dart';
 class BadgeUnlockDialog extends StatefulWidget {
   final Badge badge;
 
-  const BadgeUnlockDialog({Key? key, required this.badge}) : super(key: key);
+  const BadgeUnlockDialog({super.key, required this.badge});
 
   static void show(BuildContext context, Badge badge) {
     showGeneralDialog(
@@ -19,14 +19,8 @@ class BadgeUnlockDialog extends StatefulWidget {
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return ScaleTransition(
-          scale: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutBack,
-          ),
-          child: FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: animation, child: child),
         );
       },
     );
@@ -42,7 +36,9 @@ class _BadgeUnlockDialogState extends State<BadgeUnlockDialog> {
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
     // Start confetti after a tiny delay for maximum impact
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) _confettiController.play();
@@ -67,18 +63,13 @@ class _BadgeUnlockDialogState extends State<BadgeUnlockDialog> {
           // Main Card
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.only(
-              top: 64, // Space for the overlapping badge icon
-              bottom: 24,
-              left: 24,
-              right: 24,
-            ),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha: 0.2),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -87,6 +78,31 @@ class _BadgeUnlockDialogState extends State<BadgeUnlockDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFF5F6FA),
+                      width: 4,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    widget.badge.emoji,
+                    style: const TextStyle(fontSize: 40),
+                  ),
+                ),
+                const SizedBox(height: 24),
                 Text(
                   'Badge Unlocked!',
                   style: GoogleFonts.lato(
@@ -140,32 +156,6 @@ class _BadgeUnlockDialogState extends State<BadgeUnlockDialog> {
                   ),
                 ),
               ],
-            ),
-          ),
-
-          // Overlapping Badge Icon
-          Positioned(
-            top: -40,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFF5F6FA), width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF6C63FF).withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                widget.badge.emoji,
-                style: const TextStyle(fontSize: 40),
-              ),
             ),
           ),
 

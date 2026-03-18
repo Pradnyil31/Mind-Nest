@@ -8,6 +8,7 @@ class HomeHeader extends StatelessWidget {
   final String displayName;
   final String greeting;
   final Color textColor;
+  final String? motiveHint;
   final VoidCallback? onNotificationTap;
 
   const HomeHeader({
@@ -15,6 +16,7 @@ class HomeHeader extends StatelessWidget {
     required this.displayName,
     required this.greeting,
     this.textColor = AppColors.textPrimary,
+    this.motiveHint,
     this.onNotificationTap,
   }) : super(key: key);
 
@@ -43,6 +45,17 @@ class HomeHeader extends StatelessWidget {
                   color: textColor,
                 ),
               ),
+              if (motiveHint != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  motiveHint!,
+                  style: GoogleFonts.lato(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: textColor.withOpacity(0.65),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

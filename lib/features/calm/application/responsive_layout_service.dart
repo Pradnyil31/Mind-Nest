@@ -198,13 +198,13 @@ class ResponsiveLayoutService {
 
     switch (deviceType) {
       case DeviceType.desktop:
-        return const BoxConstraints(minHeight: 120, maxHeight: 160);
+        return const BoxConstraints(minHeight: 120);
       case DeviceType.largeTablet:
-        return const BoxConstraints(minHeight: 110, maxHeight: 150);
+        return const BoxConstraints(minHeight: 110);
       case DeviceType.tablet:
-        return const BoxConstraints(minHeight: 100, maxHeight: 140);
+        return const BoxConstraints(minHeight: 100);
       case DeviceType.mobile:
-        return const BoxConstraints(minHeight: 90, maxHeight: 130);
+        return const BoxConstraints(minHeight: 90);
     }
   }
 
