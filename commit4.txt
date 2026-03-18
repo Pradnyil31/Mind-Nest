@@ -1,0 +1,6 @@
+Feat: Add Meditation Library Experience Sorting and Banners
+
+- Extracted experienceLevel from Firestore in library screen
+- Added 'Start Here' banner for absolute beginners linking to Quick Reset
+- Added 'Welcome Back' banner for returning users
+- Sorted meditation grid by Beginner difficulty and short duration based on user experience level
