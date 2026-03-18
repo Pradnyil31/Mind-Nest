@@ -12,6 +12,8 @@ class UserModel {
   final Map<String, dynamic>? sleepData;
   final String? primaryMotive; // Sleep, Stress, Anxiety, Focus, Habit Building
   final List<String>? secondaryMotives; // Additional goals
+  final List<String>? supportAreas; // Distractions/challenges selected in onboarding
+  final String? experienceLevel; // 'New Beginner', 'Tried a little', 'Long ago', 'Never tried'
   final String? preferredTime; // Morning, Afternoon, Evening, Before Bed
   final String? dailyCommitment; // 5min, 10min, 15min, 30+min
 
@@ -27,6 +29,8 @@ class UserModel {
     this.sleepData,
     this.primaryMotive,
     this.secondaryMotives,
+    this.supportAreas,
+    this.experienceLevel,
     this.preferredTime,
     this.dailyCommitment,
   });
@@ -45,6 +49,8 @@ class UserModel {
       'sleepData': sleepData,
       'primaryMotive': primaryMotive,
       'secondaryMotives': secondaryMotives,
+      'supportAreas': supportAreas,
+      'experienceLevel': experienceLevel,
       'preferredTime': preferredTime,
       'dailyCommitment': dailyCommitment,
     };
@@ -72,6 +78,10 @@ class UserModel {
       secondaryMotives: map['secondaryMotives'] != null
           ? List<String>.from(map['secondaryMotives'])
           : null,
+      supportAreas: map['supportAreas'] != null
+          ? List<String>.from(map['supportAreas'])
+          : null,
+      experienceLevel: map['experienceLevel'] as String?,
       preferredTime: map['preferredTime'] as String?,
       dailyCommitment: map['dailyCommitment'] as String?,
     );
@@ -90,6 +100,8 @@ class UserModel {
     Map<String, dynamic>? sleepData,
     String? primaryMotive,
     List<String>? secondaryMotives,
+    List<String>? supportAreas,
+    String? experienceLevel,
     String? preferredTime,
     String? dailyCommitment,
   }) {
@@ -105,6 +117,8 @@ class UserModel {
       sleepData: sleepData ?? this.sleepData,
       primaryMotive: primaryMotive ?? this.primaryMotive,
       secondaryMotives: secondaryMotives ?? this.secondaryMotives,
+      supportAreas: supportAreas ?? this.supportAreas,
+      experienceLevel: experienceLevel ?? this.experienceLevel,
       preferredTime: preferredTime ?? this.preferredTime,
       dailyCommitment: dailyCommitment ?? this.dailyCommitment,
     );
