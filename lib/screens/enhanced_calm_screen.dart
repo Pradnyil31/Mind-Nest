@@ -13,7 +13,7 @@ import '../features/calm/application/theme_transition_service.dart';
 import '../features/calm/application/calm_recommendation_service.dart';
 import '../features/calm/application/technique_library_service.dart';
 import '../features/calm/application/visual_design_service.dart';
-import '../features/calm/application/accessibility_service.dart';
+
 import '../features/calm/application/responsive_layout_service.dart';
 import 'grounding_exercise_screen.dart';
 import 'affirmations_screen.dart';
@@ -56,9 +56,9 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     });
   }
 
-  /// Initialize accessibility service
+  /// Initialize components
   Future<void> _initializeAccessibility() async {
-    await AccessibilityService.instance.initialize();
+    // Accessibility service removed based on user request
   }
 
   @override
@@ -104,11 +104,8 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     final currentMotive = motiveState.currentMotive;
     final colorTheme = MotiveColorTheme.fromMotive(currentMotive);
 
-    // Get accessibility settings
-    final accessibilitySettings = AccessibilityService.instance.settings;
-    final reduceMotion =
-        VisualDesignService.shouldReduceMotion(context) ||
-        accessibilitySettings.reducedMotion;
+    // Get preferences
+    final reduceMotion = VisualDesignService.shouldReduceMotion(context);
 
     // Handle motive changes and interface refresh with comprehensive adaptation
     ref.listen<MotiveDetectionState>(motiveDetectionProvider, (
@@ -158,7 +155,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
           child: VisualDesignService.createAccessibleLoadingIndicator(
             semanticLabel: 'Loading calm interface',
             color: colorTheme.primaryColor,
-            highContrast: accessibilitySettings.highContrast,
+            highContrast: false,
           ),
         ),
       );
@@ -168,11 +165,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
       theme: colorTheme,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: _buildAppBar(
-          currentMotive,
-          colorTheme,
-          accessibilitySettings,
-        ),
+        appBar: _buildAppBar(currentMotive, colorTheme),
         body: Stack(
           children: [
             FadeTransition(
@@ -188,21 +181,13 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Motive-specific welcome header with smooth transitions
-                    _buildMotiveWelcomeHeader(
-                      currentMotive,
-                      colorTheme,
-                      accessibilitySettings,
-                    ),
+                    _buildMotiveWelcomeHeader(currentMotive, colorTheme),
                     SizedBox(
                       height: ResponsiveLayoutService.getSpacing(context).lg,
                     ),
 
                     // Enhanced Quick Access Emergency Panel
-                    _buildEnhancedQuickAccessPanel(
-                      currentMotive,
-                      colorTheme,
-                      accessibilitySettings,
-                    ),
+                    _buildEnhancedQuickAccessPanel(currentMotive, colorTheme),
                     SizedBox(
                       height: ResponsiveLayoutService.getSpacing(context).xl,
                     ),
@@ -211,7 +196,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                     _buildPersonalizedTechniquesSection(
                       currentMotive,
                       colorTheme,
-                      accessibilitySettings,
                       reduceMotion,
                     ),
                     SizedBox(
@@ -219,11 +203,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                     ),
 
                     // Ambient Soundscapes Section
-                    _buildAmbientSoundscapesSection(
-                      currentMotive,
-                      colorTheme,
-                      accessibilitySettings,
-                    ),
+                    _buildAmbientSoundscapesSection(currentMotive, colorTheme),
                     SizedBox(
                       height: ResponsiveLayoutService.getSpacing(context).xl,
                     ),
@@ -232,7 +212,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                     _buildNavigationIntegrationSection(
                       currentMotive,
                       colorTheme,
-                      accessibilitySettings,
                     ),
                   ],
                 ),
@@ -254,7 +233,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   PreferredSizeWidget _buildAppBar(
     String? motive,
     MotiveColorTheme colorTheme,
-    AccessibilitySettings accessibilitySettings,
   ) {
     final profile = MotiveConfig.getProfile(motive);
     final emoji = profile?.emoji ?? '🧘';
@@ -272,12 +250,10 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
               child: Text(emoji, style: TextStyle(fontSize: fontSizes.title)),
             ),
             SizedBox(width: ResponsiveLayoutService.getSpacing(context).sm),
-            AccessibilityService.instance.createAccessibleText(
-              text: 'Calm',
+            Text(
+              'Calm',
               style: GoogleFonts.lato(
-                color: accessibilitySettings.highContrast
-                    ? Colors.black
-                    : const Color(0xFF2D2D2D),
+                color: const Color(0xFF2D2D2D),
                 fontWeight: FontWeight.bold,
                 fontSize: fontSizes.title,
               ),
@@ -288,37 +264,14 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
       backgroundColor: Colors.transparent,
       elevation: 0,
       centerTitle: true,
-      iconTheme: IconThemeData(
-        color: accessibilitySettings.highContrast
-            ? Colors.black
-            : const Color(0xFF2D2D2D),
-      ),
-      actions: [
-        // Accessibility settings button
-        Padding(
-          padding: EdgeInsets.only(
-            right: ResponsiveLayoutService.getSpacing(context).sm,
-          ),
-          child: AccessibilityService.instance.createAccessibleButton(
-            semanticLabel: 'Open accessibility settings',
-            semanticHint: 'Adjust text size, contrast, and motion preferences',
-            onPressed: () => _showAccessibilitySettings(context),
-            child: Icon(
-              Icons.accessibility,
-              color: accessibilitySettings.highContrast
-                  ? Colors.black
-                  : const Color(0xFF2D2D2D),
-            ),
-          ),
-        ),
-      ],
+      iconTheme: const IconThemeData(color: Color(0xFF2D2D2D)),
+      actions: const [],
     );
   }
 
   Widget _buildMotiveWelcomeHeader(
     String? motive,
     MotiveColorTheme colorTheme,
-    AccessibilitySettings accessibilitySettings,
   ) {
     final profile = MotiveConfig.getProfile(motive);
     final displayName = profile?.displayName ?? 'Wellness';
@@ -336,7 +289,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
       child: VisualDesignService.createEnhancedGradientContainer(
         theme: colorTheme,
         borderRadius: BorderRadius.circular(20),
-        isAccessible: accessibilitySettings.highContrast,
+        isAccessible: false,
         boxShadow: [
           BoxShadow(
             color: colorTheme.primaryColor.withValues(alpha: 0.2),
@@ -368,24 +321,20 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            AccessibilityService.instance.createAccessibleText(
-                              text: 'Your $displayName Journey',
+                            Text(
+                              'Your $displayName Journey',
                               style: GoogleFonts.lato(
                                 fontSize: fontSizes.subtitle,
                                 fontWeight: FontWeight.bold,
-                                color: accessibilitySettings.highContrast
-                                    ? Colors.black
-                                    : Colors.white,
+                                color: Colors.white,
                               ),
                             ),
                             SizedBox(height: spacing.xs),
-                            AccessibilityService.instance.createAccessibleText(
-                              text: welcomeMessage,
+                            Text(
+                              welcomeMessage,
                               style: GoogleFonts.lato(
                                 fontSize: fontSizes.body,
-                                color: accessibilitySettings.highContrast
-                                    ? Colors.black87
-                                    : Colors.white.withValues(alpha: 0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                               ),
                             ),
                           ],
@@ -401,21 +350,14 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                       vertical: spacing.xs,
                     ),
                     decoration: BoxDecoration(
-                      color: accessibilitySettings.highContrast
-                          ? Colors.grey.shade200
-                          : Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
-                      border: accessibilitySettings.highContrast
-                          ? Border.all(color: Colors.black, width: 1)
-                          : null,
                     ),
-                    child: AccessibilityService.instance.createAccessibleText(
-                      text: encouragementMessage,
+                    child: Text(
+                      encouragementMessage,
                       style: GoogleFonts.lato(
                         fontSize: fontSizes.caption,
-                        color: accessibilitySettings.highContrast
-                            ? Colors.black
-                            : Colors.white.withValues(alpha: 0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -432,7 +374,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   Widget _buildEnhancedQuickAccessPanel(
     String? motive,
     MotiveColorTheme colorTheme,
-    AccessibilitySettings accessibilitySettings,
   ) {
     return Padding(
       padding: ResponsiveLayoutService.getResponsivePadding(context),
@@ -441,9 +382,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
         delay: 0.6,
         child: QuickAccessPanel(
           userMotive: motive,
-          primaryColor: accessibilitySettings.highContrast
-              ? Colors.black
-              : colorTheme.primaryColor,
+          primaryColor: colorTheme.primaryColor,
         ),
       ),
     );
@@ -452,7 +391,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   Widget _buildPersonalizedTechniquesSection(
     String? motive,
     MotiveColorTheme colorTheme,
-    AccessibilitySettings accessibilitySettings,
     bool reduceMotion,
   ) {
     final spacing = ResponsiveLayoutService.getSpacing(context);
@@ -468,16 +406,10 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
             child: _buildSectionHeader(
               'More Techniques',
               'Additional ${MotiveConfig.getProfile(motive)?.displayName ?? 'wellness'} practices to explore',
-              accessibilitySettings,
             ),
           ),
           SizedBox(height: spacing.lg),
-          _buildPersonalizedTechniquesList(
-            motive,
-            colorTheme,
-            accessibilitySettings,
-            reduceMotion,
-          ),
+          _buildPersonalizedTechniquesList(motive, colorTheme, reduceMotion),
         ],
       ),
     );
@@ -486,7 +418,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   Widget _buildPersonalizedTechniquesList(
     String? motive,
     MotiveColorTheme colorTheme,
-    AccessibilitySettings accessibilitySettings,
     bool reduceMotion,
   ) {
     final techniqueLibraryState = ref.watch(techniqueLibraryProvider);
@@ -500,7 +431,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
           child: VisualDesignService.createAccessibleLoadingIndicator(
             semanticLabel: 'Loading personalized techniques',
             color: colorTheme.primaryColor,
-            highContrast: accessibilitySettings.highContrast,
+            highContrast: false,
           ),
         ),
       );
@@ -531,7 +462,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
             technique,
             techniqueInfo,
             colorTheme,
-            accessibilitySettings,
           ),
         );
       }).toList(),
@@ -541,7 +471,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   Widget _buildAmbientSoundscapesSection(
     String? motive,
     MotiveColorTheme colorTheme,
-    AccessibilitySettings accessibilitySettings,
   ) {
     return Padding(
       padding: ResponsiveLayoutService.getResponsivePadding(context),
@@ -550,9 +479,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
         delay: 1.0,
         child: InteractiveSoundscapeWidget(
           userMotive: motive,
-          primaryColor: accessibilitySettings.highContrast
-              ? Colors.black
-              : colorTheme.primaryColor,
+          primaryColor: colorTheme.primaryColor,
         ),
       ),
     );
@@ -561,25 +488,18 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   Widget _buildNavigationIntegrationSection(
     String? motive,
     MotiveColorTheme colorTheme,
-    AccessibilitySettings accessibilitySettings,
   ) {
     return ThemeTransitionService.createFadeTransition(
       controller: entranceController,
       delay: 1.0,
       child: NavigationIntegrationWidget(
         userMotive: motive,
-        primaryColor: accessibilitySettings.highContrast
-            ? Colors.black
-            : colorTheme.primaryColor,
+        primaryColor: colorTheme.primaryColor,
       ),
     );
   }
 
-  Widget _buildSectionHeader(
-    String title,
-    String subtitle,
-    AccessibilitySettings accessibilitySettings,
-  ) {
+  Widget _buildSectionHeader(String title, String subtitle) {
     final fontSizes = ResponsiveLayoutService.getFontSizes(context);
     final spacing = ResponsiveLayoutService.getSpacing(context);
 
@@ -588,24 +508,20 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AccessibilityService.instance.createAccessibleText(
-            text: title,
+          Text(
+            title,
             style: GoogleFonts.lato(
               fontSize: fontSizes.title,
               fontWeight: FontWeight.bold,
-              color: accessibilitySettings.highContrast
-                  ? Colors.black
-                  : const Color(0xFF2D2D2D),
+              color: const Color(0xFF2D2D2D),
             ),
           ),
           SizedBox(height: spacing.xs),
-          AccessibilityService.instance.createAccessibleText(
-            text: subtitle,
+          Text(
+            subtitle,
             style: GoogleFonts.lato(
               fontSize: fontSizes.body,
-              color: accessibilitySettings.highContrast
-                  ? Colors.black87
-                  : Colors.grey.shade600,
+              color: Colors.grey.shade600,
             ),
           ),
         ],
@@ -617,7 +533,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     CalmTechnique technique,
     TechniqueWithMotiveInfo techniqueInfo,
     MotiveColorTheme colorTheme,
-    AccessibilitySettings accessibilitySettings,
   ) {
     final techniqueColor = _getTechniqueColor(technique.type);
     final fontSizes = ResponsiveLayoutService.getFontSizes(context);
@@ -633,7 +548,7 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
       semanticLabel: semanticLabel,
       onTap: () => _handleTechniqueNavigation(technique),
       isRecommended: techniqueInfo.isPrimary,
-      highContrast: accessibilitySettings.highContrast,
+      highContrast: false,
       child: Container(
         constraints: ResponsiveLayoutService.getTechniqueCardConstraints(
           context,
@@ -647,13 +562,8 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
               Container(
                 padding: EdgeInsets.all(spacing.md),
                 decoration: BoxDecoration(
-                  color: accessibilitySettings.highContrast
-                      ? Colors.grey.shade200
-                      : techniqueColor.withValues(alpha: 0.15),
+                  color: techniqueColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
-                  border: accessibilitySettings.highContrast
-                      ? Border.all(color: Colors.black, width: 1)
-                      : null,
                 ),
                 child: Text(
                   technique.icon,
@@ -669,17 +579,14 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                     Row(
                       children: [
                         Expanded(
-                          child: AccessibilityService.instance
-                              .createAccessibleText(
-                                text: technique.title,
-                                style: GoogleFonts.lato(
-                                  fontSize: fontSizes.subtitle,
-                                  fontWeight: FontWeight.bold,
-                                  color: accessibilitySettings.highContrast
-                                      ? Colors.black
-                                      : const Color(0xFF2D2D2D),
-                                ),
-                              ),
+                          child: Text(
+                            technique.title,
+                            style: GoogleFonts.lato(
+                              fontSize: fontSizes.subtitle,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF2D2D2D),
+                            ),
+                          ),
                         ),
                         if (techniqueInfo.isPrimary)
                           Container(
@@ -688,31 +595,26 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                               vertical: spacing.xs / 2,
                             ),
                             decoration: BoxDecoration(
-                              color: accessibilitySettings.highContrast
-                                  ? Colors.black
-                                  : colorTheme.primaryColor,
+                              color: colorTheme.primaryColor,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: AccessibilityService.instance
-                                .createAccessibleText(
-                                  text: 'Recommended',
-                                  style: GoogleFonts.lato(
-                                    fontSize: fontSizes.caption,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                            child: Text(
+                              'Recommended',
+                              style: GoogleFonts.lato(
+                                fontSize: fontSizes.caption,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                       ],
                     ),
                     SizedBox(height: spacing.xs),
-                    AccessibilityService.instance.createAccessibleText(
-                      text: techniqueInfo.motiveDescription,
+                    Text(
+                      techniqueInfo.motiveDescription,
                       style: GoogleFonts.lato(
                         fontSize: fontSizes.body,
-                        color: accessibilitySettings.highContrast
-                            ? Colors.black87
-                            : Colors.grey.shade600,
+                        color: Colors.grey.shade600,
                       ),
                     ),
                     if (techniqueInfo.motiveBenefits.isNotEmpty) ...[
@@ -729,27 +631,19 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                               vertical: spacing.xs / 2,
                             ),
                             decoration: BoxDecoration(
-                              color: accessibilitySettings.highContrast
-                                  ? Colors.grey.shade300
-                                  : colorTheme.accentColor.withValues(
-                                      alpha: 0.1,
-                                    ),
+                              color: colorTheme.accentColor.withValues(
+                                alpha: 0.1,
+                              ),
                               borderRadius: BorderRadius.circular(6),
-                              border: accessibilitySettings.highContrast
-                                  ? Border.all(color: Colors.black, width: 1)
-                                  : null,
                             ),
-                            child: AccessibilityService.instance
-                                .createAccessibleText(
-                                  text: benefit,
-                                  style: GoogleFonts.lato(
-                                    fontSize: fontSizes.caption,
-                                    color: accessibilitySettings.highContrast
-                                        ? Colors.black
-                                        : colorTheme.accentColor,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
+                            child: Text(
+                              benefit,
+                              style: GoogleFonts.lato(
+                                fontSize: fontSizes.caption,
+                                color: colorTheme.accentColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           );
                         }).toList(),
                       ),
@@ -757,33 +651,26 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                     SizedBox(height: spacing.sm),
                     Row(
                       children: [
-                        AccessibilityService.instance.createAccessibleIcon(
-                          icon: Icons.access_time,
-                          semanticLabel: 'Duration',
-                          color: accessibilitySettings.highContrast
-                              ? Colors.black
-                              : techniqueColor,
+                        Icon(
+                          Icons.access_time,
+                          color: techniqueColor,
                           size: iconSizes.small,
                         ),
                         SizedBox(width: spacing.xs),
-                        AccessibilityService.instance.createAccessibleText(
-                          text: '${technique.durationMinutes} min',
+                        Text(
+                          '${technique.durationMinutes} min',
                           style: GoogleFonts.lato(
                             fontSize: fontSizes.caption,
-                            color: accessibilitySettings.highContrast
-                                ? Colors.black
-                                : techniqueColor,
+                            color: techniqueColor,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const Spacer(),
-                        AccessibilityService.instance.createAccessibleText(
-                          text: 'Priority: ${techniqueInfo.priorityScore}/3',
+                        Text(
+                          'Priority: ${techniqueInfo.priorityScore}/3',
                           style: GoogleFonts.lato(
                             fontSize: fontSizes.caption,
-                            color: accessibilitySettings.highContrast
-                                ? Colors.black87
-                                : Colors.grey.shade500,
+                            color: Colors.grey.shade500,
                           ),
                         ),
                       ],
@@ -792,12 +679,9 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
                 ),
               ),
               SizedBox(width: spacing.sm),
-              AccessibilityService.instance.createAccessibleIcon(
-                icon: Icons.arrow_forward_ios,
-                semanticLabel: 'Open technique',
-                color: accessibilitySettings.highContrast
-                    ? Colors.black
-                    : Colors.grey.shade400,
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.grey.shade400,
                 size: iconSizes.small,
               ),
             ],
@@ -953,11 +837,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
   }
 
   void _handleTechniqueNavigation(CalmTechnique technique) {
-    // Provide haptic feedback for accessibility
-    AccessibilityService.instance.provideHapticFeedback(
-      type: HapticFeedbackType.medium,
-    );
-
     if (technique.id == '5-4-3-2-1') {
       Navigator.push(
         context,
@@ -976,216 +855,5 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
         ),
       );
     }
-  }
-
-  /// Show accessibility settings dialog
-  void _showAccessibilitySettings(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => _AccessibilitySettingsDialog(),
-    );
-  }
-}
-
-/// Accessibility settings dialog widget
-class _AccessibilitySettingsDialog extends StatefulWidget {
-  @override
-  _AccessibilitySettingsDialogState createState() =>
-      _AccessibilitySettingsDialogState();
-}
-
-class _AccessibilitySettingsDialogState
-    extends State<_AccessibilitySettingsDialog> {
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<AccessibilitySettings>(
-      valueListenable: AccessibilityService.instance.settingsNotifier,
-      builder: (context, settings, child) {
-        final fontSizes = ResponsiveLayoutService.getFontSizes(context);
-        final spacing = ResponsiveLayoutService.getSpacing(context);
-
-        return AlertDialog(
-          title: AccessibilityService.instance.createAccessibleText(
-            text: 'Accessibility Settings',
-            style: GoogleFonts.lato(
-              fontSize: fontSizes.title,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // High Contrast Toggle
-                _buildAccessibilityToggle(
-                  title: 'High Contrast',
-                  subtitle: 'Increase contrast for better visibility',
-                  value: settings.highContrast,
-                  onChanged: (value) {
-                    AccessibilityService.instance.setHighContrast(value);
-                  },
-                  settings: settings,
-                ),
-                SizedBox(height: spacing.md),
-
-                // Reduced Motion Toggle
-                _buildAccessibilityToggle(
-                  title: 'Reduce Motion',
-                  subtitle: 'Minimize animations and transitions',
-                  value: settings.reducedMotion,
-                  onChanged: (value) {
-                    AccessibilityService.instance.setReducedMotion(value);
-                  },
-                  settings: settings,
-                ),
-                SizedBox(height: spacing.md),
-
-                // Text Scale Slider
-                _buildTextScaleSlider(settings),
-                SizedBox(height: spacing.md),
-
-                // Audio Guidance Toggle
-                _buildAccessibilityToggle(
-                  title: 'Audio Guidance Only',
-                  subtitle: 'Use audio cues instead of visual elements',
-                  value: settings.audioGuidanceOnly,
-                  onChanged: (value) {
-                    AccessibilityService.instance.setAudioGuidanceOnly(value);
-                  },
-                  settings: settings,
-                ),
-                SizedBox(height: spacing.md),
-
-                // Voice Control Toggle
-                _buildAccessibilityToggle(
-                  title: 'Voice Control',
-                  subtitle: 'Enable voice commands for navigation',
-                  value: settings.voiceControlEnabled,
-                  onChanged: (value) {
-                    AccessibilityService.instance.setVoiceControlEnabled(value);
-                  },
-                  settings: settings,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            AccessibilityService.instance.createAccessibleButton(
-              semanticLabel: 'Reset to defaults',
-              semanticHint:
-                  'Reset all accessibility settings to default values',
-              onPressed: () {
-                AccessibilityService.instance.resetToDefaults();
-              },
-              child: AccessibilityService.instance.createAccessibleText(
-                text: 'Reset',
-                style: TextStyle(
-                  color: settings.highContrast
-                      ? Colors.black
-                      : Colors.grey.shade600,
-                ),
-              ),
-            ),
-            AccessibilityService.instance.createAccessibleButton(
-              semanticLabel: 'Close settings',
-              onPressed: () => Navigator.of(context).pop(),
-              child: AccessibilityService.instance.createAccessibleText(
-                text: 'Done',
-                style: TextStyle(
-                  color: settings.highContrast
-                      ? Colors.black
-                      : const Color(0xFF4DB6AC),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildAccessibilityToggle({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required AccessibilitySettings settings,
-  }) {
-    return Semantics(
-      toggled: value,
-      label: '$title. $subtitle',
-      child: SwitchListTile(
-        title: AccessibilityService.instance.createAccessibleText(
-          text: title,
-          style: GoogleFonts.lato(
-            fontWeight: FontWeight.w600,
-            color: settings.highContrast ? Colors.black : null,
-          ),
-        ),
-        subtitle: AccessibilityService.instance.createAccessibleText(
-          text: subtitle,
-          style: GoogleFonts.lato(
-            fontSize: 12,
-            color: settings.highContrast
-                ? Colors.black87
-                : Colors.grey.shade600,
-          ),
-        ),
-        value: value,
-        onChanged: (newValue) {
-          AccessibilityService.instance.provideHapticFeedback(
-            type: HapticFeedbackType.selection,
-          );
-          onChanged(newValue);
-        },
-        activeColor: settings.highContrast
-            ? Colors.black
-            : const Color(0xFF4DB6AC),
-        contentPadding: EdgeInsets.zero,
-      ),
-    );
-  }
-
-  Widget _buildTextScaleSlider(AccessibilitySettings settings) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AccessibilityService.instance.createAccessibleText(
-          text: 'Text Size',
-          style: GoogleFonts.lato(
-            fontWeight: FontWeight.w600,
-            color: settings.highContrast ? Colors.black : null,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Semantics(
-          label:
-              'Text size slider. Current value: ${(settings.textScale * 100).round()}%',
-          child: Slider(
-            value: settings.textScale,
-            min: 0.8,
-            max: 2.0,
-            divisions: 12,
-            label: '${(settings.textScale * 100).round()}%',
-            onChanged: (value) {
-              AccessibilityService.instance.setTextScale(value);
-            },
-            activeColor: settings.highContrast
-                ? Colors.black
-                : const Color(0xFF4DB6AC),
-          ),
-        ),
-        AccessibilityService.instance.createAccessibleText(
-          text: 'Preview text at ${(settings.textScale * 100).round()}% size',
-          style: GoogleFonts.lato(
-            fontSize: 14 * settings.textScale,
-            color: settings.highContrast
-                ? Colors.black87
-                : Colors.grey.shade600,
-          ),
-        ),
-      ],
-    );
   }
 }

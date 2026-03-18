@@ -5,6 +5,7 @@ import '../models/guided_meditation.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/meditation_analytics_service.dart';
+import '../services/personalization_service.dart';
 import 'meditation_player_screen.dart';
 import 'meditation_timer_screen.dart';
 
@@ -18,6 +19,7 @@ class MeditationLibraryScreen extends StatefulWidget {
 class _MeditationLibraryScreenState extends State<MeditationLibraryScreen> {
   MeditationCategory? _selectedCategory;
   String? _userMotive;
+  String? _experienceLevel;
   int _currentStreak = 0;
   Map<String, dynamic> _stats = {};
   bool _isLoading = true;
@@ -37,18 +39,21 @@ class _MeditationLibraryScreenState extends State<MeditationLibraryScreen> {
       final streak = await analyticsService.getCurrentStreak(user.uid);
       final stats = await analyticsService.getStats(user.uid);
       
-      // Get user's motive
+      // Get user's motive and experience level
       final userDoc = await firestoreService.getUserStream(user.uid).first;
       String? motive;
+      String? experience;
       if (userDoc.exists) {
         final data = userDoc.data() as Map<String, dynamic>;
         motive = data['primaryMotive'] as String?;
+        experience = data['experienceLevel'] as String?;
       }
       
       setState(() {
         _currentStreak = streak;
         _stats = stats;
         _userMotive = motive;
+        _experienceLevel = experience;
         _isLoading = false;
       });
     } else {
@@ -105,6 +110,22 @@ class _MeditationLibraryScreenState extends State<MeditationLibraryScreen> {
                   _buildCategoryFilter(),
 
                   const SizedBox(height: 24),
+
+                  // Experience-aware banner
+                  if (PersonalizationService.shouldShowStartHere(_experienceLevel))
+                    _buildExperienceBanner(
+                      emoji: '✨',
+                      title: 'Start Here',
+                      subtitle: 'New to meditation? Try Quick Reset – just 5 minutes to feel the difference.',
+                      meditation: GuidedMeditation.defaults.firstWhere((m) => m.id == 'quick-reset'),
+                    ),
+                  if (PersonalizationService.shouldShowWelcomeBack(_experienceLevel))
+                    _buildExperienceBanner(
+                      emoji: '🌿',
+                      title: 'Welcome Back',
+                      subtitle: 'It\'s great to see you again. Start with a short session to ease back in.',
+                      meditation: GuidedMeditation.defaults.firstWhere((m) => m.id == 'quick-reset'),
+                    ),
 
                   // Meditation Grid
                   _buildMeditationGrid(),
@@ -372,6 +393,9 @@ class _MeditationLibraryScreenState extends State<MeditationLibraryScreen> {
       meditations = GuidedMeditation.defaults;
     }
 
+    // Apply experience-aware sorting (beginners see easy/short first)
+    meditations = PersonalizationService.sortByExperience(meditations, _experienceLevel);
+
     return Column(
       children: meditations.map((meditation) {
         return Padding(
@@ -560,5 +584,77 @@ class _MeditationLibraryScreenState extends State<MeditationLibraryScreen> {
       case MeditationCategory.compassion:
         return Icons.favorite;
     }
+  }
+
+  Widget _buildExperienceBanner({
+    required String emoji,
+    required String title,
+    required String subtitle,
+    required GuidedMeditation meditation,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MeditationPlayerScreen(meditation: meditation),
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF7C4DFF), Color(0xFFB388FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF7C4DFF).withOpacity(0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 36)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.lato(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.lato(
+                      fontSize: 13,
+                      color: Colors.white.withOpacity(0.85),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 18,
+              color: Colors.white70,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
