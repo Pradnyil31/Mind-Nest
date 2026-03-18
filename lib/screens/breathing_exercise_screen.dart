@@ -89,6 +89,8 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
 
   void _nextStep() {
     if (!mounted || !_isActive) return;
+    // Silence stale narration from the previous step before the next one starts
+    _voice.stop();
 
     // Graceful completion: check if time is up when we are about to start a NEW round (index 0)
     // or if we just finished the last step (index 3 or previous was 2/3)

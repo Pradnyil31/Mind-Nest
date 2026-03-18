@@ -7,6 +7,8 @@ import '../services/auth_service.dart';
 import '../services/meditation_service.dart';
 import '../services/meditation_analytics_service.dart';
 import '../services/voice_service.dart';
+import '../services/firestore_service.dart';
+import '../widgets/activity_completion_dialog.dart';
 
 class MeditationPlayerScreen extends StatefulWidget {
   final GuidedMeditation meditation;
@@ -24,6 +26,7 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
   int _currentStep = 0;
   int _remainingSeconds = 0;
   Timer? _sessionTimer;
+  Timer? _stepTimer;
   late AnimationController _breathingController;
   late AnimationController _bgController;
   final VoiceService _voice = VoiceService();
@@ -31,7 +34,6 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
   MeditationPhase _phase = MeditationPhase.script;
   bool _isInhale = true;
   String _lastSpokenPhase = '';
-  bool _isTimeUp = false;
 
   @override
   void initState() {
@@ -51,10 +53,6 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
         _breathingController.reverse();
       } else if (status == AnimationStatus.dismissed) {
         if (_phase == MeditationPhase.breathing) {
-          if (_isTimeUp) {
-            _completeMeditation();
-            return;
-          }
           setState(() => _isInhale = true);
           _speakPhaseInstruction('Inhale');
         }
@@ -78,40 +76,19 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
     }
   }
 
-  /// Await a single TTS utterance to finish. Includes a 60s safety timeout.
-  Future<void> _awaitSpeech() async {
-    final completer = Completer<void>();
-    _voice.onComplete(() {
-      if (!completer.isCompleted) completer.complete();
-    });
-    await Future.any([
-      completer.future,
-      Future.delayed(const Duration(seconds: 90)),
-    ]);
-    _voice.clearCompletionHandler();
-  }
-
-  /// Speak an inhale/exhale bridge between script steps.
-  /// Animates the orb and speaks the cue, then awaits completion.
-  Future<void> _speakBridge() async {
-    if (!mounted || !_isActive) return;
-    // Inhale cue
-    setState(() => _isInhale = true);
-    _breathingController.forward(from: 0.0);
-    await _voice.speak('Inhale deeply...');
-    await _awaitSpeech();
-    if (!mounted || !_isActive) return;
-
-    // Exhale cue
-    setState(() => _isInhale = false);
-    _breathingController.reverse(from: 1.0);
-    await _voice.speak('and exhale...');
-    await _awaitSpeech();
+  /// Estimate how many seconds to display a script step.
+  /// Uses a comfortable reading/listening pace of ~2.5 words/sec.
+  int _stepDurationSeconds(String text) {
+    final wordCount = text.trim().split(RegExp(r'\s+')).length;
+    final listenSeconds = (wordCount / 2.5).ceil();
+    // Minimum 8 seconds, maximum 60 seconds per step
+    return listenSeconds.clamp(8, 60);
   }
 
   @override
   void dispose() {
     _sessionTimer?.cancel();
+    _stepTimer?.cancel();
     _breathingController.dispose();
     _bgController.dispose();
     _voice.dispose();
@@ -157,129 +134,86 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
         setState(() => _remainingSeconds--);
       } else {
         timer.cancel();
-        _isTimeUp = true;
-        // If we're in script phase, it will check _isTimeUp after current step.
-        // If we're in breathing phase, it will check _isTimeUp at end of cycle.
+        // Timer is king — end the session immediately.
+        _completeMeditation();
       }
     });
   }
 
-  Future<void> _startScriptSequence() async {
-    for (int i = 0; i < widget.meditation.scriptSteps.length; i++) {
-      if (!mounted || !_isActive) return;
-      setState(() => _currentStep = i);
+  /// Timer-driven script sequence. TTS is fire-and-forget narration only.
+  /// Each step shows for a duration based on its word count.
+  /// The session timer ending always wins and calls _completeMeditation directly.
+  void _startScriptSequence() {
+    _advanceToStep(0);
+  }
 
-      // Speak this step fully — wait for TTS to finish
-      await _voice.speak(widget.meditation.scriptSteps[i]);
-      await _awaitSpeech();
-      if (!mounted || !_isActive) return;
+  void _advanceToStep(int step) {
+    if (!mounted || !_isActive) return;
+    final steps = widget.meditation.scriptSteps;
 
-      // If time is up, we can end after a script step if it was the last one,
-      // or continue to bridges if not. But usually we want to finish the whole script.
-      
-      // Insert a breathing bridge between steps (not after the last one)
-      if (i < widget.meditation.scriptSteps.length - 1) {
-        await _speakBridge();
+    if (step >= steps.length) {
+      // Script done, move to breathing phase if time remains
+      if (mounted && _isActive) {
+        setState(() {
+          _phase = MeditationPhase.breathing;
+          _isInhale = true;
+          _lastSpokenPhase = '';
+        });
+        _breathingController.forward(from: 0.0);
+        _speakPhaseInstruction('Inhale');
       }
-    }
-
-    // After script ends, check if time is already up
-    if (_isTimeUp) {
-      _completeMeditation();
       return;
     }
 
-    // Transition to continuous guided breathing phase
-    if (mounted && _isActive) {
-      setState(() {
-        _phase = MeditationPhase.breathing;
-        _isInhale = true;
-        _lastSpokenPhase = '';
-      });
-      _breathingController.forward(from: 0.0);
-      _speakPhaseInstruction('Inhale');
-    }
+    setState(() => _currentStep = step);
+
+    // Narrate the step — fire and forget, does NOT gate progression
+    _voice.speak(steps[step]);
+
+    // Advance to next step after display duration — always runs regardless of TTS
+    final duration = _stepDurationSeconds(steps[step]);
+    _stepTimer?.cancel();
+    _stepTimer = Timer(Duration(seconds: duration), () {
+      if (mounted && _isActive) _advanceToStep(step + 1);
+    });
   }
 
   Future<void> _completeMeditation() async {
     _sessionTimer?.cancel();
+    // Stop any in-progress narration so it doesn't replay on unmute
+    _voice.stop();
     
     final user = AuthService().currentUser;
     if (user != null) {
-      // Save session
-      final session = MeditationSession(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        userId: user.uid,
-        startTime: DateTime.now(),
-        durationMinutes: widget.meditation.durationMinutes,
-        type: MeditationType.guided,
-        meditationId: widget.meditation.id,
-        completed: true,
-      );
-      await MeditationService().saveSession(session);
+      await ActivityCompletionDialog.show(
+        context,
+        savingText: 'Saving meditation...',
+        onComplete: () async {
+          // Save session
+          final session = MeditationSession(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            userId: user.uid,
+            startTime: DateTime.now(),
+            durationMinutes: widget.meditation.durationMinutes,
+            type: MeditationType.guided,
+            meditationId: widget.meditation.id,
+            completed: true,
+          );
+          await MeditationService().saveSession(session);
 
-      // Update analytics
-      await MeditationAnalyticsService().updateStats(user.uid, widget.meditation.durationMinutes);
+          // Update analytics
+          await MeditationAnalyticsService().updateStats(user.uid, widget.meditation.durationMinutes);
+
+          // Log to activity_stats so badge system tracks meditation count
+          await FirestoreService().logActivityCompletion(user.uid, 'meditation');
+        },
+      );
     }
 
     setState(() => _isActive = false);
 
     if (mounted) {
-      // Get updated streak
-      final streak = user != null 
-          ? await MeditationAnalyticsService().getCurrentStreak(user.uid)
-          : 0;
-
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('✨ Session Complete'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Great job completing "${widget.meditation.title}"!',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.lato(fontSize: 16),
-              ),
-              const SizedBox(height: 16),
-              if (streak > 0)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF9575CD).withAlpha(25),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('🔥', style: TextStyle(fontSize: 24)),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$streak Day Streak!',
-                        style: GoogleFonts.lato(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF9575CD),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context); // Return to meditation library
-              },
-              child: const Text('Done'),
-            ),
-          ],
-        ),
-      );
+      Navigator.pop(context);
     }
   }
 

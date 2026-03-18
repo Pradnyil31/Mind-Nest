@@ -71,7 +71,11 @@ class _GroundingExerciseScreenState extends State<GroundingExerciseScreen>
       return;
     }
 
+    // Cancel any stale TTS from the previous step so unmuting won't replay it
+    _voice.stop();
+    _voice.cancelPendingResume();
     _stepTimer?.cancel();
+
     setState(() {
       _currentStep = step;
       _countdownSeconds = _stepDurations[step];
@@ -81,35 +85,24 @@ class _GroundingExerciseScreenState extends State<GroundingExerciseScreen>
     _progressController.duration = Duration(seconds: _stepDurations[step]);
     _progressController.forward(from: 0.0);
 
-    // Speak the step fully, then chain into the next with a bridge phrase
-    _voice.onComplete(() async {
-      if (!mounted || _isPaused) return;
-      _voice.clearCompletionHandler();
-
-      // Minimum hold after speech — visual countdown runs
-      _stepTimer?.cancel();
-      _stepTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (_isPaused) return;
-        if (_countdownSeconds > 1) {
-          setState(() => _countdownSeconds--);
-        } else {
-          timer.cancel();
-          // Bridge to next step
-          final nextStep = step + 1;
-          if (nextStep < _steps.length) {
-            _voice.onComplete(() {
-              if (!mounted) return;
-              _voice.clearCompletionHandler();
-              _startStep(nextStep);
-            });
-            _voice.speak('Good. Take a breath... and continue.');
-          } else {
-            _startStep(nextStep);
-          }
-        }
-      });
-    });
+    // Narration: speak the step text (fire-and-forget — does NOT gate progression)
     _voice.speak(_steps[step]);
+
+    // Timer-based progression: always advances regardless of mute state
+    _stepTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_isPaused) return;
+      if (_countdownSeconds > 1) {
+        setState(() => _countdownSeconds--);
+      } else {
+        timer.cancel();
+        final nextStep = step + 1;
+        if (nextStep < _steps.length) {
+          _startStep(nextStep);
+        } else {
+          _startStep(nextStep); // transition to completion
+        }
+      }
+    });
   }
 
   void _togglePause() {

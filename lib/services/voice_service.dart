@@ -14,18 +14,6 @@ class VoiceService {
   bool _isEnabled = true;
   bool _initialized = false;
 
-  // ── Smart resume tracking ──────────────────────────────────────────────────
-  /// The full text of the most recently started utterance.
-  String _fullText = '';
-  /// When speak() was last called (i.e., when TTS actually started).
-  DateTime? _speechStartTime;
-  /// When the user pressed mute.
-  DateTime? _muteTimestamp;
-
-  /// Approximate words-per-second at speech rate 0.45.
-  /// 0.45 rate ≈ 80 wpm ≈ 1.33 words/second.
-  static const double _wordsPerSecond = 1.33;
-
   bool get isEnabled => _isEnabled;
 
   // ── init ───────────────────────────────────────────────────────────────────
@@ -44,10 +32,8 @@ class VoiceService {
   /// Stops any current speech and speaks [text] from the beginning.
   Future<void> speak(String text) async {
     if (text.trim().isEmpty) return;
-    _fullText = text;
     if (!_isEnabled) return;
     await _tts.stop();
-    _speechStartTime = DateTime.now();
     await _tts.speak(text);
   }
 
@@ -67,40 +53,29 @@ class VoiceService {
     await _tts.stop();
   }
 
-  // ── setEnabled (smart resume) ──────────────────────────────────────────────
-  /// On mute  → immediately stop TTS, record timestamp.
-  /// On unmute → estimate which word was being spoken, resume from there.
+  /// Cancels any pending completion handler to unblock suspended callers.
+  void cancelPendingResume() {
+    _tts.setCompletionHandler(() {});
+  }
+
+  // ── setEnabled ─────────────────────────────────────────────────────────────
+  /// Mute or unmute the voice assistant.
+  /// When muting: stops any current speech immediately.
+  /// When unmuting: re-enables voice for future speak() calls — does NOT
+  /// replay old speech (to avoid confusing repeats mid-exercise).
   Future<void> setEnabled(bool enabled) async {
     _isEnabled = enabled;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefKey, enabled);
 
     if (!enabled) {
-      // MUTING: record when we muted
-      _muteTimestamp = DateTime.now();
+      // Clear any pending completion handler so suspended awaits unblock.
+      _tts.setCompletionHandler(() {});
+      cancelPendingResume();
       await _tts.stop();
-    } else {
-      // UNMUTING: resume from estimated word position
-      if (_fullText.isNotEmpty &&
-          _speechStartTime != null &&
-          _muteTimestamp != null) {
-        final elapsedMs =
-            _muteTimestamp!.difference(_speechStartTime!).inMilliseconds;
-        final secondsSpoken = elapsedMs / 1000.0;
-        final wordsSpoken = (secondsSpoken * _wordsPerSecond).floor();
-
-        final words = _fullText.split(' ');
-        final remaining = (wordsSpoken < words.length)
-            ? words.sublist(wordsSpoken).join(' ')
-            : '';
-
-        if (remaining.trim().isNotEmpty) {
-          _speechStartTime = DateTime.now();
-          _muteTimestamp = null;
-          await _tts.speak(remaining);
-        }
-      }
     }
+    // On unmute: simply re-enable — the next speak() call will pick up
+    // naturally when the exercise advances to its next step.
   }
 
   // ── preference helper ──────────────────────────────────────────────────────

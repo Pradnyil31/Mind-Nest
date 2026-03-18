@@ -5,6 +5,8 @@ import '../models/meditation_session.dart';
 import '../services/auth_service.dart';
 import '../services/meditation_service.dart';
 import '../services/meditation_analytics_service.dart';
+import '../services/firestore_service.dart';
+import '../widgets/activity_completion_dialog.dart';
 
 class MeditationTimerScreen extends StatefulWidget {
   const MeditationTimerScreen({Key? key}) : super(key: key);
@@ -58,79 +60,34 @@ class _MeditationTimerScreenState extends State<MeditationTimerScreen> with Tick
     
     final user = AuthService().currentUser;
     if (user != null) {
-      // Save session
-      final session = MeditationSession(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        userId: user.uid,
-        startTime: DateTime.now(),
-        durationMinutes: _selectedDuration,
-        type: MeditationType.timer,
-        completed: true,
-      );
-      await MeditationService().saveSession(session);
+      await ActivityCompletionDialog.show(
+        context,
+        savingText: 'Saving meditation...',
+        onComplete: () async {
+          // Save session
+          final session = MeditationSession(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            userId: user.uid,
+            startTime: DateTime.now(),
+            durationMinutes: _selectedDuration,
+            type: MeditationType.timer,
+            completed: true,
+          );
+          await MeditationService().saveSession(session);
 
-      // Update analytics
-      await MeditationAnalyticsService().updateStats(user.uid, _selectedDuration);
+          // Update analytics
+          await MeditationAnalyticsService().updateStats(user.uid, _selectedDuration);
+
+          // Log to activity_stats so badge system tracks meditation count
+          await FirestoreService().logActivityCompletion(user.uid, 'meditation');
+        },
+      );
     }
 
     setState(() => _isActive = false);
 
     if (mounted) {
-      // Get updated streak
-      final streak = user != null 
-          ? await MeditationAnalyticsService().getCurrentStreak(user.uid)
-          : 0;
-
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('✨ Session Complete'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'You meditated for $_selectedDuration minutes!',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.lato(fontSize: 16),
-              ),
-              const SizedBox(height: 16),
-              if (streak > 0)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF81C784).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('🔥', style: TextStyle(fontSize: 24)),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$streak Day Streak!',
-                        style: GoogleFonts.lato(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF81C784),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context); // Return to meditation library
-              },
-              child: const Text('Done'),
-            ),
-          ],
-        ),
-      );
+      Navigator.pop(context);
     }
   }
 

@@ -100,6 +100,10 @@ class _CalmTechniqueScreenState extends State<CalmTechniqueScreen>
       return;
     }
 
+    // Discard stale TTS from the previous step — prevents replay on unmute
+    _voice.stop();
+    _voice.cancelPendingResume();
+
     final durations = _stepDurations;
     final dur = (step < durations.length) ? durations[step] : 15;
 
