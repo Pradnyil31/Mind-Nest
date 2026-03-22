@@ -1,4 +1,0 @@
-Feat: Add Personalization Models and Service
-
-- Enhanced UserModel with supportAreas and experienceLevel fields
-- Created PersonalizationService to centralize motive-aware greetings, recommendations, and experience-based meditation sorting

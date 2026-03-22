@@ -1,6 +1,0 @@
-Feat: Add Home Screen Personalization
-
-- Added Motive-aware greeting hint to HomeHeader
-- Extracted user's distraction/experience selections from Firestore stream
-- Added 'Recommended for You' section with motive/experience/distraction-driven exercise cards
-- Linked personalized cards directly to relevant exercise screens
