@@ -264,28 +264,53 @@ class _HomeContentState extends ConsumerState<HomeContent> {
     super.dispose();
   }
 
-  Future<void> _maybeStartTour() async {
-    if (_tourStarted) return;
-    setState(() => _tourStarted = true);
+  List<GlobalKey> _getAvailableTourKeys(List<String> additionalActivities) {
+    final keys = <GlobalKey>[TourKeys.badgesKey];
+    if (additionalActivities.isNotEmpty) {
+      keys.add(TourKeys.favoritesKey);
+    }
+    keys.addAll([
+      TourKeys.taskCardKey,
+      TourKeys.manageRoutineKey,
+      TourKeys.insightsKey,
+      TourKeys.navBarKey,
+    ]);
+    return keys;
+  }
+
+  Future<void> _maybeStartTour(List<String> additionalActivities) async {
+    if (_tourStarted || !mounted) return;
+    
     try {
       final user = ref.read(currentUserProvider);
       final uid = user?.uid ?? 'guest';
+      
+      final homeState = context.findAncestorStateOfType<_HomeScreenState>();
+      if (homeState != null && homeState._currentIndex != 0) return;
+
       final prefs = await SharedPreferences.getInstance();
       final key = 'has_shown_home_tour_$uid';
       final hasShown = prefs.getBool(key) ?? false;
+      
       if (!hasShown && mounted) {
-        // Suppress motive popup until tour finishes
+        setState(() => _tourStarted = true);
         setState(() => _suppressMotiveForTour = true);
         TourKeys.onTourFinished = _triggerMotiveAfterTour;
+        
         await Future.delayed(const Duration(milliseconds: 1000));
         if (mounted) {
-          ShowCaseWidget.of(context).startShowCase(TourKeys.featureTourKeys);
+          final keys = _getAvailableTourKeys(additionalActivities);
+          ShowCaseWidget.of(context).startShowCase(keys);
           await prefs.setBool(key, true);
         }
+      } else if (!hasShown) {
+        // Not mounted yet
+      } else {
+        setState(() => _tourStarted = true);
       }
     } catch (e) {
       debugPrint('[Tour] Error starting tour: $e');
-      setState(() => _suppressMotiveForTour = false);
+      if (mounted) setState(() => _suppressMotiveForTour = false);
     }
   }
 
@@ -1013,7 +1038,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
           // Feature Tour: trigger once after data is loaded and widgets are rendered
           if (!_tourStarted) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              Future.delayed(const Duration(milliseconds: 600), _maybeStartTour);
+              Future.delayed(const Duration(milliseconds: 600), () => _maybeStartTour(additionalActivities));
             });
           }
 

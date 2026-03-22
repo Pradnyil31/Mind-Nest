@@ -1,6 +1,6 @@
 {
-    "name": "fy_project",
-    "short_name": "fy_project",
+    "name": "temp_app",
+    "short_name": "temp_app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

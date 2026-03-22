@@ -16,6 +16,7 @@ class UserModel {
   final String? experienceLevel; // 'New Beginner', 'Tried a little', 'Long ago', 'Never tried'
   final String? preferredTime; // Morning, Afternoon, Evening, Before Bed
   final String? dailyCommitment; // 5min, 10min, 15min, 30+min
+  final bool onboardingCompleted;
 
   UserModel({
     required this.uid,
@@ -33,6 +34,7 @@ class UserModel {
     this.experienceLevel,
     this.preferredTime,
     this.dailyCommitment,
+    this.onboardingCompleted = false,
   });
 
   // Convert to Map for Firestore
@@ -53,6 +55,7 @@ class UserModel {
       'experienceLevel': experienceLevel,
       'preferredTime': preferredTime,
       'dailyCommitment': dailyCommitment,
+      'onboardingCompleted': onboardingCompleted,
     };
   }
 
@@ -84,6 +87,7 @@ class UserModel {
       experienceLevel: map['experienceLevel'] as String?,
       preferredTime: map['preferredTime'] as String?,
       dailyCommitment: map['dailyCommitment'] as String?,
+      onboardingCompleted: map['onboardingCompleted'] ?? false,
     );
   }
 
@@ -104,6 +108,7 @@ class UserModel {
     String? experienceLevel,
     String? preferredTime,
     String? dailyCommitment,
+    bool? onboardingCompleted,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -121,6 +126,7 @@ class UserModel {
       experienceLevel: experienceLevel ?? this.experienceLevel,
       preferredTime: preferredTime ?? this.preferredTime,
       dailyCommitment: dailyCommitment ?? this.dailyCommitment,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     );
   }
 }

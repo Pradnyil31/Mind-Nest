@@ -122,7 +122,7 @@ class MindNestApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MindNest',
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: true,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFA78BFA),
@@ -170,8 +170,7 @@ class AuthWrapper extends ConsumerWidget {
             }
 
             // Check if user has completed onboarding
-            // For now, we check if displayName is set (set during onboarding)
-            final hasCompletedOnboarding = profile.displayName.isNotEmpty;
+            final hasCompletedOnboarding = profile.onboardingCompleted;
 
             if (hasCompletedOnboarding) {
               return const HomeScreen();
