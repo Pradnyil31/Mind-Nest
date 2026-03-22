@@ -122,7 +122,7 @@ class MindNestApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MindNest',
-      debugShowCheckedModeBanner: true,
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFA78BFA),
