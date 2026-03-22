@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/logger.dart';
 import '../models/daily_checkin.dart';
 import 'firestore_service.dart';
+import '../config/routine_config.dart';
 
 class CheckInService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -74,17 +75,34 @@ class CheckInService {
           }
 
           bool changed = false;
+          Map<String, dynamic> tempSchedule = {};
+          if (data.containsKey('temporarySchedule')) {
+            tempSchedule = Map<String, dynamic>.from(data['temporarySchedule']);
+          }
+
           for (var activity in adaptations) {
             if (!currentRoutine.contains(activity)) {
               currentRoutine.add(activity);
               addedActivities.add(activity);
+              
+              // Assign a default broad time slot so HomeRoutineSection knows where to place it
+              final period = RoutineConfig.getTimePeriod(activity);
+              if (period == 'Morning') {
+                tempSchedule[activity] = '08:00 AM';
+              } else if (period == 'Afternoon') {
+                tempSchedule[activity] = '02:00 PM';
+              } else {
+                tempSchedule[activity] = '08:00 PM';
+              }
+              
               changed = true;
             }
           }
 
           if (changed) {
             await _usersCollection.doc(checkIn.userId).update({
-              'routineActivities': currentRoutine
+              'routineActivities': currentRoutine,
+              'temporarySchedule': tempSchedule,
             });
           }
         }

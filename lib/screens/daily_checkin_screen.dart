@@ -25,7 +25,6 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
   String _selectedMood = '';
   List<SmartGoal> _activeGoals = [];
   List<String> _checkedGoals = [];
-  String _notes = '';
 
   @override
   void initState() {
@@ -77,7 +76,6 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
           sleepQuality: _sleepQuality,
           energyLevel: _energyLevel,
           activeGoalsChecked: _checkedGoals,
-          notes: _notes,
         );
 
         final addedActivities = await ActivityCompletionDialog.show<List<String>?>(
@@ -468,22 +466,6 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
                   ),
                 );
               }),
-              
-             const SizedBox(height: 32),
-             TextField(
-               onChanged: (v) => _notes = v,
-               decoration: InputDecoration(
-                 hintText: 'Any Notes for today?',
-                 filled: true,
-                 fillColor: Colors.white,
-                 border: OutlineInputBorder(
-                   borderRadius: BorderRadius.circular(16),
-                   borderSide: BorderSide.none,
-                 ),
-                 contentPadding: const EdgeInsets.all(20),
-               ),
-               maxLines: 3,
-             ),
           ],
         ),
       ),

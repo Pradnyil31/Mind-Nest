@@ -11,6 +11,8 @@ import '../models/user_model.dart';
 import '../config/motive_config.dart';
 import '../config/notification_content.dart';
 import 'welcome_screen.dart';
+import 'privacy_screen.dart';
+import 'about_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -45,6 +47,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TimeOfDay bedTime = const TimeOfDay(hour: 22, minute: 0);
           String dailyCommitment = '10 minutes';
           List<String> supportAreas = [];
+          String avatarEmoji = 'U';
+          int avatarColor = 0xFF6C63FF;
           
           if (snapshot.hasData && snapshot.data!.exists) {
               final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -52,6 +56,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               email = user?.email ?? '';
               primaryMotive = data['primaryMotive'] as String?;
               dailyCommitment = data['dailyCommitment'] as String? ?? '10 minutes';
+              avatarEmoji = data['avatarEmoji'] ?? (displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U');
+              avatarColor = data['avatarColor'] ?? 0xFF6C63FF;
+
               if (data['supportAreas'] != null) {
                 supportAreas = List<String>.from(data['supportAreas']);
               }
@@ -69,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           return CustomScrollView(
             slivers: [
-              _buildSliverAppBar(context, displayName, email),
+              _buildSliverAppBar(context, displayName, email, avatarEmoji, avatarColor),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
@@ -107,8 +114,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                        const SizedBox(height: 16),
                        _buildActionTile(
                         icon: Icons.edit_outlined,
-                        title: 'Edit Name',
-                        onTap: () => _editName(context, user?.uid, displayName),
+                        title: 'Edit Profile',
+                        onTap: () => _editProfile(context, user?.uid, displayName, email, avatarEmoji, avatarColor),
                       ),
                       _buildActionTile(
                         icon: Icons.notifications_none_rounded,
@@ -136,7 +143,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _buildActionTile(
                         icon: Icons.privacy_tip_outlined,
                         title: 'Privacy Policy',
-                        onTap: () => _showPrivacyDialog(context),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyScreen())),
+                      ),
+                      _buildActionTile(
+                        icon: Icons.info_outline_rounded,
+                        title: 'About App',
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen())),
                       ),
                       
                       const SizedBox(height: 40),
@@ -262,7 +274,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSliverAppBar(BuildContext context, String name, String email) {
+  Widget _buildSliverAppBar(BuildContext context, String name, String email, String avatarEmoji, int avatarColor) {
     return SliverAppBar(
       expandedHeight: 200.0,
       floating: false,
@@ -287,7 +299,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white,
+                  color: Color(avatarColor),
                   border: Border.all(color: Colors.white.withOpacity(0.5), width: 4),
                   boxShadow: [
                     BoxShadow(
@@ -299,11 +311,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 child: Center(
                   child: Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                    avatarEmoji,
                     style: GoogleFonts.lato(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF6C63FF),
+                      color: Color(avatarColor) == Colors.white ? const Color(0xFF6C63FF) : Colors.white,
                     ),
                   ),
                 ),
@@ -693,45 +705,145 @@ class _ProfileScreenState extends State<ProfileScreen> {
      }
   }
   
-  Future<void> _editName(BuildContext context, String? uid, String currentName) async {
+  Future<void> _editProfile(BuildContext context, String? uid, String currentName, String email, String currentEmoji, int currentColor) async {
     if (uid == null) return;
     final controller = TextEditingController(text: currentName);
-    await showDialog(
+    String selectedEmoji = currentEmoji;
+    int selectedColor = currentColor;
+
+    final List<String> emojiOptions = ['U', '😊', '🐼', '🦊', '🐱', '🐶', '🐯', '🦉', '🦋', '🌟', '🚀', '🎯'];
+    final List<int> colorOptions = [0xFF6C63FF, 0xFF4CAF50, 0xFFFF9800, 0xFFE91E63, 0xFF00BCD4, 0xFF9C27B0, 0xFF795548, 0xFF607D8B];
+
+    await showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Name'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Enter name'),
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(
-             onPressed: () async {
-               if (controller.text.isNotEmpty) {
-                   await FirestoreService().updateUser(uid, {'displayName': controller.text.trim()});
-                   
-                   // Reschedule notifications with new name
-                   final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-                   if (userDoc.exists && userDoc.data() != null) {
-                      final data = userDoc.data() as Map<String, dynamic>;
-                      final motive = data['dailyMotive'] ?? 'Wellness';
-                      // Need wake/bed times. They might not be in this scope easily without refetching or passing.
-                      // Let's refetch to be safe and clean.
-                      final routine = Map<String, dynamic>.from(data['routine'] ?? {});
-                      final wakeTime = _parseTime(routine['wakeTime'] ?? "7:00 AM");
-                      final bedTime = _parseTime(routine['bedTime'] ?? "10:00 PM");
-                      
-                      await _rescheduleNotifications(controller.text.trim(), motive, wakeTime, bedTime);
-                   }
-                   
-                   Navigator.pop(ctx);
-               }
-             },
-             child: const Text('Save'),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-        ],
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            left: 24, right: 24, top: 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Edit Profile', style: GoogleFonts.lato(fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 24),
+                
+                // Avatar Preview
+                Center(
+                  child: Container(
+                    width: 80, height: 80,
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: Color(selectedColor)),
+                    child: Center(
+                      child: Text(selectedEmoji, style: TextStyle(fontSize: 32, color: selectedColor == 0xFFFFFFFF ? Colors.black : Colors.white)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    labelText: 'Name',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                TextField(
+                  enabled: false,
+                  controller: TextEditingController(text: email),
+                  decoration: InputDecoration(
+                    labelText: 'Email (Read Only)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                Text('Choose Avatar Emoji', style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: emojiOptions.map((e) => GestureDetector(
+                    onTap: () => setModalState(() => selectedEmoji = e),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: selectedEmoji == e ? Colors.grey.shade200 : Colors.transparent,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: selectedEmoji == e ? const Color(0xFF6C63FF) : Colors.grey.shade300),
+                      ),
+                      child: Text(e, style: const TextStyle(fontSize: 24)),
+                    ),
+                  )).toList(),
+                ),
+                
+                const SizedBox(height: 24),
+                Text('Choose Background Color', style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Wrap(
+                   spacing: 12, runSpacing: 12,
+                   children: colorOptions.map((c) => GestureDetector(
+                     onTap: () => setModalState(() => selectedColor = c),
+                     child: Container(
+                       width: 40, height: 40,
+                       decoration: BoxDecoration(
+                         color: Color(c),
+                         shape: BoxShape.circle,
+                         border: Border.all(color: selectedColor == c ? Colors.black : Colors.transparent, width: 2),
+                       ),
+                     ),
+                   )).toList(),
+                ),
+                
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C63FF),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () async {
+                      if (controller.text.isNotEmpty) {
+                        await FirestoreService().updateUser(uid, {
+                          'displayName': controller.text.trim(),
+                          'avatarEmoji': selectedEmoji,
+                          'avatarColor': selectedColor,
+                        });
+                        
+                        // Reschedule notifications just like before
+                        final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+                        if (userDoc.exists && userDoc.data() != null) {
+                           final data = userDoc.data() as Map<String, dynamic>;
+                           final motive = data['dailyMotive'] ?? 'Wellness';
+                           final routine = Map<String, dynamic>.from(data['routine'] ?? {});
+                           final wakeTime = _parseTime(routine['wakeTime'] ?? "7:00 AM");
+                           final bedTime = _parseTime(routine['bedTime'] ?? "10:00 PM");
+                           
+                           await _rescheduleNotifications(controller.text.trim(), motive, wakeTime, bedTime);
+                        }
+                        
+                        if (context.mounted) Navigator.pop(ctx);
+                      }
+                    },
+                    child: Text('Save Profile', style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -745,21 +857,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sign Out', style: TextStyle(color: Colors.red))),
-        ],
-      ),
-    );
-  }
-  
-  void _showPrivacyDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Privacy Policy'),
-        content: const SingleChildScrollView(
-          child: Text('Your privacy is important to us. \n\nWe store your routine data locally and in the cloud to provide you with a seamless experience across devices. We do not share your data with third parties.\n\n(Full policy placeholder)'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
         ],
       ),
     );

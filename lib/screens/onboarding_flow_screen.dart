@@ -30,7 +30,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   String? _selectedMotive; // Primary motive selection
   final List<String> _selectedSupportAreas = [];
   String _selectedExperienceLevel = '';
-  String _selectedPreferredTime = '';
   String _selectedCommitment = '';
 
   // Sleep/Wake Times (Newly added for personalization)
@@ -53,13 +52,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     'Never tried',
   ];
 
-  final List<String> _preferredTimeOptions = [
-    '🌅  Morning',
-    '☀️  Afternoon',
-    '🌆  Evening',
-    '🌙  Before Bed',
-  ];
-
   final List<String> _commitmentOptions = [
     '5 minutes — Just a quick reset',
     '10 minutes — A solid pause',
@@ -68,7 +60,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   ];
 
   void _nextPage() {
-    if (_currentPage < 6) { // 7 pages total (0-6)
+    if (_currentPage < 5) { // 6 pages total (0-5)
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -100,7 +92,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           'primaryGoals': [_selectedMotive ?? 'General Wellness'], // Save for compatibility
           'supportAreas': _selectedSupportAreas,
           'experienceLevel': _selectedExperienceLevel,
-          'preferredTime': _selectedPreferredTime,
           'dailyCommitment': _selectedCommitment,
           'routine': {
             'wakeUpTime': _formatTime(_wakeUpTime),
@@ -201,7 +192,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           children: [
             // Progress Bar
             LinearProgressIndicator(
-              value: (_currentPage + 1) / 7, // 7 pages
+              value: (_currentPage + 1) / 6, // 6 pages
               backgroundColor: const Color(0xFFE0D4F5),
               valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFA78BFA)),
               minHeight: 6,
@@ -222,7 +213,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                   
                   const Spacer(),
                   Text(
-                    'Step ${_currentPage + 1}/7',
+                    'Step ${_currentPage + 1}/6',
                     style: const TextStyle(
                       color: Color(0xFF757575),
                       fontWeight: FontWeight.w600,
@@ -268,21 +259,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                     },
                   ),
 
-                  // Step 4: Preferred Time
-                  _buildSelectionPage(
-                    title: 'When do you prefer to recharge?',
-                    subtitle: 'We\'ll schedule your routine around this',
-                    options: _preferredTimeOptions,
-                    selectedValues: [_selectedPreferredTime].where((e) => e.isNotEmpty).toList(),
-                    allowMultiple: false,
-                    onSingleSelect: (val) {
-                      setState(() {
-                        _selectedPreferredTime = val;
-                      });
-                    },
-                  ),
-
-                  // Step 5: Daily Commitment
+                  // Step 4: Daily Commitment
                   _buildSelectionPage(
                     title: 'How much time can you commit daily?',
                     subtitle: 'Start small — you can always adjust later',
@@ -334,7 +311,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                   child: _isSaving
                       ? const CircularProgressIndicator(color: Colors.white)
                       : Text(
-                          _currentPage == 6 ? 'Let\'s Go! 🚀' : 'Next',
+                          _currentPage == 5 ? 'Let\'s Go! 🚀' : 'Next',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,

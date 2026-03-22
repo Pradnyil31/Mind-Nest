@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_colors.dart';
 import '../../screens/profile_screen.dart';
 import '../../screens/badges_screen.dart';
+import 'package:showcaseview/showcaseview.dart';
+import '../../config/tour_keys.dart';
 
 class HomeHeader extends StatelessWidget {
   final String displayName;
@@ -60,19 +62,37 @@ class HomeHeader extends StatelessWidget {
           ),
         ),
         // Badges Icon
-        IconButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const BadgesScreen(),
-              ),
-            );
-          },
-          icon: const Icon(Icons.emoji_events_rounded),
-          iconSize: 28,
-          color: const Color(0xFFFFA726), // Keep specific brand color for badge
-          tooltip: 'My Badges',
+        Showcase(
+          key: TourKeys.badgesKey,
+          title: '🏆 My Badges',
+          description: 'Collect achievement badges as you build healthy habits and hit your goals!',
+          targetShapeBorder: const CircleBorder(),
+          tooltipBackgroundColor: const Color(0xFF1C1C2E),
+          textColor: Colors.white,
+          titleTextStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+          descTextStyle: const TextStyle(
+            fontSize: 13,
+            color: Color(0xFFCBCBDB),
+            height: 1.5,
+          ),
+          child: IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BadgesScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.emoji_events_rounded),
+            iconSize: 28,
+            color: const Color(0xFFFFA726),
+            tooltip: 'My Badges',
+          ),
         ),
       ],
     );

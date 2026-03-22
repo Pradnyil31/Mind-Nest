@@ -77,6 +77,7 @@ dependencies:
   device_info_plus: ^10.1.2
   confetti: ^0.8.0
   flutter_staggered_grid_view: ^0.7.0
+  showcaseview: ^5.0.1
 
 
 dev_dependencies:
