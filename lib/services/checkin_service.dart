@@ -79,6 +79,10 @@ class CheckInService {
           if (data.containsKey('temporarySchedule')) {
             tempSchedule = Map<String, dynamic>.from(data['temporarySchedule']);
           }
+          Map<String, dynamic> routineSchedule = {};
+          if (data.containsKey('routineSchedule')) {
+            routineSchedule = Map<String, dynamic>.from(data['routineSchedule']);
+          }
 
           for (var activity in adaptations) {
             if (!currentRoutine.contains(activity)) {
@@ -87,14 +91,15 @@ class CheckInService {
               
               // Assign a default broad time slot so HomeRoutineSection knows where to place it
               final period = RoutineConfig.getTimePeriod(activity);
-              if (period == 'Morning') {
-                tempSchedule[activity] = '08:00 AM';
-              } else if (period == 'Afternoon') {
-                tempSchedule[activity] = '02:00 PM';
-              } else {
-                tempSchedule[activity] = '08:00 PM';
+              String timeSlot = '08:00 AM';
+              if (period == 'Afternoon') {
+                timeSlot = '02:00 PM';
+              } else if (period == 'Evening') {
+                timeSlot = '08:00 PM';
               }
               
+              tempSchedule[activity] = timeSlot;
+              routineSchedule[activity] = timeSlot;
               changed = true;
             }
           }
@@ -103,6 +108,7 @@ class CheckInService {
             await _usersCollection.doc(checkIn.userId).update({
               'routineActivities': currentRoutine,
               'temporarySchedule': tempSchedule,
+              'routineSchedule': routineSchedule,
             });
           }
         }

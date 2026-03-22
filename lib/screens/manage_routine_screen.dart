@@ -102,6 +102,11 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
          
          _userMotive = data['primaryMotive'] as String?;
          
+         List<String> pool = [];
+         if (data.containsKey('customActivitiesPool')) {
+            pool = List<String>.from(data['customActivitiesPool']);
+         }
+         
           if (data.containsKey('routineActivities')) {
               // Load activity list and recalculate ALL periods fresh from RoutineConfig
               // (never trust stale Firestore period values for known activities)
@@ -128,7 +133,13 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
               }
               
               _initialSchedule = Map.from(_activitySchedule);
-               _customActivities = baseList.where((a) => !_allActivities.contains(a)).toList();
+               var custom = baseList.where((a) => !_allActivities.contains(a)).toList();
+               for (var activity in pool) {
+                 if (!custom.contains(activity) && !_allActivities.contains(activity)) {
+                   custom.add(activity);
+                 }
+               }
+               _customActivities = custom;
              });
              
          } else if (data.containsKey('routineSchedule')) {
@@ -149,6 +160,12 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
            setState(() {
              _activitySchedule = recalculated;
              _initialSchedule = Map.from(recalculated);
+             
+             for (var activity in pool) {
+               if (!custom.contains(activity) && !_allActivities.contains(activity)) {
+                 custom.add(activity);
+               }
+             }
              _customActivities = custom;
              
              // Parse user's sleep/wake times if available
@@ -174,7 +191,14 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
            setState(() {
              _activitySchedule = schedule;
              _initialSchedule = Map.from(schedule);
-             _customActivities = oldActivities.where((a) => !_allActivities.contains(a)).toList();
+             
+             var custom = oldActivities.where((a) => !_allActivities.contains(a)).toList();
+             for (var activity in pool) {
+               if (!custom.contains(activity) && !_allActivities.contains(activity)) {
+                 custom.add(activity);
+               }
+             }
+             _customActivities = custom;
            });
          } else {
            // First time setup
@@ -227,6 +251,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
         // Update both baseRoutine and routineActivities to stay in sync
         'baseRoutine': newActivitiesList,
         'routineActivities': newActivitiesList,
+        'customActivitiesPool': _customActivities,
 
         // Stamp today's date so the daily generator doesn't overwrite this
         // customization until tomorrow's fresh generation.
