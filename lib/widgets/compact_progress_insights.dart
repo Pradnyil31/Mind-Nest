@@ -9,9 +9,13 @@ import 'dart:math' as math;
 /// Compact progress insights widget - single card with dynamic content that auto-updates
 class CompactProgressInsights extends ConsumerStatefulWidget {
   final String userId;
+  final Map<String, dynamic>? todayCheckInData;
 
-  const CompactProgressInsights({Key? key, required this.userId})
-    : super(key: key);
+  const CompactProgressInsights({
+    Key? key,
+    required this.userId,
+    this.todayCheckInData,
+  }) : super(key: key);
 
   @override
   ConsumerState<CompactProgressInsights> createState() =>
@@ -145,6 +149,25 @@ class _CompactProgressInsightsState
                   _buildStat('🧘', _calmSessions.toString(), 'Calm'),
                 ],
               ),
+              if (widget.todayCheckInData != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildMiniStat('Mood', widget.todayCheckInData!['mood'] ?? '-'),
+                      _buildMiniStat('Sleep', '${widget.todayCheckInData!['sleepQuality'] ?? '-'}/10', icon: '🌙'),
+                      _buildMiniStat('Energy', '${widget.todayCheckInData!['energyLevel'] ?? '-'}/10', icon: '⚡'),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -157,7 +180,11 @@ class _CompactProgressInsightsState
       final now = DateTime.now();
       final weekAgo = now.subtract(const Duration(days: 7));
 
-      // Get weekly routine data
+      // ── Today's date key (matches how routine_completions stores docs) ──
+      final todayKey =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      // Get weekly routine data (for the "This Week" stat only)
       final weekSnapshot = await FirebaseFirestore.instance
           .collection('routine_completions')
           .where('userId', isEqualTo: widget.userId)
@@ -165,16 +192,27 @@ class _CompactProgressInsightsState
           .get();
 
       int weeklyCount = 0;
-      int totalCompleted = 0;
-      int totalPossible = 0;
+
+      // ── Today-only completion for the progress ring ──
+      int todayCompleted = 0;
+      int todayTotal = 0;
 
       for (var doc in weekSnapshot.docs) {
         final data = doc.data();
         final completed = (data['completedActivities'] as List?)?.length ?? 0;
         final total = (data['totalActivities'] as int?) ?? 0;
         weeklyCount += completed;
-        totalCompleted += completed;
-        totalPossible += total;
+
+        // Check if this doc is today
+        final docDate = (data['date'] as Timestamp?)?.toDate();
+        if (docDate != null) {
+          final docKey =
+              '${docDate.year}-${docDate.month.toString().padLeft(2, '0')}-${docDate.day.toString().padLeft(2, '0')}';
+          if (docKey == todayKey) {
+            todayCompleted = completed;
+            todayTotal = total;
+          }
+        }
       }
 
       // Get all-time total
@@ -189,7 +227,7 @@ class _CompactProgressInsightsState
         allTimeTotal += (data['completedActivities'] as List?)?.length ?? 0;
       }
 
-      // Use existing routine service for streak calculation (more efficient)
+      // Use existing routine service for streak calculation
       final currentStreak = await ref
           .read(routineServiceProvider)
           .getCompletionStreak(widget.userId);
@@ -223,7 +261,8 @@ class _CompactProgressInsightsState
         }
       }
 
-      final rate = totalPossible > 0 ? totalCompleted / totalPossible : 0.0;
+      // Progress ring = today's completion rate (resets every day)
+      final rate = todayTotal > 0 ? todayCompleted / todayTotal : 0.0;
 
       // Get enhanced calm insights for dashboard integration
       final calmInsights = await _ecosystemService.getCalmInsightsForDashboard(
@@ -436,6 +475,31 @@ class _CompactProgressInsightsState
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMiniStat(String label, String value, {String? icon}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) Text(icon, style: const TextStyle(fontSize: 16)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.lato(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF374151),
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.lato(
+            fontSize: 10,
+            color: const Color(0xFF6B7280),
+          ),
+        ),
+      ],
     );
   }
 }

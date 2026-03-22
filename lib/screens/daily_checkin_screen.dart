@@ -251,7 +251,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildStepTitle('Good Morning!', 'How did you sleep last night?'),
+          _buildStepTitle(_getGreeting(), 'How did you sleep last night?'),
           
           Text(
             _getSleepEmoji(_sleepQuality),
@@ -489,4 +489,12 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
       ),
     );
   }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning! ☀️';
+    if (hour < 17) return 'Good Afternoon! 🌤️';
+    return 'Good Evening! 🌙';
+  }
 }
+

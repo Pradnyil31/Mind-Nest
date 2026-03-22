@@ -48,6 +48,9 @@ import '../widgets/home/home_favorites_list.dart';
 import '../widgets/compact_progress_insights.dart';
 import '../widgets/badge_unlock_dialog.dart';
 import '../widgets/calm/mini_audio_player.dart';
+import 'package:showcaseview/showcaseview.dart';
+import '../config/tour_keys.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -112,83 +115,114 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         Positioned.fill(child: Container(color: Colors.white.withOpacity(0.1))),
 
-        Scaffold(
-          backgroundColor: Colors.transparent,
-          resizeToAvoidBottomInset: false,
-          extendBody: false,
-          body: IndexedStack(index: _currentIndex, children: _screens),
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: AppColors.backgroundLight,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadowColor,
-                  blurRadius: 20,
-                  offset: const Offset(0, -5),
+        ShowCaseWidget(
+          enableAutoScroll: true,
+          onFinish: () {
+            TourKeys.onTourFinished?.call();
+            TourKeys.onTourFinished = null;
+          },
+          builder: (context) {
+              return Scaffold(
+                backgroundColor: Colors.transparent,
+                resizeToAvoidBottomInset: false,
+                extendBody: false,
+                body: Stack(
+                  children: [
+                    IndexedStack(index: _currentIndex, children: _screens),
+                    // Global Mini Audio Player
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: kBottomNavigationBarHeight +
+                          MediaQuery.of(context).padding.bottom,
+                      child: MiniAudioPlayer(
+                          primaryColor: const Color(0xFF4DB6AC)),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
-              ),
-              child: BottomNavigationBar(
-                currentIndex: _currentIndex,
-                onTap: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
-                type: BottomNavigationBarType.fixed,
-                backgroundColor: AppColors.backgroundLight,
-                selectedItemColor: AppColors.primary,
-                unselectedItemColor: AppColors.navBarUnselected,
-                selectedLabelStyle: GoogleFonts.lato(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                bottomNavigationBar: Showcase(
+                  key: TourKeys.navBarKey,
+                  title: '🧭 Navigation',
+                  description: 'Switch between Home, Calm, Chat, and Profile anytime from here!',
+                  targetBorderRadius: BorderRadius.circular(24),
+                  tooltipBackgroundColor: const Color(0xFF1C1C2E),
+                  textColor: Colors.white,
+                  titleTextStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                  descTextStyle: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFCBCBDB),
+                    height: 1.5,
+                  ),
+                  child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundLight,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.shadowColor,
+                        blurRadius: 20,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                    child: BottomNavigationBar(
+                      currentIndex: _currentIndex,
+                      onTap: (index) {
+                        setState(() {
+                          _currentIndex = index;
+                        });
+                      },
+                      type: BottomNavigationBarType.fixed,
+                      backgroundColor: AppColors.backgroundLight,
+                      selectedItemColor: AppColors.primary,
+                      unselectedItemColor: AppColors.navBarUnselected,
+                      selectedLabelStyle: GoogleFonts.lato(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                      unselectedLabelStyle: GoogleFonts.lato(fontSize: 12),
+                      elevation: 0,
+                      items: const [
+                        BottomNavigationBarItem(
+                          icon: Icon(Icons.home_rounded),
+                          activeIcon: Icon(Icons.home_rounded),
+                          label: 'Home',
+                        ),
+                        BottomNavigationBarItem(
+                          icon: Icon(Icons.spa_outlined),
+                          activeIcon: Icon(Icons.spa_rounded),
+                          label: 'Calm',
+                        ),
+                        BottomNavigationBarItem(
+                          icon: Icon(Icons.chat_bubble_outline),
+                          activeIcon: Icon(Icons.chat_bubble_rounded),
+                          label: 'Chat',
+                        ),
+                        BottomNavigationBarItem(
+                          icon: Icon(Icons.person_outline),
+                          activeIcon: Icon(Icons.person),
+                          label: 'Profile',
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                unselectedLabelStyle: GoogleFonts.lato(fontSize: 12),
-                elevation: 0,
-                items: const [
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.home_rounded),
-                    activeIcon: Icon(Icons.home_rounded),
-                    label: 'Home',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.spa_outlined),
-                    activeIcon: Icon(Icons.spa_rounded),
-                    label: 'Calm',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.chat_bubble_outline),
-                    activeIcon: Icon(Icons.chat_bubble_rounded),
-                    label: 'Chat',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.person_outline),
-                    activeIcon: Icon(Icons.person),
-                    label: 'Profile',
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
-        ),
-
-        // Global Mini Audio Player
-        Positioned(
-          left: 0,
-          right: 0,
-          // Keep this *above* the bottom navigation bar so it never blocks taps.
-          bottom:
-              kBottomNavigationBarHeight + MediaQuery.of(context).padding.bottom,
-          child: MiniAudioPlayer(primaryColor: const Color(0xFF4DB6AC)),
-        ),
-      ],
+        ],
     );
   }
 }
+
 
 class HomeContent extends ConsumerStatefulWidget {
   const HomeContent({Key? key}) : super(key: key);
@@ -201,6 +235,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
   String? _todaysMotive;
   bool _hasCheckedMotive = false;
   bool _checkInCompleted = false;
+  Map<String, dynamic>? _todayCheckInData;
 
   // Routine tracking
   TimeOfDay _wakeTime = const TimeOfDay(hour: 7, minute: 0);
@@ -208,11 +243,59 @@ class _HomeContentState extends ConsumerState<HomeContent> {
 
   Set<int> _activeDaysThisWeek = {};
 
+  // Tour
+  final ScrollController _scrollController = ScrollController();
+  bool _tourStarted = false;
+  bool _suppressMotiveForTour = false;
+  List<String> _lastGoals = [];
+  String? _lastPrimaryMotive;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initialLoad();
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _maybeStartTour() async {
+    if (_tourStarted) return;
+    setState(() => _tourStarted = true);
+    try {
+      final user = ref.read(currentUserProvider);
+      final uid = user?.uid ?? 'guest';
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'has_shown_home_tour_$uid';
+      final hasShown = prefs.getBool(key) ?? false;
+      if (!hasShown && mounted) {
+        // Suppress motive popup until tour finishes
+        setState(() => _suppressMotiveForTour = true);
+        TourKeys.onTourFinished = _triggerMotiveAfterTour;
+        await Future.delayed(const Duration(milliseconds: 1000));
+        if (mounted) {
+          ShowCaseWidget.of(context).startShowCase(TourKeys.featureTourKeys);
+          await prefs.setBool(key, true);
+        }
+      }
+    } catch (e) {
+      debugPrint('[Tour] Error starting tour: $e');
+      setState(() => _suppressMotiveForTour = false);
+    }
+  }
+
+  void _triggerMotiveAfterTour() {
+    if (!mounted) return;
+    setState(() => _suppressMotiveForTour = false);
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        _showDailyMotivePrompt(context, _lastGoals, _lastPrimaryMotive);
+      }
     });
   }
 
@@ -482,12 +565,20 @@ class _HomeContentState extends ConsumerState<HomeContent> {
   }
 
   Future<void> _checkCheckInStatus(String uid) async {
-    final hasCheckedIn = await ref
-        .read(checkInServiceProvider)
-        .hasCheckedInToday(uid);
+    final checkInService = ref.read(checkInServiceProvider);
+    final hasCheckedIn = await checkInService.hasCheckedInToday(uid);
+    
+    Map<String, dynamic>? checkInData;
+    if (hasCheckedIn) {
+      try {
+        checkInData = await checkInService.getTodayCheckIn(uid);
+      } catch (_) {}
+    }
+
     if (mounted) {
       setState(() {
         _checkInCompleted = hasCheckedIn;
+        _todayCheckInData = checkInData;
       });
     }
   }
@@ -908,10 +999,21 @@ class _HomeContentState extends ConsumerState<HomeContent> {
             sleepDataAll = Map<String, dynamic>.from(data['sleepData']);
           }
 
-          // Motive Check Trigger
-          if (!_hasCheckedMotive) {
+          // Store for post-tour motive prompt
+          _lastGoals = goals;
+          _lastPrimaryMotive = primaryMotive;
+
+          // Motive Check Trigger — only after tour check is complete
+          if (!_hasCheckedMotive && !_suppressMotiveForTour && _tourStarted) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _handleMotiveCheck(context, goals, primaryMotive);
+            });
+          }
+
+          // Feature Tour: trigger once after data is loaded and widgets are rendered
+          if (!_tourStarted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Future.delayed(const Duration(milliseconds: 600), _maybeStartTour);
             });
           }
 
@@ -984,6 +1086,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
             final scrollBottomPadding = bottomSafe + 160;
 
             return SingleChildScrollView(
+              controller: _scrollController,
               padding: EdgeInsets.only(bottom: scrollBottomPadding),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -1017,43 +1120,79 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      HomeFavoritesList(
-                        activities: additionalActivities,
-                        routine: routine,
-                        textColor: textColor,
-                        onCheckInComplete: () {
-                          _checkCheckInStatus(user.uid);
-                        },
+                      Showcase(
+                        key: TourKeys.favoritesKey,
+                        title: '⭐ Quick Favorites',
+                        description: 'Jump straight into your most-loved exercises and meditations!',
+                        targetBorderRadius: BorderRadius.circular(20),
+                        tooltipBackgroundColor: const Color(0xFF1C1C2E),
+                        textColor: Colors.white,
+                        titleTextStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                        descTextStyle: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFFCBCBDB),
+                          height: 1.5,
+                        ),
+                        child: HomeFavoritesList(
+                          activities: additionalActivities,
+                          routine: routine,
+                          textColor: textColor,
+                          onCheckInComplete: () {
+                            _checkCheckInStatus(user.uid);
+                          },
+                        ),
                       ),
                       const SizedBox(height: 32),
                     ],
 
                     // Check In Card
-                    if (!_checkInCompleted) ...[
-                      HomeCheckInCard(
-                        isCompleted: _checkInCompleted,
-                        onTap: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const DailyCheckInScreen(),
-                            ),
-                          );
-                          if (result == true) {
-                            _checkCheckInStatus(user.uid);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                    ],
+                    HomeCheckInCard(
+                      isCompleted: _checkInCompleted,
+                      checkInData: _todayCheckInData,
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DailyCheckInScreen(),
+                          ),
+                        );
+                        if (result == true) {
+                          _checkCheckInStatus(user.uid);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
 
-                    HomeFocusCard(
-                      displayName: displayName,
-                      goals: goals,
-                      routine: routine,
-                      loginDates: loginDates,
-                      primaryMotive: primaryMotive,
-                      todaysMotive: _todaysMotive,
+                    Showcase(
+                      key: TourKeys.taskCardKey,
+                      title: '📋 Manage Routine',
+                      description: 'Tap to add daily activities and view your weekly consistency streak!',
+                      targetBorderRadius: BorderRadius.circular(32),
+                      tooltipBackgroundColor: const Color(0xFF1C1C2E),
+                      textColor: Colors.white,
+                      titleTextStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                      descTextStyle: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFFCBCBDB),
+                        height: 1.5,
+                      ),
+                      child: HomeFocusCard(
+                        displayName: displayName,
+                        goals: goals,
+                        routine: routine,
+                        loginDates: loginDates,
+                        primaryMotive: primaryMotive,
+                        todaysMotive: _todaysMotive,
+                        activeDaysThisWeek: _activeDaysThisWeek,
+                      ),
                     ),
 
                     const SizedBox(height: 24),
@@ -1074,23 +1213,62 @@ class _HomeContentState extends ConsumerState<HomeContent> {
 
                     const SizedBox(height: 24),
 
-                    HomeRoutineSection(
-                      selectedActivities: routineActivities,
-                      temporarySchedule: temporarySchedule,
-                      routineSchedule: routineSchedule,
-                      wakeTime: effectiveWakeTime,
-                      bedTime: effectiveBedTime,
-                      completedActivities: completedActivities,
-                      onToggleActivity: (activity, checked) {
-                        _toggleActivity(user.uid, activity, checked);
-                      },
-                      textColor: textColor,
-                      streak: homeState.streak,
+                    Showcase(
+                      key: TourKeys.manageRoutineKey,
+                      title: '⏰ Daily Schedule',
+                      description: 'Your time-blocked plan for the day — just follow along and check off each activity!',
+                      targetBorderRadius: BorderRadius.circular(20),
+                      tooltipBackgroundColor: const Color(0xFF1C1C2E),
+                      textColor: Colors.white,
+                      titleTextStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                      descTextStyle: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFFCBCBDB),
+                        height: 1.5,
+                      ),
+                      child: HomeRoutineSection(
+                        selectedActivities: routineActivities,
+                        temporarySchedule: temporarySchedule,
+                        routineSchedule: routineSchedule,
+                        wakeTime: effectiveWakeTime,
+                        bedTime: effectiveBedTime,
+                        completedActivities: completedActivities,
+                        onToggleActivity: (activity, checked) {
+                          _toggleActivity(user.uid, activity, checked);
+                        },
+                        textColor: textColor,
+                        streak: homeState.streak,
+                      ),
                     ),
 
                     const SizedBox(height: 32),
 
-                    CompactProgressInsights(userId: user.uid),
+                    Showcase(
+                      key: TourKeys.insightsKey,
+                      title: '📊 Progress Insights',
+                      description: 'See your streak, weekly activity count, and calm sessions all at a glance!',
+                      targetBorderRadius: BorderRadius.circular(20),
+                      tooltipBackgroundColor: const Color(0xFF1C1C2E),
+                      textColor: Colors.white,
+                      titleTextStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                      descTextStyle: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFFCBCBDB),
+                        height: 1.5,
+                      ),
+                      child: CompactProgressInsights(
+                        userId: user.uid,
+                        todayCheckInData: _todayCheckInData,
+                      ),
+                    ),
 
                     const SizedBox(height: 32),
                   ],

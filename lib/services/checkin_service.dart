@@ -110,4 +110,23 @@ class CheckInService {
 
     return query.docs.isNotEmpty;
   }
+
+  // Get today's check-in data to display in Insights/Card
+  Future<Map<String, dynamic>?> getTodayCheckIn(String userId) async {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    final query = await _checkInsCollection
+        .where('userId', isEqualTo: userId)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .limit(1)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      return query.docs.first.data() as Map<String, dynamic>;
+    }
+    return null;
+  }
 }
