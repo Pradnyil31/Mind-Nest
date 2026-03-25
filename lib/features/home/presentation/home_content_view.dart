@@ -1,13 +1,11 @@
-import 'dart:math';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../config/motive_config.dart';
-import '../../../config/routine_config.dart';
 import '../../../providers/app_providers.dart';
+import '../../../services/personalization_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/badge_notification.dart';
 import '../../../widgets/home/home_check_in_card.dart';
@@ -15,10 +13,21 @@ import '../../../widgets/home/home_favorites_list.dart';
 import '../../../widgets/home/home_focus_card.dart';
 import '../../../widgets/home/home_header.dart';
 import '../../../widgets/home/home_routine_section.dart';
+import '../../../widgets/home/personalized_recommendation_card.dart';
+import '../../../widgets/home/home_ai_coach_card.dart';
 import '../../../widgets/compact_progress_insights.dart';
 import '../../../screens/daily_checkin_screen.dart';
+import '../../../screens/breathing_screen.dart';
+import '../../../screens/grounding_exercise_screen.dart';
+import '../../../screens/meditation_library_screen.dart';
+import '../../../screens/meditation_player_screen.dart';
+import '../../../screens/journaling_screen.dart';
+import '../../../screens/smart_goals_screen.dart';
+import '../../../screens/calm_screen.dart';
 import '../../../screens/sleep_recovery_screen.dart';
+import '../../../screens/chat_screen.dart';
 import '../../home/application/home_controller.dart';
+import '../../home/application/home_routine_engine.dart';
 
 /// Extracted Home content widget for the main Home tab.
 ///
@@ -36,6 +45,7 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   String? _todaysMotive;
   bool _hasCheckedMotive = false;
   bool _checkInCompleted = false;
+  Map<String, dynamic>? _todayCheckInData;
 
   // Routine tracking
   TimeOfDay _wakeTime = const TimeOfDay(hour: 7, minute: 0);
@@ -145,8 +155,8 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
       }
 
       final pool = MotiveConfig.getFullActivityPool(motive);
-      final newDaily = _generateBalancedRoutine(pool, taskCount);
-      final newSchedule = _calculateDynamicSchedule(
+      final newDaily = HomeRoutineEngine.generateBalancedRoutine(pool, taskCount);
+      final newSchedule = HomeRoutineEngine.calculateDynamicSchedule(
         newDaily,
         _wakeTime,
         _bedTime,
@@ -170,7 +180,7 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
           if (activity.toLowerCase().contains('caffeine') &&
               (activity.toLowerCase().contains('cut') ||
                   activity.toLowerCase().contains('off'))) {
-            final correctTime = _minToTime(bedMin - 10 * 60);
+            final correctTime = HomeRoutineEngine.minToTime(bedMin - 10 * 60);
             if (time != correctTime) {
               schedule[activity] = correctTime;
               needsFix = true;
@@ -184,65 +194,6 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
         }
       }
     }
-  }
-
-  List<String> _generateBalancedRoutine(List<String> pool, int count) {
-    final rng = Random();
-
-    final morningPool = pool
-        .where((a) => RoutineConfig.getTimePeriod(a) == 'Morning')
-        .toList();
-    final afternoonPool = pool
-        .where((a) => RoutineConfig.getTimePeriod(a) == 'Afternoon')
-        .toList();
-    final eveningPool = pool
-        .where((a) => RoutineConfig.getTimePeriod(a) == 'Evening')
-        .toList();
-
-    if (morningPool.length < 4) {
-      morningPool.addAll(RoutineConfig.getActivitiesForPeriod('Morning'));
-    }
-    if (afternoonPool.length < 4) {
-      afternoonPool.addAll(RoutineConfig.getActivitiesForPeriod('Afternoon'));
-    }
-    if (eveningPool.length < 4) {
-      eveningPool.addAll(RoutineConfig.getActivitiesForPeriod('Evening'));
-    }
-
-    morningPool.shuffle(rng);
-    afternoonPool.shuffle(rng);
-    eveningPool.shuffle(rng);
-
-    final base = count ~/ 3;
-    final rem = count % 3;
-    final mCount = base + (rem > 0 ? 1 : 0);
-    final aCount = base + (rem > 1 ? 1 : 0);
-    final eCount = base;
-
-    final result = <String>{};
-
-    void pickFrom(List<String> src, int needed) {
-      int taken = 0;
-      for (final a in src) {
-        if (taken >= needed) break;
-        if (result.add(a)) taken++;
-      }
-    }
-
-    pickFrom(morningPool, mCount);
-    pickFrom(afternoonPool, aCount);
-    pickFrom(eveningPool, eCount);
-
-    if (result.length < count) {
-      final all = [...morningPool, ...afternoonPool, ...eveningPool]
-        ..shuffle(rng);
-      for (final a in all) {
-        if (result.length >= count) break;
-        result.add(a);
-      }
-    }
-
-    return result.take(count).toList();
   }
 
   Future<void> _toggleActivity(
@@ -304,14 +255,71 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   }
 
   Future<void> _checkCheckInStatus(String uid) async {
-    final hasCheckedIn = await ref
-        .read(checkInServiceProvider)
-        .hasCheckedInToday(uid);
+    final checkInService = ref.read(checkInServiceProvider);
+    final hasCheckedIn = await checkInService.hasCheckedInToday(uid);
+    Map<String, dynamic>? checkInData;
+    if (hasCheckedIn) {
+      checkInData = await checkInService.getTodayCheckIn(uid);
+    }
     if (mounted) {
       setState(() {
         _checkInCompleted = hasCheckedIn;
+        _todayCheckInData = checkInData;
       });
     }
+  }
+
+  String _buildRecommendationSubtitle({
+    String? primaryMotive,
+    String? experienceLevel,
+    String? mood,
+  }) {
+    if (mood != null && mood.isNotEmpty) {
+      return 'Based on your check-in: feeling $mood today.';
+    }
+    if (primaryMotive != null && primaryMotive.isNotEmpty) {
+      return 'Picked for your ${primaryMotive.toLowerCase()} focus.';
+    }
+    if (experienceLevel != null && experienceLevel.isNotEmpty) {
+      return 'Matched to where you are right now.';
+    }
+    return 'A calm pick to support your day.';
+  }
+
+  void _openRecommendation(RecommendedExercise recommendation) {
+    Widget? target;
+    switch (recommendation.routeKey) {
+      case 'breathing':
+        target = const BreathingScreen();
+        break;
+      case 'grounding':
+        target = const GroundingExerciseScreen();
+        break;
+      case 'journaling':
+        target = const JournalingScreen();
+        break;
+      case 'meditation':
+        if (recommendation.meditation != null) {
+          target = MeditationPlayerScreen(meditation: recommendation.meditation!);
+        } else {
+          target = const MeditationLibraryScreen();
+        }
+        break;
+      case 'goals':
+        target = const SmartGoalsScreen();
+        break;
+      case 'calm':
+        target = const CalmScreen();
+        break;
+      case 'checkin':
+        target = const DailyCheckInScreen();
+        break;
+      default:
+        target = null;
+    }
+
+    if (target == null) return;
+    Navigator.push(context, MaterialPageRoute(builder: (_) => target!));
   }
 
   Future<void> _handleMotiveCheck(
@@ -630,79 +638,6 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
     }
   }
 
-  String _minToTime(int totalMinutes) {
-    totalMinutes = totalMinutes % (24 * 60);
-    final h = totalMinutes ~/ 60;
-    final m = totalMinutes % 60;
-    final period = h >= 12 ? 'PM' : 'AM';
-    final h12 = h > 12 ? h - 12 : (h == 0 ? 12 : h);
-    return "$h12:${m.toString().padLeft(2, '0')} $period";
-  }
-
-  Map<String, String> _calculateDynamicSchedule(
-    List<String> activities,
-    TimeOfDay wakeTime,
-    TimeOfDay bedTime,
-  ) {
-    final schedule = <String, String>{};
-
-    int wakeMin = wakeTime.hour * 60 + wakeTime.minute;
-    int bedMin = bedTime.hour * 60 + bedTime.minute;
-    if (bedMin < wakeMin) bedMin += 24 * 60;
-
-    int morningOffset = 0;
-    int afternoonOffset = 0;
-
-    int afternoonStart = 12 * 60;
-    if (afternoonStart < wakeMin + 4 * 60) {
-      afternoonStart = wakeMin + 4 * 60;
-    }
-
-    int eveningStart = 18 * 60;
-
-    for (var activity in activities) {
-      String timeString = "";
-      final lower = activity.toLowerCase();
-
-      if (lower.contains('morning sun') || lower.contains('wake')) {
-        timeString = _formatTimeOfDay(wakeTime);
-      } else if (lower.contains('caffeine') &&
-          (lower.contains('cut') || lower.contains('delay'))) {
-        if (lower.contains('delay')) {
-          timeString = _minToTime(wakeMin + 90);
-        } else {
-          timeString = _minToTime(bedMin - 10 * 60);
-        }
-      } else if (lower.contains('sleep') || lower.contains('bed time')) {
-        timeString = _formatTimeOfDay(bedTime);
-      } else if (lower.contains('wind down')) {
-        timeString = _minToTime(bedMin - 60);
-      } else {
-        final period = RoutineConfig.getTimePeriod(activity);
-        if (period == 'Morning') {
-          timeString = _minToTime(wakeMin + 15 + morningOffset);
-          morningOffset += 30;
-        } else if (period == 'Afternoon') {
-          timeString = _minToTime(afternoonStart + afternoonOffset);
-          afternoonOffset += 60;
-        } else {
-          timeString = _minToTime(eveningStart + 60);
-        }
-      }
-
-      schedule[activity] = timeString;
-    }
-
-    return schedule;
-  }
-
-  String _formatTimeOfDay(TimeOfDay t) {
-    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-    final m = t.minute.toString().padLeft(2, '0');
-    final period = t.period == DayPeriod.am ? 'AM' : 'PM';
-    return "$h:$m $period";
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
@@ -722,6 +657,8 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
         List<String> routineActivities = [];
         List<String> additionalActivities = [];
         String? primaryMotive;
+        String? experienceLevel;
+        List<String> supportAreas = <String>[];
         List<DateTime> loginDates = [];
         Map<String, dynamic> sleepDataAll = {};
 
@@ -772,6 +709,10 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
           }
 
           primaryMotive = data['primaryMotive'] as String?;
+          experienceLevel = data['experienceLevel'] as String?;
+          if (data['supportAreas'] != null) {
+            supportAreas = List<String>.from(data['supportAreas']);
+          }
 
           if (data['loginDates'] != null) {
             loginDates = (data['loginDates'] as List<dynamic>)
@@ -840,84 +781,122 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
               effectiveBedTime,
             );
 
+            final topRecommendation = homeState.recommendation ??
+                (() {
+                  final recommendations = PersonalizationService.getRecommendations(
+                    motive: primaryMotive,
+                    experienceLevel: experienceLevel,
+                    supportAreas: supportAreas,
+                  );
+                  return recommendations.isNotEmpty ? recommendations.first : null;
+                })();
+            final recommendationSubtitle = _buildRecommendationSubtitle(
+              primaryMotive: primaryMotive,
+              experienceLevel: experienceLevel,
+              mood: _todayCheckInData?['mood'] as String?,
+            );
+
+            final bool hasRoutine = routineActivities.isNotEmpty;
+            final String focusTitle =
+                hasRoutine ? 'Continue your routine' : 'Start gently today';
+            final String focusSubtitle = hasRoutine
+                ? 'Pick up right where you left off.'
+                : 'Build one calm habit today.';
+            final String? focusHint =
+                homeState.streak > 0 ? '${homeState.streak}-day streak' : null;
+
             return SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 100),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    HomeHeader(
-                      displayName: displayName,
-                      greeting: _getGreetingFor(effectiveWakeTime),
-                      textColor: textColor,
-                    ),
-                    const SizedBox(height: 32),
-                    if (additionalActivities.isNotEmpty) ...[
-                      Text(
-                        'My Favorites',
-                        style: GoogleFonts.lato(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 140),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  HomeHeader(
+                    displayName: displayName,
+                    greeting: _getGreetingFor(effectiveWakeTime),
+                    textColor: textColor,
+                  ),
+                  const SizedBox(height: 20),
+                  HomeCheckInCard(
+                    isCompleted: _checkInCompleted,
+                    checkInData: _todayCheckInData,
+                    onTap: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DailyCheckInScreen(),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      HomeFavoritesList(
-                        activities: additionalActivities,
-                        routine: routine,
-                        textColor: textColor,
-                        onCheckInComplete: () {
-                          _checkCheckInStatus(user.uid);
-                        },
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-                    if (!_checkInCompleted) ...[
-                      HomeCheckInCard(
-                        isCompleted: _checkInCompleted,
-                        onTap: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const DailyCheckInScreen(),
-                            ),
-                          );
-                          if (result == true) {
-                            _checkCheckInStatus(user.uid);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                    HomeFocusCard(
-                      displayName: displayName,
-                      goals: goals,
-                      routine: routine,
-                      loginDates: loginDates,
-                      primaryMotive: primaryMotive,
-                      todaysMotive: _todaysMotive,
+                      );
+                      if (result == true) {
+                        _checkCheckInStatus(user.uid);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  HomeFocusCard(
+                    displayName: displayName,
+                    goals: goals,
+                    routine: routine,
+                    loginDates: loginDates,
+                    primaryMotive: primaryMotive,
+                    todaysMotive: _todaysMotive,
+                    activeDaysThisWeek: _activeDaysThisWeek,
+                    title: focusTitle,
+                    subtitle: focusSubtitle,
+                    hint: focusHint,
+                  ),
+                  const SizedBox(height: 16),
+                  if (topRecommendation != null) ...[
+                    PersonalizedRecommendationCard(
+                      recommendation: topRecommendation,
+                      subtitle: recommendationSubtitle,
+                      onTap: () => _openRecommendation(topRecommendation),
                     ),
-                    const SizedBox(height: 24),
-                    HomeRoutineSection(
-                      selectedActivities: routineActivities,
-                      temporarySchedule: temporarySchedule,
-                      routineSchedule: routineSchedule,
-                      wakeTime: effectiveWakeTime,
-                      bedTime: effectiveBedTime,
-                      completedActivities: completedActivities,
-                      onToggleActivity: (activity, checked) {
-                        _toggleActivity(user.uid, activity, checked);
-                      },
-                      textColor: textColor,
-                      streak: homeState.streak,
-                    ),
-                    const SizedBox(height: 32),
-                    CompactProgressInsights(userId: user.uid),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 16),
                   ],
-                ),
+                  HomeRoutineSection(
+                    selectedActivities: routineActivities,
+                    temporarySchedule: temporarySchedule,
+                    routineSchedule: routineSchedule,
+                    wakeTime: effectiveWakeTime,
+                    bedTime: effectiveBedTime,
+                    completedActivities: completedActivities,
+                    onToggleActivity: (activity, checked) {
+                      _toggleActivity(user.uid, activity, checked);
+                    },
+                    textColor: textColor,
+                    streak: homeState.streak,
+                  ),
+                  const SizedBox(height: 16),
+                  CompactProgressInsights(userId: user.uid),
+                  const SizedBox(height: 16),
+                  HomeAICoachCard(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ChatScreen()),
+                    ),
+                  ),
+                  if (additionalActivities.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Quick tools',
+                      style: GoogleFonts.lato(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    HomeFavoritesList(
+                      activities: additionalActivities,
+                      routine: routine,
+                      textColor: textColor,
+                      onCheckInComplete: () {
+                        _checkCheckInStatus(user.uid);
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 32),
+                ],
               ),
             );
           },

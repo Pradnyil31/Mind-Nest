@@ -19,7 +19,7 @@ class HomeCheckInCard extends StatelessWidget {
     if (isCompleted) {
       return Container(
         width: double.infinity,
-        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        margin: const EdgeInsets.symmetric(vertical: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.green.shade50,
@@ -74,7 +74,7 @@ class HomeCheckInCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        margin: const EdgeInsets.symmetric(vertical: 10),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
            gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF8B9DFF)]),

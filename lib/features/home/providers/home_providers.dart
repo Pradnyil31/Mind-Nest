@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../services/firestore_service.dart';
 import '../../../services/routine_tracking_service.dart';
+import '../../../services/checkin_service.dart';
 
 /// Re-exports for Home feature so the controller can depend on
 /// stable, feature-scoped providers instead of importing from
@@ -15,5 +16,9 @@ final firestoreServiceProvider = Provider<FirestoreService>((ref) {
 
 final routineServiceProvider = Provider<RoutineTrackingService>((ref) {
   return RoutineTrackingService();
+});
+
+final checkInServiceProvider = Provider<CheckInService>((ref) {
+  return CheckInService();
 });
 

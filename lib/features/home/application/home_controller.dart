@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/home_providers.dart';
 import '../domain/home_state.dart';
+import '../../../services/personalization_service.dart';
 
 /// Central state controller for the Home screen.
 ///
@@ -17,15 +18,19 @@ class HomeController extends StateNotifier<HomeState> {
 
   Future<void> loadInitial(String uid) async {
     // Guard: avoid duplicate work if already loaded once.
-    if (!state.isLoading) return;
+    if (state.hasLoaded) return;
 
     try {
       final firestore = _ref.read(firestoreServiceProvider);
       final routineService = _ref.read(routineServiceProvider);
+      final checkInService = _ref.read(checkInServiceProvider);
 
       final userDoc = await firestore.getUserOnce(uid);
       String displayName = 'User';
       List<String> goals = <String>[];
+      String? primaryMotive;
+      String? experienceLevel;
+      List<String> supportAreas = <String>[];
       TimeOfDay wakeTime = state.wakeTime;
       TimeOfDay bedTime = state.bedTime;
 
@@ -33,6 +38,11 @@ class HomeController extends StateNotifier<HomeState> {
         final data = userDoc.data() as Map<String, dynamic>;
         displayName = data['displayName'] ?? displayName;
         goals = List<String>.from(data['primaryGoals'] ?? const <String>[]);
+        primaryMotive = data['primaryMotive'] as String?;
+        experienceLevel = data['experienceLevel'] as String?;
+        if (data['supportAreas'] != null) {
+          supportAreas = List<String>.from(data['supportAreas']);
+        }
 
         if (data['routine'] is Map<String, dynamic>) {
           final routine = data['routine'] as Map<String, dynamic>;
@@ -46,18 +56,45 @@ class HomeController extends StateNotifier<HomeState> {
       }
 
       final streak = await routineService.getCompletionStreak(uid);
+      final hasCheckedInToday = await checkInService.hasCheckedInToday(uid);
+      final completedSteps = await routineService.getTodayCompletedActivities(uid);
+
+      final rawSchedule = userDoc.exists
+          ? Map<String, String>.from(
+              (userDoc.data() as Map<String, dynamic>)['routineSchedule'] ?? {},
+            )
+          : <String, String>{};
+      final routineActivities = rawSchedule.isNotEmpty
+          ? rawSchedule.keys.toList()
+          : userDoc.exists
+              ? List<String>.from(
+                  (userDoc.data() as Map<String, dynamic>)['routineActivities'] ?? [],
+                )
+              : <String>[];
+      final totalSteps = routineActivities.length;
+
+      final recommendations = PersonalizationService.getRecommendations(
+        motive: primaryMotive,
+        experienceLevel: experienceLevel,
+        supportAreas: supportAreas,
+      );
+      final recommendation = recommendations.isNotEmpty ? recommendations.first : null;
 
       state = state.copyWith(
-        isLoading: false,
+        hasLoaded: true,
         displayName: displayName,
         goals: goals,
         streak: streak,
         wakeTime: wakeTime,
         bedTime: bedTime,
+        hasCheckedInToday: hasCheckedInToday,
+        completedSteps: completedSteps.length,
+        totalSteps: totalSteps,
+        recommendation: recommendation,
       );
     } catch (_) {
       // Keep failure silent for now; we can add explicit error handling later.
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(hasLoaded: true);
     }
   }
 
