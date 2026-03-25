@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/motive_config.dart';
 import '../models/calm_technique.dart';
-import '../services/auth_service.dart';
+import '../providers/app_providers.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/calm/interactive_soundscape_widget.dart';
 import '../widgets/calm/mini_audio_player.dart';
 import '../widgets/calm/quick_access_panel.dart';
 import '../widgets/calm/navigation_integration_widget.dart';
 import '../features/calm/application/motive_detection_service.dart';
 import '../features/calm/application/theme_transition_service.dart';
-import '../features/calm/application/calm_recommendation_service.dart';
 import '../features/calm/application/technique_library_service.dart';
 import '../features/calm/application/visual_design_service.dart';
 
@@ -30,8 +30,6 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     with TickerProviderStateMixin, ThemeTransitionMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  final CalmRecommendationService _recommendationService =
-      CalmRecommendationService();
   List<CalmTechnique> _personalizedTechniques = [];
   bool _isLoadingRecommendations = false;
 
@@ -76,9 +74,9 @@ class _EnhancedCalmScreenState extends ConsumerState<EnhancedCalmScreen>
     });
 
     try {
-      final user = AuthService().currentUser;
+      final user = ref.read(authServiceProvider).currentUser;
       if (user != null) {
-        final recommendations = await _recommendationService
+        final recommendations = await ref.read(calmRecommendationServiceProvider)
             .getPersonalizedRecommendations(user.uid, motive);
 
         if (mounted) {

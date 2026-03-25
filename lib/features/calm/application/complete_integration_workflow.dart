@@ -6,15 +6,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// Complete integration workflow for calm technique completion
 /// Handles all ecosystem integrations in a single coordinated flow
 class CompleteIntegrationWorkflow {
-  static final CompleteIntegrationWorkflow _instance =
-      CompleteIntegrationWorkflow._internal();
-  factory CompleteIntegrationWorkflow() => _instance;
-  CompleteIntegrationWorkflow._internal();
+  final EcosystemIntegrationService _ecosystemService;
+  final CalmProgressService _calmProgress;
+  final FirebaseFirestore _db;
 
-  final EcosystemIntegrationService _ecosystemService =
-      EcosystemIntegrationService();
-  final CalmProgressService _calmProgress = CalmProgressService();
-
+  CompleteIntegrationWorkflow({
+    EcosystemIntegrationService? ecosystemService,
+    CalmProgressService? calmProgressService,
+    FirebaseFirestore? firestore,
+  })  : _db = firestore ?? FirebaseFirestore.instance,
+        _ecosystemService = ecosystemService ??
+            EcosystemIntegrationService(
+              firestore: firestore ?? FirebaseFirestore.instance,
+            ),
+        _calmProgress = calmProgressService ??
+            CalmProgressService(
+              firestore: firestore ?? FirebaseFirestore.instance,
+            );
   /// Execute complete integration workflow when a calm technique is completed
   /// This is the main entry point for all ecosystem integrations
   Future<void> executeCompleteIntegration({
@@ -176,7 +184,7 @@ class CompleteIntegrationWorkflow {
     String moodSessionId,
   ) async {
     try {
-      final doc = await FirebaseFirestore.instance
+      final doc = await _db
           .collection('mood_sessions')
           .doc(moodSessionId)
           .get();
@@ -233,3 +241,5 @@ class CompleteIntegrationWorkflow {
     }
   }
 }
+
+

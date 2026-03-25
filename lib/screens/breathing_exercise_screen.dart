@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/breathing_technique.dart';
-import '../services/firestore_service.dart';
 import '../services/voice_service.dart';
+import '../providers/app_providers.dart';
+import '../providers/auth_provider.dart';
 
-class BreathingExerciseScreen extends StatefulWidget {
+class BreathingExerciseScreen extends ConsumerStatefulWidget {
   final BreathingTechnique technique;
 
   const BreathingExerciseScreen({Key? key, required this.technique}) : super(key: key);
 
   @override
-  State<BreathingExerciseScreen> createState() => _BreathingExerciseScreenState();
+  ConsumerState<BreathingExerciseScreen> createState() => _BreathingExerciseScreenState();
 }
 
-class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with TickerProviderStateMixin {
+class _BreathingExerciseScreenState extends ConsumerState<BreathingExerciseScreen> with TickerProviderStateMixin {
   late AnimationController _mainController;
   late Animation<double> _breatheAnimation;
   
@@ -36,7 +37,7 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
   bool _sessionLogged = false;
 
   // Voice
-  final VoiceService _voice = VoiceService();
+  late final VoiceService _voice;
   String _lastSpokenInstruction = '';
 
   // Background animation
@@ -45,6 +46,7 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
   @override
   void initState() {
     super.initState();
+    _voice = ref.read(voiceServiceProvider);
     _setupAnimations();
     _bgController = AnimationController(
       vsync: this,
@@ -125,9 +127,9 @@ class _BreathingExerciseScreenState extends State<BreathingExerciseScreen> with 
   }
 
   Future<void> _logCompletionAndShowDialog() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = ref.read(authServiceProvider).currentUser?.uid;
     if (uid != null) {
-      FirestoreService().logActivityCompletion(uid, 'breathing');
+      await ref.read(firestoreServiceProvider).logActivityCompletion(uid, 'breathing');
     }
 
     if (!mounted) return;

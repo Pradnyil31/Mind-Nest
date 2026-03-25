@@ -1,29 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/firestore_service.dart';
-import '../services/auth_service.dart';
 import '../config/motive_config.dart';
-// The instruction asked to remove 'routine_screen.dart', but it was not present.
-// The instruction's example output also removed 'home_screen.dart' and duplicated 'motive_config.dart'.
-// Following the explicit instruction to remove 'routine_screen.dart' means no change to the imports as it's not there.
-// However, if the intent was to match the provided 'Code Edit' snippet's import list,
-// then 'home_screen.dart' would be removed and 'motive_config.dart' would be duplicated.
-// Sticking strictly to "Remove the import of routine_screen.dart" and "without making any unrelated edits".
-// Since 'routine_screen.dart' is not in the original content, no change is made to the imports.
+import '../providers/auth_provider.dart';
+import '../providers/user_provider.dart';
 import 'home_screen.dart';
 
-class OnboardingFlowScreen extends StatefulWidget {
+class OnboardingFlowScreen extends ConsumerStatefulWidget {
   const OnboardingFlowScreen({Key? key}) : super(key: key);
 
   @override
-  State<OnboardingFlowScreen> createState() => _OnboardingFlowScreenState();
+  ConsumerState<OnboardingFlowScreen> createState() => _OnboardingFlowScreenState();
 }
 
-class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
+class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final FirestoreService _firestoreService = FirestoreService();
-  final AuthService _authService = AuthService();
   bool _isSaving = false;
 
   // selections
@@ -60,6 +52,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   ];
 
   void _nextPage() {
+    final validationError = _validateCurrentStep();
+    if (validationError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(validationError)),
+      );
+      return;
+    }
+
     if (_currentPage < 5) { // 6 pages total (0-5)
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -68,6 +68,27 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     } else {
       _finishOnboarding();
     }
+  }
+
+  String? _validateCurrentStep() {
+    switch (_currentPage) {
+      case 0:
+        if (_selectedMotive == null || _selectedMotive!.isEmpty) {
+          return 'Please choose your primary focus.';
+        }
+        break;
+      case 2:
+        if (_selectedExperienceLevel.isEmpty) {
+          return 'Please select your experience level.';
+        }
+        break;
+      case 3:
+        if (_selectedCommitment.isEmpty) {
+          return 'Please select your daily commitment.';
+        }
+        break;
+    }
+    return null;
   }
 
   void _previousPage() {
@@ -85,9 +106,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     });
 
     try {
-      final user = _authService.currentUser;
+      final user = ref.read(authServiceProvider).currentUser;
       if (user != null) {
-        await _firestoreService.updateUser(user.uid, {
+        await ref.read(firestoreServiceProvider).updateUser(user.uid, {
           'primaryMotive': _selectedMotive,
           'primaryGoals': [_selectedMotive ?? 'General Wellness'], // Save for compatibility
           'supportAreas': _selectedSupportAreas,
@@ -97,7 +118,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             'wakeUpTime': _formatTime(_wakeUpTime),
             'bedTime': _formatTime(_bedTime),
           },
-          'onboardingCompleted': true,
           'onboardingCompleted': true,
           // Set initial routine: scaled by commitment level
           'baseRoutine': MotiveConfig.generateRoutine(

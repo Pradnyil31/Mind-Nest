@@ -23,9 +23,11 @@ class CacheManagementService {
   static const int _maxCacheSize = 100 * 1024 * 1024; // 100MB
   static const int _maxAudioCacheSize = 50 * 1024 * 1024; // 50MB
 
-  CacheManagementService()
-    : _errorRecovery = ErrorRecoveryService(),
-      _dataIntegrity = DataIntegrityService();
+  CacheManagementService({
+    ErrorRecoveryService? errorRecovery,
+    DataIntegrityService? dataIntegrity,
+  }) : _errorRecovery = errorRecovery ?? ErrorRecoveryService(),
+       _dataIntegrity = dataIntegrity ?? DataIntegrityService();
 
   /// Initializes cache management system
   Future<bool> initialize() async {

@@ -1,26 +1,23 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'home_screen.dart';
 import 'onboarding_flow_screen.dart';
 import 'signup_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import '../providers/auth_provider.dart';
+import '../providers/user_provider.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
-  final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
   
   bool _isPasswordVisible = false;
   bool _isLoading = false;
@@ -32,6 +29,64 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _showForgotPasswordDialog() async {
+    final emailController = TextEditingController(text: _emailController.text.trim());
+    try {
+      await showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Reset Password'),
+            content: TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                hintText: 'you@example.com',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final email = emailController.text.trim();
+                  if (!email.contains('@')) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enter a valid email')),
+                    );
+                    return;
+                  }
+
+                  try {
+                    await ref.read(authServiceProvider).sendPasswordResetEmail(email);
+                    if (context.mounted) {
+                      Navigator.pop(dialogContext);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Password reset email sent')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString())),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Send'),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      emailController.dispose();
+    }
+  }
+
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -40,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final userCredential = await _authService.signInWithEmail(
+      final userCredential = await ref.read(authServiceProvider).signInWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
@@ -50,10 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // We verify this to decide routing, though AuthWrapper in main.dart also handles it.
         // Explicit navigation is smoother here.
         
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .get();
+        final userDoc = await ref.read(firestoreServiceProvider).getUserOnce(userCredential.user!.uid);
             
         bool onboardingCompleted = false;
         if (userDoc.exists) {
@@ -220,12 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      // TODO: Implement forgot password
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Forgot password coming soon')),
-                      );
-                    },
+                    onPressed: _showForgotPasswordDialog,
                     child: Text(
                       'Forgot Password?',
                       style: TextStyle(
@@ -316,14 +363,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: OutlinedButton(
                     onPressed: () async {
                       try {
-                        final userCredential = await _authService.signInWithGoogle();
+                        final userCredential = await ref.read(authServiceProvider).signInWithGoogle();
                         if (userCredential != null && userCredential.user != null) {
                            final user = userCredential.user!;
-                           final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+                           final userDoc = await ref.read(firestoreServiceProvider).getUserOnce(user.uid);
                            bool onboardingCompleted = false;
                            
                            if (!userDoc.exists) {
-                              await _firestoreService.createUser(UserModel(
+                              await ref.read(firestoreServiceProvider).createUser(UserModel(
                                 uid: user.uid,
                                 email: user.email ?? '',
                                 displayName: user.displayName ?? 'New User',

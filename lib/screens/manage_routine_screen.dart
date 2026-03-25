@@ -1,25 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
+import '../core/logger.dart';
+import '../providers/auth_provider.dart';
+import '../providers/app_providers.dart';
 import '../config/motive_config.dart';
-import '../services/notification_service.dart';
 import '../config/notification_content.dart';
-import '../services/routine_tracking_service.dart';
 import '../config/routine_config.dart';
 
-class ManageRoutineScreen extends StatefulWidget {
+class ManageRoutineScreen extends ConsumerStatefulWidget {
   const ManageRoutineScreen({Key? key}) : super(key: key);
 
   @override
-  State<ManageRoutineScreen> createState() => _ManageRoutineScreenState();
+  ConsumerState<ManageRoutineScreen> createState() => _ManageRoutineScreenState();
 }
 
-class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
-  final FirestoreService _firestoreService = FirestoreService();
-  final AuthService _authService = AuthService();
-  
+class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
   String? _userMotive;
   Map<String, String> _activitySchedule = {}; // activity -> time period
   List<String> _customActivities = [];
@@ -94,9 +90,9 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
   Map<String, String> _initialSchedule = {};
 
   Future<void> _loadUserRoutine() async {
-    final user = _authService.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user != null) {
-       final doc = await _firestoreService.getUserStream(user.uid).first;
+       final doc = await ref.read(firestoreServiceProvider).getUserStream(user.uid).first;
        if (doc.exists) {
          final data = doc.data() as Map<String, dynamic>;
          
@@ -217,11 +213,9 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
     return RoutineConfig.getTimePeriod(activity);
   }
 
-  final RoutineTrackingService _routineService = RoutineTrackingService();
-
   Future<void> _saveRoutine() async {
     setState(() => _isLoading = true);
-    final user = _authService.currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     
     if (user != null) {
       try {
@@ -231,10 +225,10 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
         // 2. Unmark them in Firestore so they appear as "To Do"
         for (final activity in newActivities) {
           try {
-             await _routineService.unmarkActivityComplete(user.uid, activity);
-          } catch (e) {
+             await ref.read(routineServiceProvider).unmarkActivityComplete(user.uid, activity);
+          } catch (e, stackTrace) {
              // Ignore individual unmark failures to prevent blocking save
-             print('Failed to unmark $activity: $e');
+             appLogger.e('Failed to unmark $activity', error: e, stackTrace: stackTrace);
           }
         }
 
@@ -244,7 +238,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
 
         // 4. Save new format
       final now = DateTime.now();
-      await _firestoreService.updateUser(user.uid, {
+      await ref.read(firestoreServiceProvider).updateUser(user.uid, {
         'routineSchedule': newSchedule, 
         'temporarySchedule': newSchedule, // Sync temp schedule too
         
@@ -260,17 +254,19 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
 
         // 5. Schedule Notifications
         try {
-           final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+           final userDoc = await ref.read(firestoreServiceProvider).getUserOnce(user.uid);
            if (userDoc.exists && userDoc.data() != null) {
               final data = userDoc.data() as Map<String, dynamic>;
               final name = data['displayName'] ?? 'there';
               final motive = data['primaryMotive'] ?? 'Wellness';
+              final notificationService = ref.read(notificationServiceProvider);
            
-              await NotificationService().requestPermissions();
-              await NotificationService().cancelAll();
+              await notificationService.init();
+              await notificationService.requestPermissions();
+              await notificationService.cancelAll();
               
               // Wake Up
-              await NotificationService().scheduleDailyNotification(
+              await notificationService.scheduleDailyNotification(
                 id: 1, 
                 title: 'Good Morning!', 
                 body: NotificationContent.getMorningMessage(name, motive), 
@@ -281,7 +277,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
               // Midday (Wake + 6 hours)
               final midday = _wakeTime.hour + 6;
               final middayHour = midday >= 24 ? midday - 24 : midday;
-              await NotificationService().scheduleDailyNotification(
+              await notificationService.scheduleDailyNotification(
                 id: 2, 
                 title: 'Check In', 
                 body: NotificationContent.getAfternoonMessage(name), 
@@ -292,7 +288,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
               // Evening (Bed - 2 hours)
               final evening = _bedTime.hour - 2;
               final eveningHour = evening < 0 ? evening + 24 : evening;
-              await NotificationService().scheduleDailyNotification(
+              await notificationService.scheduleDailyNotification(
                 id: 3, 
                 title: 'Wind Down', 
                 body: NotificationContent.getEveningMessage(name), 
@@ -301,7 +297,7 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
               );
               
               // Bedtime
-              await NotificationService().scheduleDailyNotification(
+              await notificationService.scheduleDailyNotification(
                 id: 4, 
                 title: 'Sweet Dreams', 
                 body: NotificationContent.getBedtimeMessage(name), 
@@ -309,8 +305,8 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
                 minute: _bedTime.minute
               );
            }
-        } catch (e) {
-           print('Notification scheduling failed: $e');
+        } catch (e, stackTrace) {
+           appLogger.e('Notification scheduling failed', error: e, stackTrace: stackTrace);
         }
         
         if (mounted) {
@@ -1195,44 +1191,42 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
                     ),
                   ),
                 ),
-              if (true) ...[ // Always show time badge
-                const SizedBox(width: 4),
-                // Time Badge & Edit Button
-                InkWell(
-                   onTap: isLocked ? () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Cannot edit past routines today.')),
-                      );
-                   } : () => _changeTimePeriod(activity),
-                   child: Container(
-                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                     decoration: BoxDecoration(
-                       color: isLocked ? Colors.grey.shade200 : _getTimePeriodColor(timePeriod!).withOpacity(0.2),
-                       borderRadius: BorderRadius.circular(8),
-                       border: Border.all(color: isLocked ? Colors.grey : _getTimePeriodColor(timePeriod)),
-                     ),
-                     child: Row(
-                       mainAxisSize: MainAxisSize.min,
-                       children: [
-                         Icon(
-                           isLocked ? Icons.lock : _getTimePeriodIcon(timePeriod), 
-                           size: 14, 
-                           color: isLocked ? Colors.grey : _getTimePeriodColor(timePeriod)
+              const SizedBox(width: 4),
+              // Time Badge & Edit Button
+              InkWell(
+                 onTap: isLocked ? () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Cannot edit past routines today.')),
+                    );
+                 } : () => _changeTimePeriod(activity),
+                 child: Container(
+                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                   decoration: BoxDecoration(
+                     color: isLocked ? Colors.grey.shade200 : _getTimePeriodColor(timePeriod!).withOpacity(0.2),
+                     borderRadius: BorderRadius.circular(8),
+                     border: Border.all(color: isLocked ? Colors.grey : _getTimePeriodColor(timePeriod)),
+                   ),
+                   child: Row(
+                     mainAxisSize: MainAxisSize.min,
+                     children: [
+                       Icon(
+                         isLocked ? Icons.lock : _getTimePeriodIcon(timePeriod), 
+                         size: 14, 
+                         color: isLocked ? Colors.grey : _getTimePeriodColor(timePeriod)
+                       ),
+                       const SizedBox(width: 4),
+                       Text(
+                         isLocked ? 'Locked' : timePeriod,
+                         style: GoogleFonts.lato(
+                           fontSize: 12,
+                           fontWeight: FontWeight.bold,
+                           color: isLocked ? Colors.grey : _getTimePeriodColor(timePeriod),
                          ),
-                         const SizedBox(width: 4),
-                         Text(
-                           isLocked ? 'Locked' : timePeriod,
-                           style: GoogleFonts.lato(
-                             fontSize: 12,
-                             fontWeight: FontWeight.bold,
-                             color: isLocked ? Colors.grey : _getTimePeriodColor(timePeriod),
-                           ),
-                         ),
-                       ],
-                     ),
+                       ),
+                     ],
                    ),
                  ),
-               ],
+               ),
               if (isRecommended && !isSelected && !isLocked)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1374,3 +1368,6 @@ class _ManageRoutineScreenState extends State<ManageRoutineScreen> {
     return "$h:$m $period";
   }
 }
+
+
+

@@ -6,12 +6,11 @@ import '../../../models/ambient_sound.dart';
 
 /// Service for managing sound presets including saving, loading, and recommendations
 class SoundPresetService {
-  static final SoundPresetService _instance = SoundPresetService._internal();
-  factory SoundPresetService() => _instance;
-  SoundPresetService._internal();
-
   final Logger _logger = Logger();
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirestoreService _firestoreService;
+
+  SoundPresetService({FirestoreService? firestoreService})
+      : _firestoreService = firestoreService ?? FirestoreService();
 
   static const String _collectionName = 'sound_presets';
 

@@ -1,22 +1,23 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/guided_meditation.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
-import '../services/meditation_analytics_service.dart';
 import '../services/personalization_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/meditation_provider.dart';
+import '../providers/user_provider.dart';
 import 'meditation_player_screen.dart';
 import 'meditation_timer_screen.dart';
 
-class MeditationLibraryScreen extends StatefulWidget {
+class MeditationLibraryScreen extends ConsumerStatefulWidget {
   const MeditationLibraryScreen({Key? key}) : super(key: key);
 
   @override
-  State<MeditationLibraryScreen> createState() => _MeditationLibraryScreenState();
+  ConsumerState<MeditationLibraryScreen> createState() => _MeditationLibraryScreenState();
 }
 
-class _MeditationLibraryScreenState extends State<MeditationLibraryScreen> {
+class _MeditationLibraryScreenState extends ConsumerState<MeditationLibraryScreen> {
   MeditationCategory? _selectedCategory;
   String? _userMotive;
   String? _experienceLevel;
@@ -31,10 +32,10 @@ class _MeditationLibraryScreenState extends State<MeditationLibraryScreen> {
   }
 
   Future<void> _loadMeditationData() async {
-    final user = AuthService().currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user != null) {
-      final analyticsService = MeditationAnalyticsService();
-      final firestoreService = FirestoreService();
+      final analyticsService = ref.read(meditationAnalyticsProvider);
+      final firestoreService = ref.read(firestoreServiceProvider);
       
       final streak = await analyticsService.getCurrentStreak(user.uid);
       final stats = await analyticsService.getStats(user.uid);

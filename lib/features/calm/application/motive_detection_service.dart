@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/motive_config.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/firestore_service.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/user_provider.dart';
 
 /// Service for detecting motive changes and triggering interface adaptations
 /// Monitors user profile changes and provides real-time motive updates
@@ -687,5 +689,8 @@ class MotiveColorTheme {
 /// Provider for motive detection service
 final motiveDetectionProvider =
     StateNotifierProvider<MotiveDetectionService, MotiveDetectionState>(
-      (ref) => MotiveDetectionService(),
+      (ref) => MotiveDetectionService(
+        firestoreService: ref.read(firestoreServiceProvider),
+        authService: ref.read(authServiceProvider),
+      ),
     );

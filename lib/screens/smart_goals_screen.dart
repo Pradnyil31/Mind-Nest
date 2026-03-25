@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart'; 
 import '../models/smart_goal.dart';
-import '../services/goal_service.dart';
-import '../services/auth_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/goal_provider.dart';
 import 'create_goal_screen.dart';
 import '../widgets/activity_completion_dialog.dart';
 
-class SmartGoalsScreen extends StatelessWidget {
+class SmartGoalsScreen extends ConsumerWidget {
   const SmartGoalsScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final user = AuthService().currentUser;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDFCF4),
@@ -68,7 +69,7 @@ class SmartGoalsScreen extends StatelessWidget {
       body: user == null
           ? const Center(child: Text("Please sign in to view your goals."))
           : StreamBuilder<List<SmartGoal>>(
-              stream: GoalService().getGoalsStream(user.uid),
+              stream: ref.read(goalServiceProvider).getGoalsStream(user.uid),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -88,7 +89,7 @@ class SmartGoalsScreen extends StatelessWidget {
                   itemCount: goals.length,
                   itemBuilder: (context, index) {
                     final goal = goals[index];
-                    return _buildGoalCard(context, goal);
+                    return _buildGoalCard(context, ref, goal);
                   },
                 );
               },
@@ -143,7 +144,7 @@ class SmartGoalsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGoalCard(BuildContext context, SmartGoal goal) {
+  Widget _buildGoalCard(BuildContext context, WidgetRef ref, SmartGoal goal) {
     final double progress = goal.currentValue / goal.targetValue;
     final int percent = (progress * 100).toInt().clamp(0, 100);
     final Color color = Color(goal.colorValue);
@@ -221,7 +222,7 @@ class SmartGoalsScreen extends StatelessWidget {
                    color: Colors.grey,
                    onPressed: () {
                      // Potential Edit/Delete options
-                     _showDeleteConfirm(context, goal.id);
+                     _showDeleteConfirm(context, ref, goal.id);
                    },
                  ),
               ],
@@ -253,7 +254,7 @@ class SmartGoalsScreen extends StatelessWidget {
                              context,
                              savingText: 'Logging progress...',
                              onComplete: () async {
-                               await GoalService().updateProgress(goal.id, newVal);
+                               await ref.read(goalServiceProvider).updateProgress(goal.id, newVal);
                              },
                            );
                         }
@@ -289,7 +290,7 @@ class SmartGoalsScreen extends StatelessWidget {
     );
   }
 
-  void _showDeleteConfirm(BuildContext context, String goalId) {
+  void _showDeleteConfirm(BuildContext context, WidgetRef ref, String goalId) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -302,7 +303,7 @@ class SmartGoalsScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              GoalService().deleteGoal(goalId);
+              ref.read(goalServiceProvider).deleteGoal(goalId);
               Navigator.pop(ctx);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),

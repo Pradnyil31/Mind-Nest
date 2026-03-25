@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/calm/application/calm_recommendation_service.dart';
 import '../../models/calm_technique.dart';
-import '../../services/auth_service.dart';
+import '../../providers/app_providers.dart';
+import '../../providers/auth_provider.dart';
 
 /// Widget that displays personalized technique recommendations
 /// This would be integrated into the EnhancedCalmScreen
@@ -22,8 +23,8 @@ class RecommendationSection extends ConsumerStatefulWidget {
 }
 
 class _RecommendationSectionState extends ConsumerState<RecommendationSection> {
-  final CalmRecommendationService _recommendationService =
-      CalmRecommendationService();
+  CalmRecommendationService get _recommendationService =>
+      ref.read(calmRecommendationServiceProvider);
   List<CalmTechnique> _recommendations = [];
   bool _isLoading = true;
 
@@ -49,7 +50,7 @@ class _RecommendationSectionState extends ConsumerState<RecommendationSection> {
     });
 
     try {
-      final user = AuthService().currentUser;
+      final user = ref.read(authServiceProvider).currentUser;
       if (user != null) {
         final recommendations = await _recommendationService
             .getPersonalizedRecommendations(user.uid, widget.userMotive);

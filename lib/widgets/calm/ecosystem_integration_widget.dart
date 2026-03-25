@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../features/calm/application/ecosystem_integration_service.dart';
+import '../../providers/app_providers.dart';
 import '../../screens/journaling_screen.dart';
 import '../../screens/breathing_screen.dart';
 import '../../screens/meditation_library_screen.dart';
@@ -29,8 +29,6 @@ class EcosystemIntegrationWidget extends ConsumerStatefulWidget {
 
 class _EcosystemIntegrationWidgetState
     extends ConsumerState<EcosystemIntegrationWidget> {
-  final EcosystemIntegrationService _ecosystemService =
-      EcosystemIntegrationService();
   Map<String, dynamic> _integrationStatus = {};
   bool _isLoading = true;
 
@@ -42,7 +40,7 @@ class _EcosystemIntegrationWidgetState
 
   Future<void> _loadIntegrationStatus() async {
     try {
-      final status = await _ecosystemService.getEcosystemIntegrationStatus(
+      final status = await ref.read(ecosystemIntegrationServiceProvider).getEcosystemIntegrationStatus(
         widget.userId,
       );
       if (mounted) {

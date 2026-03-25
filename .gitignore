@@ -69,3 +69,7 @@ ios/Runner/GoogleService-Info.plist
 # Sensitive data
 **/*secret*
 **/*credential*
+
+# Node dependencies
+**/node_modules/
+

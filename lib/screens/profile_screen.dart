@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/timezone.dart' as tz;
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
-import '../services/notification_service.dart';
+import '../core/logger.dart';
 import '../services/voice_service.dart';
-import '../models/user_model.dart';
+import '../providers/app_providers.dart';
+import '../providers/auth_provider.dart';
 import '../config/motive_config.dart';
 import '../config/notification_content.dart';
 import 'welcome_screen.dart';
 import 'privacy_screen.dart';
 import 'about_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _voiceEnabled = true;
 
   @override
@@ -32,16 +30,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = AuthService();
+    final authService = ref.read(authServiceProvider);
     final user = authService.currentUser;
+
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF9FAFB),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.person_off_outlined, size: 48, color: Colors.grey),
+              const SizedBox(height: 12),
+              Text('Session expired', style: GoogleFonts.lato(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                    (route) => false,
+                  );
+                },
+                child: const Text('Go to Welcome'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: FirestoreService().getUserStream(user?.uid ?? ''),
+        stream: ref.read(firestoreServiceProvider).getUserStream(user.uid),
         builder: (context, snapshot) {
           String displayName = 'User';
-          String email = user?.email ?? '';
+          String email = user.email ?? '';
           String? primaryMotive;
           TimeOfDay wakeTime = const TimeOfDay(hour: 7, minute: 0);
           TimeOfDay bedTime = const TimeOfDay(hour: 22, minute: 0);
@@ -53,7 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (snapshot.hasData && snapshot.data!.exists) {
               final data = snapshot.data!.data() as Map<String, dynamic>;
               displayName = data['displayName'] ?? 'User';
-              email = user?.email ?? '';
+              email = user.email ?? '';
               primaryMotive = data['primaryMotive'] as String?;
               dailyCommitment = data['dailyCommitment'] as String? ?? '10 minutes';
               avatarEmoji = data['avatarEmoji'] ?? (displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U');
@@ -133,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                          trailing: Switch(
                            value: _voiceEnabled,
                            onChanged: (val) async {
-                             await VoiceService().setEnabled(val);
+                             await ref.read(voiceServiceProvider).setEnabled(val);
                              setState(() => _voiceEnabled = val);
                            },
                            activeColor: const Color(0xFF6C63FF),
@@ -151,88 +175,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen())),
                       ),
                       
-                      const SizedBox(height: 40),
-
-                      // ── DEVELOPER TEST SECTION ──────────────────────────
-                      _buildSectionHeader('🧪 Notification Tests'),
-                      const SizedBox(height: 12),
-                      _buildActionTile(
-                        icon: Icons.notifications_active_outlined,
-                        title: 'Fire Test Notification (5s)',
-                        onTap: () async {
-                          final ns = NotificationService();
-                          await ns.init();
-                          await ns.requestPermissions();
-                          await ns.flutterLocalNotificationsPlugin.zonedSchedule(
-                            id: 99,
-                            title: '✅ Test Notification',
-                            body: 'MindNest notifications are working!',
-                            scheduledDate: tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
-                            notificationDetails: const NotificationDetails(
-                              android: AndroidNotificationDetails(
-                                'daily_routine_channel',
-                                'Daily Routine Reminders',
-                                importance: Importance.max,
-                                priority: Priority.high,
-                              ),
-                              iOS: DarwinNotificationDetails(),
-                            ),
-                            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-                            matchDateTimeComponents: null,
-                          );
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('⏱ Notification will arrive in 5 seconds — minimize the app!'),
-                                duration: Duration(seconds: 4),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                      _buildActionTile(
-                        icon: Icons.list_alt_rounded,
-                        title: 'Check Pending Notifications',
-                        onTap: () async {
-                          final pending = await NotificationService()
-                              .flutterLocalNotificationsPlugin
-                              .pendingNotificationRequests();
-                          if (context.mounted) {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                title: Text(
-                                  'Pending: ${pending.length} notification${pending.length == 1 ? '' : 's'}',
-                                  style: GoogleFonts.lato(fontWeight: FontWeight.bold),
-                                ),
-                                content: pending.isEmpty
-                                    ? Text('No notifications scheduled yet.\nSave your routine to schedule them.', style: GoogleFonts.lato())
-                                    : SizedBox(
-                                        width: double.maxFinite,
-                                        child: ListView.builder(
-                                          shrinkWrap: true,
-                                          itemCount: pending.length,
-                                          itemBuilder: (_, i) => ListTile(
-                                            leading: const Icon(Icons.notifications, color: Color(0xFF6C63FF)),
-                                            title: Text(pending[i].title ?? '(no title)', style: GoogleFonts.lato(fontWeight: FontWeight.bold)),
-                                            subtitle: Text(pending[i].body ?? '', style: GoogleFonts.lato(fontSize: 12)),
-                                          ),
-                                        ),
-                                      ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: Text('OK', style: GoogleFonts.lato(color: const Color(0xFF6C63FF))),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                      // ────────────────────────────────────────────────────
-
                       const SizedBox(height: 40),
                       SizedBox(
                         width: double.infinity,
@@ -542,7 +484,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _pickCommitment(context, AuthService().currentUser?.uid, currentCommitment, primaryMotive, supportAreas),
+          onTap: () => _pickCommitment(context, ref.read(authServiceProvider).currentUser?.uid, currentCommitment, primaryMotive, supportAreas),
           borderRadius: BorderRadius.circular(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -594,56 +536,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (uid == null) return;
     final picked = await showTimePicker(context: context, initialTime: initial);
     if (picked != null) {
-      final formatted = "${picked.hour}:${picked.minute.toString().padLeft(2, '0')} ${picked.period == DayPeriod.am ? 'AM' : 'PM'}";
+      final formatted = _formatTime(picked);
       
       // Check if we should force regenerate today's routine
       bool forceRegenerate = false;
       final now = DateTime.now();
       if (now.hour < 12) {
-          // It's morning. Check if user has done any tasks.
-          // We need to fetch the user doc again to be sure or pass it in. 
-          // For simplicity, let's look at the snapshot data if possible, but better to query fresh.
-          final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-          if (userDoc.exists) {
-            final data = userDoc.data();
-            // check routine_completions collection for today? 
-            // Or simpler: check if 'completedActivities' list in user doc is empty? 
-            // The Home Screen logic maintains a local list or state. 
-            // In Firestore, we usually track completions in a subcollection or separate collection. 
-            // Let's assume we check the 'routine_completions' collection for today.
-             final startOfDay = DateTime(now.year, now.month, now.day);
-             final query = await FirebaseFirestore.instance
-                  .collection('routine_completions')
-                  .where('userId', isEqualTo: uid)
-                  .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-                  .get();
-             
-             if (query.docs.isEmpty) {
-                // No completed tasks today!
-                forceRegenerate = true;
-             }
-          }
+          forceRegenerate = !(await ref
+              .read(routineServiceProvider)
+              .hasAnyCompletedActivityToday(uid));
       }
 
-      await FirestoreService().updateUser(uid, {
+      await ref.read(firestoreServiceProvider).updateUser(uid, {
          'routine.$field': formatted,
          if (forceRegenerate) 'lastGeneratedDate': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
       });
       
       // Reschedule notifications with new time
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (userDoc.exists && userDoc.data() != null) {
-         final data = userDoc.data() as Map<String, dynamic>;
-         final name = data['displayName'] ?? 'there';
-         final motive = data['dailyMotive'] ?? 'Wellness';
-         final routine = Map<String, dynamic>.from(data['routine'] ?? {});
-         
-         TimeOfDay wakeTime = _parseTime(routine['wakeTime'] ?? "7:00 AM");
-         TimeOfDay bedTime = _parseTime(routine['bedTime'] ?? "10:00 PM");
-         
-         if (field == 'wakeTime') wakeTime = picked;
+      final userContext = await _getUserNotificationContext(uid);
+      if (userContext != null) {
+         final name = userContext['name'] as String;
+         final motive = userContext['motive'] as String;
+         var wakeTime = userContext['wakeTime'] as TimeOfDay;
+         var bedTime = userContext['bedTime'] as TimeOfDay;
+
+         if (field == 'wakeUpTime') wakeTime = picked;
          if (field == 'bedTime') bedTime = picked;
-         
+
          await _rescheduleNotifications(name, motive, wakeTime, bedTime);
       }
       
@@ -694,7 +613,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
          supportAreas: supportAreas,
        );
 
-       await FirestoreService().updateUser(uid, {
+       await ref.read(firestoreServiceProvider).updateUser(uid, {
          'dailyCommitment': selected,
          'baseRoutine': newRoutine,
        });
@@ -815,21 +734,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     onPressed: () async {
                       if (controller.text.isNotEmpty) {
-                        await FirestoreService().updateUser(uid, {
+                        await ref.read(firestoreServiceProvider).updateUser(uid, {
                           'displayName': controller.text.trim(),
                           'avatarEmoji': selectedEmoji,
                           'avatarColor': selectedColor,
                         });
                         
                         // Reschedule notifications just like before
-                        final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-                        if (userDoc.exists && userDoc.data() != null) {
-                           final data = userDoc.data() as Map<String, dynamic>;
-                           final motive = data['dailyMotive'] ?? 'Wellness';
-                           final routine = Map<String, dynamic>.from(data['routine'] ?? {});
-                           final wakeTime = _parseTime(routine['wakeTime'] ?? "7:00 AM");
-                           final bedTime = _parseTime(routine['bedTime'] ?? "10:00 PM");
-                           
+                        final userContext = await _getUserNotificationContext(uid);
+                        if (userContext != null) {
+                           final motive = userContext['motive'] as String;
+                           final wakeTime = userContext['wakeTime'] as TimeOfDay;
+                           final bedTime = userContext['bedTime'] as TimeOfDay;
+
                            await _rescheduleNotifications(controller.text.trim(), motive, wakeTime, bedTime);
                         }
                         
@@ -863,6 +780,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // --- Helpers ---
+
+  Future<Map<String, dynamic>?> _getUserNotificationContext(String uid) async {
+    final userDoc = await ref.read(firestoreServiceProvider).getUserOnce(uid);
+    if (!userDoc.exists || userDoc.data() == null) return null;
+
+    final data = userDoc.data() as Map<String, dynamic>;
+    final routine = Map<String, dynamic>.from(data['routine'] ?? {});
+
+    return <String, dynamic>{
+      'name': data['displayName'] ?? 'there',
+      'motive': (data['primaryMotive'] as String?) ?? 'Wellness',
+      'wakeTime': _parseTime(routine['wakeUpTime'] ?? '7:00 AM'),
+      'bedTime': _parseTime(routine['bedTime'] ?? '10:00 PM'),
+    };
+  }
   
   TimeOfDay _parseTime(String timeString) {
     try {
@@ -932,7 +864,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   return GestureDetector(
                     onTap: () async {
-                      final user = AuthService().currentUser;
+                      final user = ref.read(authServiceProvider).currentUser;
                       if (user != null) {
                          // 1. Generate new activities
                          final newActivities = MotiveConfig.generateRoutine(
@@ -941,49 +873,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             supportAreas: supportAreas,
                          );
                          
-                         // 2. Check if user has completed any tasks *today*
-                         // We'll query routine_completions for today
-                         final now = DateTime.now();
-                         final startOfDay = DateTime(now.year, now.month, now.day);
-                         
-                         final completionSnap = await FirebaseFirestore.instance
-                              .collection('routine_completions')
-                              .where('userId', isEqualTo: user.uid)
-                              .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-                              .get();
-                         
-                         bool hasActivityToday = false;
-                         if (completionSnap.docs.isNotEmpty) {
-                            // double check if the list is not empty
-                           for(var doc in completionSnap.docs) {
-                             final data = doc.data();
-                              if (data['completedActivities'] != null && (data['completedActivities'] as List).isNotEmpty) {
-                                hasActivityToday = true;
-                                break;
-                              }
-                           }
-                         }
+                         // 2. Check if user has completed any tasks today
+                         final hasActivityToday = await ref
+                             .read(routineServiceProvider)
+                             .hasAnyCompletedActivityToday(user.uid);
 
                          if (context.mounted) Navigator.pop(context);
 
                          if (hasActivityToday) {
                            // Case A: Has activity -> Update baseRoutine only (Apply Tomorrow)
-                           await FirestoreService().updateUser(user.uid, {
-                              'primaryMotive': motive,
-                              'baseRoutine': newActivities,
-                           });
-                           
-                           // Reschedule notifications
-                           final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-                           if (userDoc.exists && userDoc.data() != null) {
-                              final data = userDoc.data() as Map<String, dynamic>;
-                              final name = data['displayName'] ?? 'there';
-                              final routine = Map<String, dynamic>.from(data['routine'] ?? {});
-                              final wakeTime = _parseTime(routine['wakeTime'] ?? "7:00 AM");
-                              final bedTime = _parseTime(routine['bedTime'] ?? "10:00 PM");
-                              
-                              await _rescheduleNotifications(name, motive, wakeTime, bedTime);
-                           }
+                            await ref.read(firestoreServiceProvider).updateUser(user.uid, {
+                               'primaryMotive': motive,
+                               'baseRoutine': newActivities,
+                            });
+                            
+                            // Reschedule notifications
+                            final userContext = await _getUserNotificationContext(user.uid);
+                            if (userContext != null) {
+                               final name = userContext['name'] as String;
+                               final wakeTime = userContext['wakeTime'] as TimeOfDay;
+                               final bedTime = userContext['bedTime'] as TimeOfDay;
+
+                               await _rescheduleNotifications(name, motive, wakeTime, bedTime);
+                            }
                            
                            if (context.mounted) {
                              showDialog(
@@ -1008,21 +920,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                          } else {
                            // Case B: No activity -> Update immediately
                            // We set lastGeneratedDate to past to trigger Home Screen regeneration
-                           await FirestoreService().updateUser(user.uid, {
+                           await ref.read(firestoreServiceProvider).updateUser(user.uid, {
                               'primaryMotive': motive,
                               'baseRoutine': newActivities,
                               'lastGeneratedDate': DateTime(2000, 1, 1).toIso8601String(), // Force regeneration
                            });
-                           
+                            
                            // Reschedule notifications
-                           final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-                           if (userDoc.exists && userDoc.data() != null) {
-                              final data = userDoc.data() as Map<String, dynamic>;
-                              final name = data['displayName'] ?? 'there';
-                              final routine = Map<String, dynamic>.from(data['routine'] ?? {});
-                              final wakeTime = _parseTime(routine['wakeTime'] ?? "7:00 AM");
-                              final bedTime = _parseTime(routine['bedTime'] ?? "10:00 PM");
-                              
+                           final userContext = await _getUserNotificationContext(user.uid);
+                           if (userContext != null) {
+                              final name = userContext['name'] as String;
+                              final wakeTime = userContext['wakeTime'] as TimeOfDay;
+                              final bedTime = userContext['bedTime'] as TimeOfDay;
+
                               await _rescheduleNotifications(name, motive, wakeTime, bedTime);
                            }
                            
@@ -1105,11 +1015,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
   Future<void> _rescheduleNotifications(String name, String motive, TimeOfDay wakeTime, TimeOfDay bedTime) async {
      try {
-       await NotificationService().requestPermissions();
-       await NotificationService().cancelAll();
+       final notificationService = ref.read(notificationServiceProvider);
+       await notificationService.init();
+       await notificationService.requestPermissions();
+       await notificationService.cancelAll();
        
        // Wake Up
-       await NotificationService().scheduleDailyNotification(
+       await notificationService.scheduleDailyNotification(
          id: 1, 
          title: 'Good Morning!', 
          body: NotificationContent.getMorningMessage(name, motive), 
@@ -1120,7 +1032,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
        // Midday (Wake + 6 hours)
        final midday = wakeTime.hour + 6;
        final middayHour = midday >= 24 ? midday - 24 : midday;
-       await NotificationService().scheduleDailyNotification(
+       await notificationService.scheduleDailyNotification(
          id: 2, 
          title: 'Check In', 
          body: NotificationContent.getAfternoonMessage(name), 
@@ -1131,7 +1043,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
        // Evening (Bed - 2 hours)
        final evening = bedTime.hour - 2;
        final eveningHour = evening < 0 ? evening + 24 : evening;
-       await NotificationService().scheduleDailyNotification(
+       await notificationService.scheduleDailyNotification(
          id: 3, 
          title: 'Wind Down', 
          body: NotificationContent.getEveningMessage(name), 
@@ -1140,7 +1052,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
        );
        
        // Bedtime
-       await NotificationService().scheduleDailyNotification(
+       await notificationService.scheduleDailyNotification(
          id: 4, 
          title: 'Sweet Dreams', 
          body: NotificationContent.getBedtimeMessage(name), 
@@ -1148,8 +1060,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
          minute: bedTime.minute
        );
        
-     } catch (e) {
-       print('Error rescheduling notifications: $e');
+     } catch (e, stackTrace) {
+       appLogger.e('Error rescheduling notifications', error: e, stackTrace: stackTrace);
      }
   }
 }
+
+
+

@@ -3,12 +3,15 @@ import '../models/user_model.dart';
 import 'badge_service.dart';
 import '../models/badge.dart';
 import 'dart:async';
+import '../core/logger.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore;
+  final BadgeService? _badgeService;
 
-  FirestoreService({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  FirestoreService({FirebaseFirestore? firestore, BadgeService? badgeService})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _badgeService = badgeService;
 
   // Collection reference
   CollectionReference get _usersCollection => _firestore.collection('users');
@@ -18,7 +21,7 @@ class FirestoreService {
     try {
       await _usersCollection.doc(user.uid).set(user.toMap());
     } catch (e) {
-      throw 'Failed to create user profile: $e';
+      throw Exception('Failed to create user profile: $e');
     }
   }
 
@@ -31,7 +34,7 @@ class FirestoreService {
       }
       return null;
     } catch (e) {
-      throw 'Failed to get user data: $e';
+      throw Exception('Failed to get user data: $e');
     }
   }
 
@@ -49,7 +52,7 @@ class FirestoreService {
     try {
       await _usersCollection.doc(uid).update(data);
     } catch (e) {
-      throw 'Failed to update user: $e';
+      throw Exception('Failed to update user: $e');
     }
   }
 
@@ -58,9 +61,7 @@ class FirestoreService {
     try {
       final now = DateTime.now();
 
-      // Use a more efficient approach to avoid unnecessary reads
-      // Only update if it's been more than 1 hour since last update
-      // This reduces quota usage significantly
+      // Write login metadata directly to avoid an extra read-before-write.
 
       await _usersCollection.doc(uid).update({
         'lastLogin': Timestamp.fromDate(now),
@@ -71,7 +72,7 @@ class FirestoreService {
       // For login dates tracking, use a separate optimized method
       await _updateLoginDateOptimized(uid, now);
     } catch (e) {
-      throw 'Failed to update last login: $e';
+      throw Exception('Failed to update last login: $e');
     }
   }
 
@@ -93,7 +94,7 @@ class FirestoreService {
           }, SetOptions(merge: true));
     } catch (e) {
       // Don't throw error for login tracking failure
-      print('Login tracking failed: $e');
+      appLogger.w('Login tracking failed: $e');
     }
   }
 
@@ -102,7 +103,7 @@ class FirestoreService {
     try {
       await _usersCollection.doc(uid).delete();
     } catch (e) {
-      throw 'Failed to delete user: $e';
+      throw Exception('Failed to delete user: $e');
     }
   }
 
@@ -180,7 +181,7 @@ class FirestoreService {
         'sleepData': {dateKey: data},
       }, SetOptions(merge: true));
     } catch (e) {
-      throw 'Failed to log sleep data: $e';
+      throw Exception('Failed to log sleep data: $e');
     }
   }
 
@@ -200,7 +201,7 @@ class FirestoreService {
       }
       return null;
     } catch (e) {
-      throw 'Failed to get sleep data: $e';
+      throw Exception('Failed to get sleep data: $e');
     }
   }
 
@@ -226,7 +227,10 @@ class FirestoreService {
           }, SetOptions(merge: true));
 
       // After logging the activity, check if they earned any badges!
-      final badgeService = BadgeService();
+      final badgeService = _badgeService ?? BadgeService(
+        firestore: _firestore,
+        firestoreService: this,
+      );
       final newBadges = await badgeService.checkAndAwardBadges(uid);
       return newBadges;
     } catch (e) {
@@ -264,7 +268,7 @@ class FirestoreService {
     try {
       await _firestore.collection(collection).doc(docId).set(data);
     } catch (e) {
-      throw 'Failed to set document: $e';
+      throw Exception('Failed to set document: $e');
     }
   }
 
@@ -280,7 +284,7 @@ class FirestoreService {
           .where(field, isEqualTo: value)
           .get();
     } catch (e) {
-      throw 'Failed to get documents: $e';
+      throw Exception('Failed to get documents: $e');
     }
   }
 
@@ -292,7 +296,7 @@ class FirestoreService {
     try {
       await _firestore.collection(collection).doc(docId).delete();
     } catch (e) {
-      throw 'Failed to delete document: $e';
+      throw Exception('Failed to delete document: $e');
     }
   }
 }

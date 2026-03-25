@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/journal_entry.dart';
-import '../services/journal_service.dart';
-import '../services/auth_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/journal_provider.dart';
 import 'journal_entry_screen.dart';
 
-class JournalingScreen extends StatelessWidget {
+class JournalingScreen extends ConsumerWidget {
   const JournalingScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final user = AuthService().currentUser;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDFCF4),
@@ -42,7 +43,7 @@ class JournalingScreen extends StatelessWidget {
       body: user == null
           ? const Center(child: Text("Please sign in to view your journal."))
           : StreamBuilder<List<JournalEntry>>(
-              stream: JournalService().getEntriesStream(user.uid),
+              stream: ref.read(journalServiceProvider).getEntriesStream(user.uid),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());

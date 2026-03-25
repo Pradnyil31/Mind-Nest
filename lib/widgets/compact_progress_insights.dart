@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/app_providers.dart';
-import '../features/calm/application/ecosystem_integration_service.dart';
 import 'dart:math' as math;
 
 /// Compact progress insights widget - single card with dynamic content that auto-updates
@@ -38,8 +36,6 @@ class _CompactProgressInsightsState
   String _displayTitle = '';
   String _displayMessage = '';
   String _progressColor = '#6B7280';
-  final EcosystemIntegrationService _ecosystemService =
-      EcosystemIntegrationService();
 
   late AnimationController _animController;
   late Animation<double> _progressAnimation;
@@ -177,76 +173,33 @@ class _CompactProgressInsightsState
 
   Future<void> _loadData() async {
     try {
-      final now = DateTime.now();
-      final weekAgo = now.subtract(const Duration(days: 7));
+      final routineService = ref.read(routineServiceProvider);
+      final weekCompletions = await routineService.getWeekCompletions(widget.userId);
+      final todaySummary = await routineService.getTodayCompletionSummary(widget.userId);
+      final allCompletions = await routineService.getAllCompletions(widget.userId);
 
-      // ── Today's date key (matches how routine_completions stores docs) ──
-      final todayKey =
-          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final weeklyCount = weekCompletions.fold<int>(
+        0,
+        (sum, completion) => sum + completion.completedActivities.length,
+      );
+      final todayCompleted = todaySummary['completed'] ?? 0;
+      final todayTotal = todaySummary['total'] ?? 0;
+      final allTimeTotal = allCompletions.fold<int>(
+        0,
+        (sum, completion) => sum + completion.completedActivities.length,
+      );
 
-      // Get weekly routine data (for the "This Week" stat only)
-      final weekSnapshot = await FirebaseFirestore.instance
-          .collection('routine_completions')
-          .where('userId', isEqualTo: widget.userId)
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(weekAgo))
-          .get();
+      final currentStreak = await routineService.getCompletionStreak(widget.userId);
 
-      int weeklyCount = 0;
-
-      // ── Today-only completion for the progress ring ──
-      int todayCompleted = 0;
-      int todayTotal = 0;
-
-      for (var doc in weekSnapshot.docs) {
-        final data = doc.data();
-        final completed = (data['completedActivities'] as List?)?.length ?? 0;
-        final total = (data['totalActivities'] as int?) ?? 0;
-        weeklyCount += completed;
-
-        // Check if this doc is today
-        final docDate = (data['date'] as Timestamp?)?.toDate();
-        if (docDate != null) {
-          final docKey =
-              '${docDate.year}-${docDate.month.toString().padLeft(2, '0')}-${docDate.day.toString().padLeft(2, '0')}';
-          if (docKey == todayKey) {
-            todayCompleted = completed;
-            todayTotal = total;
-          }
-        }
-      }
-
-      // Get all-time total
-      final allSnapshot = await FirebaseFirestore.instance
-          .collection('routine_completions')
-          .where('userId', isEqualTo: widget.userId)
-          .get();
-
-      int allTimeTotal = 0;
-      for (var doc in allSnapshot.docs) {
-        final data = doc.data();
-        allTimeTotal += (data['completedActivities'] as List?)?.length ?? 0;
-      }
-
-      // Use existing routine service for streak calculation
-      final currentStreak = await ref
-          .read(routineServiceProvider)
-          .getCompletionStreak(widget.userId);
-
-      // Calculate best streak from all data
       int maxStreak = 0;
       int tempStreak = 0;
-      final sortedDocs = allSnapshot.docs.toList()
-        ..sort((a, b) {
-          final aDate = (a.data()['date'] as Timestamp).toDate();
-          final bDate = (b.data()['date'] as Timestamp).toDate();
-          return aDate.compareTo(bDate);
-        });
+      final sortedCompletions = allCompletions.toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
 
       DateTime? lastDate;
-      for (var doc in sortedDocs) {
-        final data = doc.data();
-        final date = (data['date'] as Timestamp).toDate();
-        final completed = (data['completedActivities'] as List?)?.length ?? 0;
+      for (final completion in sortedCompletions) {
+        final date = completion.date;
+        final completed = completion.completedActivities.length;
 
         if (completed > 0) {
           if (lastDate == null || date.difference(lastDate).inDays == 1) {
@@ -261,13 +214,11 @@ class _CompactProgressInsightsState
         }
       }
 
-      // Progress ring = today's completion rate (resets every day)
       final rate = todayTotal > 0 ? todayCompleted / todayTotal : 0.0;
 
-      // Get enhanced calm insights for dashboard integration
-      final calmInsights = await _ecosystemService.getCalmInsightsForDashboard(
-        widget.userId,
-      );
+      final calmInsights = await ref
+          .read(ecosystemIntegrationServiceProvider)
+          .getCalmInsightsForDashboard(widget.userId);
 
       if (mounted) {
         setState(() {
@@ -277,27 +228,22 @@ class _CompactProgressInsightsState
           _totalActivities = allTimeTotal;
           _completionRate = rate;
 
-          // Enhanced with calm data
           _calmSessions = calmInsights['totalSessions'] as int? ?? 0;
           _calmStreak = calmInsights['currentStreak'] as int? ?? 0;
-          _displayTitle =
-              calmInsights['displayTitle'] as String? ?? _getTitle();
-          _displayMessage =
-              calmInsights['displayMessage'] as String? ?? _getMessage();
-          _progressColor =
-              calmInsights['progressColor'] as String? ?? '#6B7280';
+          _displayTitle = calmInsights['displayTitle'] as String? ?? _getTitle();
+          _displayMessage = calmInsights['displayMessage'] as String? ?? _getMessage();
+          _progressColor = calmInsights['progressColor'] as String? ?? '#6B7280';
 
           _isLoading = false;
         });
 
-        // Animate progress ring
         _progressAnimation =
             Tween<double>(begin: _progressAnimation.value, end: rate).animate(
-              CurvedAnimation(
-                parent: _animController,
-                curve: Curves.easeOutCubic,
-              ),
-            );
+          CurvedAnimation(
+            parent: _animController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
         _animController.forward(from: 0);
       }
     } catch (e) {
@@ -546,3 +492,4 @@ class _ProgressRingPainter extends CustomPainter {
     return oldDelegate.progress != progress || oldDelegate.color != color;
   }
 }
+

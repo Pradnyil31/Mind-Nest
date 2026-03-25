@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/daily_checkin.dart';
 import '../models/smart_goal.dart';
-import '../services/checkin_service.dart';
-import '../services/auth_service.dart';
-import '../services/goal_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/goal_provider.dart';
+import '../providers/app_providers.dart';
 import '../widgets/activity_completion_dialog.dart';
 
-class DailyCheckInScreen extends StatefulWidget {
+class DailyCheckInScreen extends ConsumerStatefulWidget {
   const DailyCheckInScreen({Key? key}) : super(key: key);
 
   @override
-  State<DailyCheckInScreen> createState() => _DailyCheckInScreenState();
+  ConsumerState<DailyCheckInScreen> createState() => _DailyCheckInScreenState();
 }
 
-class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
+class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
   bool _isLoading = false;
@@ -33,9 +34,9 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
   }
 
   Future<void> _loadGoals() async {
-    final user = AuthService().currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user != null) {
-      final goals = await GoalService().getGoalsStream(user.uid).first;
+      final goals = await ref.read(goalServiceProvider).getGoalsStream(user.uid).first;
       if (mounted) {
         setState(() {
           _activeGoals = goals.where((g) => !g.isCompleted).toList();
@@ -66,7 +67,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final user = AuthService().currentUser;
+      final user = ref.read(authServiceProvider).currentUser;
       if (user != null) {
         final checkIn = DailyCheckIn(
           id: '',
@@ -82,7 +83,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
           context,
           savingText: 'Saving check-in...',
           onComplete: () async {
-            return await CheckInService()
+            return await ref.read(checkInServiceProvider)
                 .submitCheckIn(checkIn)
                 .timeout(const Duration(seconds: 10), onTimeout: () {
                   throw 'Connection timed out. Please check internet.';

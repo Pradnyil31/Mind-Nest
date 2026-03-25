@@ -14,7 +14,8 @@ class DataIntegrityService {
   static const String _backupPrefix = 'calm_backup_';
   static const String _checksumPrefix = 'calm_checksum_';
 
-  DataIntegrityService() : _errorRecovery = ErrorRecoveryService();
+  DataIntegrityService({ErrorRecoveryService? errorRecovery})
+    : _errorRecovery = errorRecovery ?? ErrorRecoveryService();
 
   /// Validates and stores data with integrity protection
   Future<bool> storeWithIntegrity<T>(

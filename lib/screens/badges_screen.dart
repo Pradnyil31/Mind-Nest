@@ -1,27 +1,20 @@
 import 'package:flutter/material.dart' hide Badge;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../models/badge.dart';
-import '../services/progress_insights_service.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
 import '../services/badge_service.dart';
-import '../config/motive_config.dart';
+import '../providers/app_providers.dart';
+import '../providers/auth_provider.dart';
 
-class BadgesScreen extends StatefulWidget {
+class BadgesScreen extends ConsumerStatefulWidget {
   const BadgesScreen({Key? key}) : super(key: key);
 
   @override
-  State<BadgesScreen> createState() => _BadgesScreenState();
+  ConsumerState<BadgesScreen> createState() => _BadgesScreenState();
 }
 
-class _BadgesScreenState extends State<BadgesScreen> {
-  final ProgressInsightsService _insightsService = ProgressInsightsService();
-  final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
-  final BadgeService _badgeService = BadgeService();
-  
+class _BadgesScreenState extends ConsumerState<BadgesScreen> {
   List<Badge> _earnedBadges = [];
   Map<String, BadgeProgress> _badgeProgress = {};
   String? _userMotive;
@@ -34,67 +27,41 @@ class _BadgesScreenState extends State<BadgesScreen> {
   }
 
   Future<void> _loadBadges() async {
-    final user = _authService.currentUser;
-    if (user != null) {
+    final user = ref.read(authServiceProvider).currentUser;
+    if (user == null) return;
+
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final badgeService = ref.read(badgeServiceProvider);
+      final earnedBadges = await badgeService.getEarnedBadges(user.uid);
+
+      String? motive;
       try {
+        final userDoc = await ref.read(firestoreServiceProvider).getUserOnce(user.uid);
+        if (userDoc.exists) {
+          final data = userDoc.data() as Map<String, dynamic>;
+          motive = data['primaryMotive'] as String?;
+        }
+      } catch (_) {}
+
+      final progress = await badgeService.getAllBadgesProgress(user.uid);
+
+      if (mounted) {
         setState(() {
-          _isLoading = true;
+          _earnedBadges = earnedBadges;
+          _badgeProgress = progress;
+          _userMotive = motive;
+          _isLoading = false;
         });
-        
-        print('🔍 Loading badges for user: ${user.uid}');
-        
-        // Get earned badge IDs from Firestore
-        final earnedSnapshot = await FirebaseFirestore.instance
-            .collection('badges')
-            .doc(user.uid)
-            .collection('earned')
-            .get();
-        
-        final earnedBadgeIds = earnedSnapshot.docs.map((doc) => doc.id).toSet();
-        print('📝 Earned badge IDs from Firestore: $earnedBadgeIds');
-        
-        // Map to full Badge objects with earned dates
-        final earnedBadges = <Badge>[];
-        for (final doc in earnedSnapshot.docs) {
-          final data = doc.data();
-          final badge = Badge.allBadges.firstWhere((b) => b.id == doc.id);
-          earnedBadges.add(badge.copyWith(
-            earnedDate: (data['earnedDate'] as Timestamp?)?.toDate(),
-          ));
-        }
-        
-        print('✅ Loaded ${earnedBadges.length} earned badges');
-
-        // Get user motive
-        String? motive;
-        try {
-          final userDoc = await _firestoreService.getUserStream(user.uid).first;
-          if (userDoc.exists) {
-            final data = userDoc.data() as Map<String, dynamic>;
-            motive = data['primaryMotive'] as String?;
-          }
-        } catch (e) {
-          print('Error loading user motive: $e');
-        }
-        
-        // Load Live Progress for locked badges
-        final progress = await _badgeService.getAllBadgesProgress(user.uid);
-
-        if (mounted) {
-          setState(() {
-            _earnedBadges = earnedBadges;
-            _badgeProgress = progress;
-            _userMotive = motive;
-            _isLoading = false;
-          });
-        }
-      } catch (e) {
-        print('⛔ Error loading badges: $e');
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -418,3 +385,7 @@ class _BadgesScreenState extends State<BadgesScreen> {
     );
   }
 }
+
+
+
+

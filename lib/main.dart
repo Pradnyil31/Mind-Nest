@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,9 +24,13 @@ void main() async {
     // populated on the Dart side. Treat duplicate-app as a no-op.
     if (Firebase.apps.isEmpty) {
       try {
-        await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        );
+        if (kIsWeb) {
+          await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform,
+          );
+        } else {
+          await Firebase.initializeApp();
+        }
       } on FirebaseException catch (e) {
         if (e.code != 'duplicate-app') rethrow;
         debugPrint('Firebase default app already exists; continuing.');

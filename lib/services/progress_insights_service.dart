@@ -7,9 +7,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/logger.dart';
 
 class ProgressInsightsService {
-  final RoutineTrackingService _routineService = RoutineTrackingService();
-  final FirestoreService _firestoreService = FirestoreService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final RoutineTrackingService _routineService;
+  final FirestoreService _firestoreService;
+  final FirebaseFirestore _firestore;
+
+  ProgressInsightsService({
+    RoutineTrackingService? routineService,
+    FirestoreService? firestoreService,
+    FirebaseFirestore? firestore,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _routineService = routineService ?? RoutineTrackingService(firestore: firestore ?? FirebaseFirestore.instance),
+        _firestoreService = firestoreService ?? FirestoreService(firestore: firestore ?? FirebaseFirestore.instance);
 
   /// Get trend direction based on recent activity
   Future<String> getTrendDirection(String userId) async {
@@ -121,33 +129,24 @@ class ProgressInsightsService {
   /// Detect eligible badges
   Future<List<Badge>> detectNewBadges(String userId) async {
     try {
-      print('🔎 detectNewBadges called for userId: $userId');
       final newBadges = <Badge>[];
       final earnedBadges = await _getEarnedBadgeIds(userId);
-      print('📝 Already earned badge IDs: $earnedBadges');
 
       // Check each badge
       for (final badge in Badge.allBadges) {
-        print('🎯 Checking badge: ${badge.id} (${badge.name})');
         if (!earnedBadges.contains(badge.id)) {
           final isEligible = await _checkBadgeEligibility(userId, badge.id);
-          print('   ✓ Eligible: $isEligible');
           if (isEligible) {
             // Award the badge
-            print('   🏅 Awarding badge: ${badge.name}');
             await _awardBadge(userId, badge);
             newBadges.add(badge.copyWith(earnedDate: DateTime.now()));
           }
-        } else {
-          print('   ⊗ Already earned');
         }
       }
 
-      print('✅ Total new badges awarded: ${newBadges.length}');
       return newBadges;
     } catch (e, stackTrace) {
       appLogger.e('Error detecting badges', error: e, stackTrace: stackTrace);
-      print('⛔ Error in detectNewBadges: $e');
       return [];
     }
   }
@@ -160,7 +159,7 @@ class ProgressInsightsService {
       final snapshot = await _firestore
           .collection('meditation_sessions')
           .where('userId', isEqualTo: userId)
-          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(weekAgo))
+          .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(weekAgo))
           .get();
       return snapshot.docs.length;
     } catch (e) {

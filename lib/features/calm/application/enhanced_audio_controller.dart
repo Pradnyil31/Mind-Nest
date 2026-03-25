@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/ambient_sound.dart';
 import '../../../services/audio_playback_service.dart';
 import '../../../screens/audio_player_screen.dart';
+import '../../../core/logger.dart';
 
 // Enhanced state for audio playback with player screen management
 class EnhancedAudioState {
@@ -50,17 +51,19 @@ class EnhancedAudioState {
 
 // Enhanced controller for managing audio playback with full-screen player
 class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
-  final AudioPlaybackService _audioService = AudioPlaybackService();
+  final AudioPlaybackService _audioService;
 
-  EnhancedAudioController() : super(const EnhancedAudioState()) {
+  EnhancedAudioController({AudioPlaybackService? audioService})
+    : _audioService = audioService ?? AudioPlaybackService(),
+      super(const EnhancedAudioState()) {
     _initializeAudioService();
   }
 
   Future<void> _initializeAudioService() async {
     try {
       await _audioService.initialize();
-    } catch (e) {
-      print('Failed to initialize audio service: $e');
+    } catch (e, stackTrace) {
+      appLogger.e('Failed to initialize audio service', error: e, stackTrace: stackTrace);
     }
   }
 
@@ -84,8 +87,12 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
         isPlaying: true,
         currentlyPlayingSound: sound,
       );
-    } catch (e) {
-      print('Audio operation failed for ${sound.id}: $e');
+    } catch (e, stackTrace) {
+      appLogger.e(
+        'Audio operation failed for ${sound.id}',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -119,8 +126,12 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
           currentlyPlayingSound: sound,
         );
       }
-    } catch (e) {
-      print('Audio operation failed for ${sound.id}: $e');
+    } catch (e, stackTrace) {
+      appLogger.e(
+        'Audio operation failed for ${sound.id}',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -166,8 +177,8 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
     state = state.copyWith(masterVolume: volume);
     try {
       await _audioService.setMasterVolume(volume);
-    } catch (e) {
-      print('Failed to set master volume: $e');
+    } catch (e, stackTrace) {
+      appLogger.e('Failed to set master volume', error: e, stackTrace: stackTrace);
     }
   }
 
@@ -178,8 +189,12 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
     state = state.copyWith(individualVolumes: newVolumes);
     try {
       await _audioService.setVolume(soundId, volume);
-    } catch (e) {
-      print('Failed to set volume for $soundId: $e');
+    } catch (e, stackTrace) {
+      appLogger.e(
+        'Failed to set volume for $soundId',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -193,8 +208,8 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
       } else {
         _audioService.cancelTimer();
       }
-    } catch (e) {
-      print('Failed to set timer: $e');
+    } catch (e, stackTrace) {
+      appLogger.e('Failed to set timer', error: e, stackTrace: stackTrace);
     }
   }
 
@@ -207,8 +222,8 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
     );
     try {
       await _audioService.stopAllSounds();
-    } catch (e) {
-      print('Failed to stop all sounds: $e');
+    } catch (e, stackTrace) {
+      appLogger.e('Failed to stop all sounds', error: e, stackTrace: stackTrace);
     }
   }
 

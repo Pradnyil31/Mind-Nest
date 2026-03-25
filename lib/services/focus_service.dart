@@ -4,8 +4,12 @@ import '../models/focus_session.dart';
 import 'firestore_service.dart';
 
 class FocusService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirebaseFirestore _firestore;
+  final FirestoreService _firestoreService;
+
+  FocusService({FirebaseFirestore? firestore, FirestoreService? firestoreService})
+      : _firestore = firestore ?? FirebaseFirestore.instance,
+        _firestoreService = firestoreService ?? FirestoreService(firestore: firestore ?? FirebaseFirestore.instance);
 
   CollectionReference get _sessionsCollection => _firestore.collection('focus_sessions');
 
@@ -14,7 +18,7 @@ class FocusService {
       await _sessionsCollection.doc(session.id).set(session.toMap());
 
       // Log completion for badge system — only fires when session is actually saved
-      _firestoreService.logActivityCompletion(session.userId, 'focus_session');
+      await _firestoreService.logActivityCompletion(session.userId, 'focus_session');
     } catch (e, stackTrace) {
       appLogger.e('Error saving focus session', error: e, stackTrace: stackTrace);
       rethrow;

@@ -50,7 +50,6 @@ class _OnboardingIntroductionScreenState extends State<OnboardingIntroductionScr
 
   @override
   Widget build(BuildContext context) {
-    print("DEBUG: Loading New Glassmorphism Intro Screen");
     return Scaffold(
       body: Stack(
         children: [

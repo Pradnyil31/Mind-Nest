@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/ambient_sound.dart';
 import '../../../services/audio_playback_service.dart';
+import '../../../core/logger.dart';
 
 // State for ambient sound playback
 class AmbientSoundState {
@@ -37,9 +38,11 @@ class AmbientSoundState {
 
 // Controller for managing ambient sound playback
 class AmbientSoundController extends StateNotifier<AmbientSoundState> {
-  final AudioPlaybackService _audioService = AudioPlaybackService();
+  final AudioPlaybackService _audioService;
 
-  AmbientSoundController() : super(const AmbientSoundState()) {
+  AmbientSoundController({AudioPlaybackService? audioService})
+    : _audioService = audioService ?? AudioPlaybackService(),
+      super(const AmbientSoundState()) {
     _initializeAudioService();
   }
 
@@ -48,9 +51,9 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
       await _audioService.initialize();
       // Note: We don't listen to the audio service stream here to avoid race conditions
       // The controller manages its own state and calls the audio service directly
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Handle initialization error gracefully
-      print('Failed to initialize audio service: $e');
+      appLogger.e('Failed to initialize audio service', error: e, stackTrace: stackTrace);
     }
   }
 
@@ -77,9 +80,13 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
 
         state = state.copyWith(activeSounds: newActiveSounds, isPlaying: true);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Handle audio errors gracefully - revert state if needed
-      print('Audio operation failed for $soundId: $e');
+      appLogger.e(
+        'Audio operation failed for $soundId',
+        error: e,
+        stackTrace: stackTrace,
+      );
       // Don't update state if audio operation failed
     }
   }
@@ -99,8 +106,12 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
 
       // Update state
       state = state.copyWith(activeSounds: newActiveSounds, isPlaying: true);
-    } catch (e) {
-      print('Audio operation failed for $soundId: $e');
+    } catch (e, stackTrace) {
+      appLogger.e(
+        'Audio operation failed for $soundId',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -108,8 +119,8 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
     state = state.copyWith(masterVolume: volume);
     try {
       await _audioService.setMasterVolume(volume);
-    } catch (e) {
-      print('Failed to set master volume: $e');
+    } catch (e, stackTrace) {
+      appLogger.e('Failed to set master volume', error: e, stackTrace: stackTrace);
     }
   }
 
@@ -120,8 +131,12 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
     state = state.copyWith(individualVolumes: newVolumes);
     try {
       await _audioService.setVolume(soundId, volume);
-    } catch (e) {
-      print('Failed to set volume for $soundId: $e');
+    } catch (e, stackTrace) {
+      appLogger.e(
+        'Failed to set volume for $soundId',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -134,8 +149,8 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
       } else {
         _audioService.cancelTimer();
       }
-    } catch (e) {
-      print('Failed to set timer: $e');
+    } catch (e, stackTrace) {
+      appLogger.e('Failed to set timer', error: e, stackTrace: stackTrace);
     }
   }
 
@@ -143,8 +158,8 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
     state = state.copyWith(activeSounds: const {}, isPlaying: false);
     try {
       await _audioService.stopAllSounds();
-    } catch (e) {
-      print('Failed to stop all sounds: $e');
+    } catch (e, stackTrace) {
+      appLogger.e('Failed to stop all sounds', error: e, stackTrace: stackTrace);
     }
   }
 

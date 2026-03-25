@@ -1,25 +1,26 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/meditation_session.dart';
-import '../services/auth_service.dart';
-import '../services/meditation_service.dart';
-import '../services/meditation_analytics_service.dart';
-import '../services/firestore_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/meditation_provider.dart';
+import '../providers/user_provider.dart';
 import '../widgets/activity_completion_dialog.dart';
 
-class MeditationTimerScreen extends StatefulWidget {
+class MeditationTimerScreen extends ConsumerStatefulWidget {
   const MeditationTimerScreen({Key? key}) : super(key: key);
 
   @override
-  State<MeditationTimerScreen> createState() => _MeditationTimerScreenState();
+  ConsumerState<MeditationTimerScreen> createState() => _MeditationTimerScreenState();
 }
 
-class _MeditationTimerScreenState extends State<MeditationTimerScreen> with TickerProviderStateMixin {
+class _MeditationTimerScreenState extends ConsumerState<MeditationTimerScreen> with TickerProviderStateMixin {
   int _selectedDuration = 10; // default 10 minutes
   bool _isActive = false;
   int _remainingSeconds = 0;
   Timer? _timer;
+  DateTime? _sessionStartedAt;
   late AnimationController _breathingController;
 
   final List<int> _durationOptions = [5, 10, 15, 20, 30];
@@ -44,6 +45,7 @@ class _MeditationTimerScreenState extends State<MeditationTimerScreen> with Tick
     setState(() {
       _isActive = true;
       _remainingSeconds = _selectedDuration * 60;
+      _sessionStartedAt = DateTime.now();
     });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -58,7 +60,7 @@ class _MeditationTimerScreenState extends State<MeditationTimerScreen> with Tick
   Future<void> _completeSession() async {
     _timer?.cancel();
     
-    final user = AuthService().currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user != null) {
       await ActivityCompletionDialog.show(
         context,
@@ -68,23 +70,26 @@ class _MeditationTimerScreenState extends State<MeditationTimerScreen> with Tick
           final session = MeditationSession(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             userId: user.uid,
-            startTime: DateTime.now(),
+            startTime: _sessionStartedAt ?? DateTime.now(),
             durationMinutes: _selectedDuration,
             type: MeditationType.timer,
             completed: true,
           );
-          await MeditationService().saveSession(session);
+          await ref.read(meditationServiceProvider).saveSession(session);
 
           // Update analytics
-          await MeditationAnalyticsService().updateStats(user.uid, _selectedDuration);
+          await ref.read(meditationAnalyticsProvider).updateStats(user.uid, _selectedDuration);
 
           // Log to activity_stats so badge system tracks meditation count
-          await FirestoreService().logActivityCompletion(user.uid, 'meditation');
+          await ref.read(firestoreServiceProvider).logActivityCompletion(user.uid, 'meditation');
         },
       );
     }
 
-    setState(() => _isActive = false);
+    setState(() {
+      _isActive = false;
+      _sessionStartedAt = null;
+    });
 
     if (mounted) {
       Navigator.pop(context);
@@ -93,7 +98,10 @@ class _MeditationTimerScreenState extends State<MeditationTimerScreen> with Tick
 
   void _stopTimer() {
     _timer?.cancel();
-    setState(() => _isActive = false);
+    setState(() {
+      _isActive = false;
+      _sessionStartedAt = null;
+    });
     Navigator.pop(context);
   }
 

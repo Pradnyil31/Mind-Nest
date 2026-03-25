@@ -1,25 +1,23 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
 import 'onboarding_flow_screen.dart';
 import 'login_screen.dart';
+import '../providers/auth_provider.dart';
+import '../providers/user_provider.dart';
 
-class SignUpScreen extends StatefulWidget {
+class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({Key? key}) : super(key: key);
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
-  final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
   
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
@@ -42,7 +40,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       // Sign up with Firebase Auth
-      final userCredential = await _authService.signUpWithEmail(
+      final userCredential = await ref.read(authServiceProvider).signUpWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
@@ -58,7 +56,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           signInMethod: 'email',
         );
 
-        await _firestoreService.createUser(user);
+        await ref.read(firestoreServiceProvider).createUser(user);
 
         if (mounted) {
           // Show success message

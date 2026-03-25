@@ -3,15 +3,19 @@ import '../models/meditation_session.dart';
 import '../services/meditation_service.dart';
 import '../services/meditation_analytics_service.dart';
 import 'auth_provider.dart';
+import 'user_provider.dart';
 
 /// Provider for MeditationService instance
 final meditationServiceProvider = Provider<MeditationService>((ref) {
-  return MeditationService();
+  return MeditationService(firestore: ref.read(firebaseFirestoreProvider));
 });
 
 /// Provider for MeditationAnalyticsService instance
 final meditationAnalyticsProvider = Provider<MeditationAnalyticsService>((ref) {
-  return MeditationAnalyticsService();
+  return MeditationAnalyticsService(
+    firestore: ref.read(firebaseFirestoreProvider),
+    firestoreService: ref.read(firestoreServiceProvider),
+  );
 });
 
 /// Stream provider for recent meditation sessions

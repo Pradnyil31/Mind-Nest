@@ -7,17 +7,10 @@ import '../../../models/guided_meditation.dart';
 
 /// Service for seamless navigation integration between calm features and existing app ecosystem
 class NavigationIntegrationService {
-  static final NavigationIntegrationService _instance =
-      NavigationIntegrationService._internal();
-  factory NavigationIntegrationService() => _instance;
-  NavigationIntegrationService._internal();
+  final MeditationAnalyticsService _analytics;
 
-  MeditationAnalyticsService? _meditationAnalytics;
-
-  MeditationAnalyticsService get _analytics {
-    _meditationAnalytics ??= MeditationAnalyticsService();
-    return _meditationAnalytics!;
-  }
+  NavigationIntegrationService({MeditationAnalyticsService? meditationAnalytics})
+      : _analytics = meditationAnalytics ?? MeditationAnalyticsService();
 
   /// Navigate directly to existing BreathingScreen with analytics integration
   Future<void> navigateToBreathing(

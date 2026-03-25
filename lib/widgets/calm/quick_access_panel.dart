@@ -4,7 +4,8 @@ import '../../features/calm/application/calm_recommendation_service.dart';
 import '../../features/calm/application/technique_library_service.dart';
 import '../../models/calm_technique.dart';
 import '../../models/breathing_technique.dart';
-import '../../services/auth_service.dart';
+import '../../providers/app_providers.dart';
+import '../../providers/auth_provider.dart';
 import '../../screens/grounding_exercise_screen.dart';
 import '../../screens/affirmations_screen.dart';
 import '../../screens/calm_technique_screen.dart';
@@ -27,8 +28,8 @@ class QuickAccessPanel extends ConsumerStatefulWidget {
 }
 
 class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
-  final CalmRecommendationService _recommendationService =
-      CalmRecommendationService();
+  CalmRecommendationService get _recommendationService =>
+      ref.read(calmRecommendationServiceProvider);
   List<CalmTechnique> _quickTechniques = [];
   CalmTechnique? _emergencyTechnique;
   bool _isLoading = true;
@@ -69,7 +70,7 @@ class _QuickAccessPanelState extends ConsumerState<QuickAccessPanel> {
       }
 
       // Fallback to recommendation service
-      final user = AuthService().currentUser;
+      final user = ref.read(authServiceProvider).currentUser;
       if (user != null) {
         // Get effectiveness-based quick access techniques (under 2 minutes)
         final quickTechniques = await _recommendationService

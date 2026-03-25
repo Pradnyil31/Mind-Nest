@@ -8,7 +8,7 @@ class GoalService {
 
   GoalService({FirebaseFirestore? firestore, FirestoreService? firestoreService})
       : _firestore = firestore ?? FirebaseFirestore.instance,
-        _firestoreService = firestoreService ?? FirestoreService();
+        _firestoreService = firestoreService ?? FirestoreService(firestore: firestore ?? FirebaseFirestore.instance);
 
   CollectionReference get _goalsCollection => _firestore.collection('smart_goals');
 
@@ -18,7 +18,7 @@ class GoalService {
       final goalWithId = goal.copyWith(id: docRef.id);
       await docRef.set(goalWithId.toMap());
     } catch (e) {
-      throw 'Failed to add goal: $e';
+      throw Exception('Failed to add goal: $e');
     }
   }
 
@@ -26,7 +26,7 @@ class GoalService {
     try {
       await _goalsCollection.doc(goal.id).update(goal.toMap());
     } catch (e) {
-      throw 'Failed to update goal: $e';
+      throw Exception('Failed to update goal: $e');
     }
   }
 
@@ -55,7 +55,7 @@ class GoalService {
         }
       }
     } catch (e) {
-      throw 'Failed to update progress: $e';
+      throw Exception('Failed to update progress: $e');
     }
   }
   
@@ -71,7 +71,7 @@ class GoalService {
         _firestoreService.logActivityCompletion(userId, 'smart_goals');
       }
     } catch (e) {
-      throw 'Failed to update completion status: $e';
+      throw Exception('Failed to update completion status: $e');
     }
   }
 
@@ -79,7 +79,7 @@ class GoalService {
     try {
       await _goalsCollection.doc(goalId).delete();
     } catch (e) {
-      throw 'Failed to delete goal: $e';
+      throw Exception('Failed to delete goal: $e');
     }
   }
 

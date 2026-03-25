@@ -5,7 +5,10 @@ import '../models/mood_session.dart';
 /// Service for tracking user mood before and after calm techniques
 /// Provides mood improvement calculation and trend analysis
 class MoodTrackingService {
-  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  MoodTrackingService({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference get _moodSessionsCollection =>
       _firestore.collection('mood_sessions');

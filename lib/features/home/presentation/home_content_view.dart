@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,6 +54,7 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   TimeOfDay _bedTime = const TimeOfDay(hour: 22, minute: 0);
 
   Set<int> _activeDaysThisWeek = {};
+  StreamSubscription<DocumentSnapshot>? _routineSubscription;
 
   @override
   void initState() {
@@ -64,6 +67,7 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   void _initialLoad() async {
     final user = ref.read(currentUserProvider);
     if (user != null) {
+      await ref.read(homeControllerProvider.notifier).loadInitial(user.uid);
       _checkCheckInStatus(user.uid);
       _setupRoutineListener(user.uid);
       _loadActiveDaysThisWeek(user.uid);
@@ -71,37 +75,23 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   }
 
   void _setupRoutineListener(String uid) {
-    ref.read(firestoreServiceProvider).getUserStream(uid).listen((snapshot) {
-      if (snapshot.exists && mounted) {
-        final data = snapshot.data() as Map<String, dynamic>;
-        _checkAndRegenerateDailyRoutine(uid, data);
-      }
-    });
+    _routineSubscription?.cancel();
+    _routineSubscription = ref
+        .read(firestoreServiceProvider)
+        .getUserStream(uid)
+        .listen((snapshot) {
+          if (snapshot.exists && mounted) {
+            final data = snapshot.data() as Map<String, dynamic>;
+            _checkAndRegenerateDailyRoutine(uid, data);
+          }
+        });
   }
 
   Future<void> _loadActiveDaysThisWeek(String uid) async {
     try {
-      final now = DateTime.now();
-      final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
-
-      final snapshot = await FirebaseFirestore.instance
-          .collection('routine_completions')
-          .where('userId', isEqualTo: uid)
-          .where(
-            'date',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek),
-          )
-          .get();
-
-      final activeDays = <int>{};
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        if (data['completedActivities'] != null &&
-            (data['completedActivities'] as List).isNotEmpty) {
-          final date = (data['date'] as Timestamp).toDate();
-          activeDays.add(date.weekday);
-        }
-      }
+      final activeDays = await ref
+          .read(routineServiceProvider)
+          .getActiveDaysThisWeek(uid);
 
       if (mounted) {
         setState(() {
@@ -207,10 +197,7 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
             .read(routineServiceProvider)
             .unmarkActivityComplete(userId, activity);
       } else {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .get();
+        final userDoc = await ref.read(firestoreServiceProvider).getUserOnce(userId);
         List<String> currentRoutine = [];
         if (userDoc.exists) {
           final data = userDoc.data();
@@ -639,13 +626,17 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
   }
 
   @override
+  void dispose() {
+    _routineSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
 
     if (user == null) return const SizedBox();
 
-    // Kick off the new HomeController loading in the background.
-    ref.read(homeControllerProvider.notifier).loadInitial(user.uid);
     final homeState = ref.watch(homeControllerProvider);
 
     return StreamBuilder<DocumentSnapshot>(

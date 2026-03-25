@@ -2,7 +2,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
+import '../core/logger.dart';
 
 class NotificationService {
   // Singleton pattern
@@ -16,6 +17,10 @@ class NotificationService {
 
   Future<void> init() async {
     if (_isInitialized) return;
+    if (kIsWeb) {
+      _isInitialized = true;
+      return;
+    }
 
     // Initialize Timezone
     tz.initializeTimeZones();
@@ -54,7 +59,10 @@ class NotificationService {
   }
 
   Future<void> requestPermissions() async {
-    if (Platform.isIOS) {
+    if (kIsWeb) return;
+    if (!_isInitialized) await init();
+
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
       await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
           ?.requestPermissions(
@@ -62,7 +70,7 @@ class NotificationService {
             badge: true,
             sound: true,
           );
-    } else if (Platform.isAndroid) {
+    } else if (defaultTargetPlatform == TargetPlatform.android) {
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
           flutterLocalNotificationsPlugin
               .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
@@ -72,6 +80,8 @@ class NotificationService {
   }
 
   Future<void> cancelAll() async {
+    if (kIsWeb) return;
+    if (!_isInitialized) await init();
     await flutterLocalNotificationsPlugin.cancelAll();
   }
 
@@ -82,6 +92,8 @@ class NotificationService {
     required int hour,
     required int minute,
   }) async {
+    if (kIsWeb) return;
+
     // Safety guard: ensure plugin is initialised before scheduling
     if (!_isInitialized) await init();
     try {
@@ -105,7 +117,7 @@ class NotificationService {
         matchDateTimeComponents: DateTimeComponents.time, // Repeating daily
       );
     } catch (e) {
-      print('Error counseling notification $id: $e');
+      appLogger.w('Error scheduling notification $id: $e');
     }
   }
 

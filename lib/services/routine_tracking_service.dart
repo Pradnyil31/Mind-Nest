@@ -153,35 +153,142 @@ class RoutineTrackingService {
   Future<int> getCompletionStreak(String userId) async {
     try {
       final now = DateTime.now();
-      var currentDate = DateTime(now.year, now.month, now.day);
-      var streak = 0;
+      final today = DateTime(now.year, now.month, now.day);
+      final startWindow = today.subtract(const Duration(days: 365));
 
-      // Go backward day by day
+      final snapshot = await _completionsCollection
+          .where('userId', isEqualTo: userId)
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startWindow))
+          .where(
+            'date',
+            isLessThanOrEqualTo: Timestamp.fromDate(
+              today.add(const Duration(days: 1)),
+            ),
+          )
+          .orderBy('date', descending: true)
+          .limit(400)
+          .get();
+
+      if (snapshot.docs.isEmpty) return 0;
+
+      final activeDays = <String>{};
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final completed = List<String>.from(data['completedActivities'] ?? []);
+        if (completed.isEmpty) continue;
+
+        final ts = data['date'];
+        if (ts is! Timestamp) continue;
+        final d = ts.toDate();
+        final dayKey =
+            '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+        activeDays.add(dayKey);
+      }
+
+      var streak = 0;
+      var cursor = today;
       while (true) {
-        final dateId =
-            '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}';
-        
-        final doc = await _completionsCollection.doc('${userId}_$dateId').get();
-        
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>;
-          final completed = List<String>.from(data['completedActivities'] ?? []);
-          
-          if (completed.isNotEmpty) {
-            streak++;
-            currentDate = currentDate.subtract(const Duration(days: 1));
-          } else {
-            break;
-          }
-        } else {
+        final dayKey =
+            '${cursor.year}-${cursor.month.toString().padLeft(2, '0')}-${cursor.day.toString().padLeft(2, '0')}';
+        if (!activeDays.contains(dayKey)) {
           break;
         }
+        streak++;
+        cursor = cursor.subtract(const Duration(days: 1));
       }
 
       return streak;
     } catch (e, stackTrace) {
       appLogger.e('Error calculating streak', error: e, stackTrace: stackTrace);
       return 0;
+    }
+  }
+
+  /// Returns active weekdays (1=Mon..7=Sun) with any completion in current week.
+  Future<Set<int>> getActiveDaysThisWeek(String userId) async {
+    try {
+      final now = DateTime.now();
+      final startOfWeek = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: now.weekday % 7));
+
+      final snapshot = await _completionsCollection
+          .where('userId', isEqualTo: userId)
+          .where(
+            'date',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek),
+          )
+          .orderBy('date', descending: true)
+          .limit(40)
+          .get();
+
+      final activeDays = <int>{};
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final completed = List<String>.from(data['completedActivities'] ?? []);
+        if (completed.isEmpty) continue;
+
+        final ts = data['date'];
+        if (ts is! Timestamp) continue;
+        activeDays.add(ts.toDate().weekday);
+      }
+
+      return activeDays;
+    } catch (e, stackTrace) {
+      appLogger.e('Error getting active days this week', error: e, stackTrace: stackTrace);
+      return <int>{};
+    }
+  }
+
+  /// True when user has completed at least one routine activity today.
+  Future<bool> hasAnyCompletedActivityToday(String userId) async {
+    final completed = await getTodayCompletedActivities(userId);
+    return completed.isNotEmpty;
+  }
+
+  /// Get all routine completion docs for a user ordered by date (asc).
+  Future<List<RoutineCompletion>> getAllCompletions(String userId) async {
+    try {
+      final snapshot = await _completionsCollection
+          .where('userId', isEqualTo: userId)
+          .orderBy('date', descending: false)
+          .get();
+
+      return snapshot.docs
+          .map(
+            (doc) => RoutineCompletion.fromMap(
+              doc.data() as Map<String, dynamic>,
+              doc.id,
+            ),
+          )
+          .toList();
+    } catch (e, stackTrace) {
+      appLogger.e('Error getting all completions', error: e, stackTrace: stackTrace);
+      return [];
+    }
+  }
+
+  /// Returns today's completion counts.
+  Future<Map<String, int>> getTodayCompletionSummary(String userId) async {
+    try {
+      final today = DateTime.now();
+      final dateId =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+      final doc = await _completionsCollection.doc('${userId}_$dateId').get();
+      if (!doc.exists) {
+        return {'completed': 0, 'total': 0};
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+      final completed = List<String>.from(data['completedActivities'] ?? []).length;
+      final total = (data['totalActivities'] as int?) ?? 0;
+      return {'completed': completed, 'total': total};
+    } catch (e, stackTrace) {
+      appLogger.e('Error getting today completion summary', error: e, stackTrace: stackTrace);
+      return {'completed': 0, 'total': 0};
     }
   }
 }

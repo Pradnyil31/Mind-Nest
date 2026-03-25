@@ -3,9 +3,14 @@ import '../core/logger.dart';
 import '../models/meditation_session.dart';
 
 class MeditationService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  MeditationService({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference get _sessionsCollection => _firestore.collection('meditation_sessions');
+  DocumentReference _summaryStatsDoc(String userId) =>
+      _firestore.collection('users').doc(userId).collection('meditation_stats').doc('summary');
 
   /// Save a completed meditation session
   Future<void> saveSession(MeditationSession session) async {
@@ -34,6 +39,13 @@ class MeditationService {
   /// Get total session count for a user
   Future<int> getTotalSessionCount(String userId) async {
     try {
+      final statsSnapshot = await _summaryStatsDoc(userId).get();
+      if (statsSnapshot.exists) {
+        final stats = statsSnapshot.data() as Map<String, dynamic>;
+        final totalSessions = stats['totalSessions'];
+        if (totalSessions is int) return totalSessions;
+      }
+
       final snapshot = await _sessionsCollection
           .where('userId', isEqualTo: userId)
           .where('completed', isEqualTo: true)
@@ -48,6 +60,13 @@ class MeditationService {
   /// Get total meditation minutes for a user
   Future<int> getTotalMinutes(String userId) async {
     try {
+      final statsSnapshot = await _summaryStatsDoc(userId).get();
+      if (statsSnapshot.exists) {
+        final stats = statsSnapshot.data() as Map<String, dynamic>;
+        final totalMinutes = stats['totalMinutes'];
+        if (totalMinutes is int) return totalMinutes;
+      }
+
       final snapshot = await _sessionsCollection
           .where('userId', isEqualTo: userId)
           .where('completed', isEqualTo: true)

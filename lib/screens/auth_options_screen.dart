@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'signup_screen.dart';
 import 'login_screen.dart';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
 import '../models/user_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../providers/auth_provider.dart';
+import '../providers/user_provider.dart';
 import 'home_screen.dart';
 import 'onboarding_flow_screen.dart';
 
-class AuthOptionsScreen extends StatelessWidget {
+class AuthOptionsScreen extends ConsumerWidget {
   const AuthOptionsScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -51,23 +51,20 @@ class AuthOptionsScreen extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () async {
                             try {
-                              final authService = AuthService();
+                              final authService = ref.read(authServiceProvider);
                               final userCredential = await authService.signInWithGoogle();
                               
                               if (userCredential != null && userCredential.user != null) {
                                  final user = userCredential.user!;
                                  
                                  // Check Firestore
-                                 final userDoc = await FirebaseFirestore.instance
-                                     .collection('users')
-                                     .doc(user.uid)
-                                     .get();
+                                 final userDoc = await ref.read(firestoreServiceProvider).getUserOnce(user.uid);
                                  
                                  bool onboardingCompleted = false;
                                  
                                  if (!userDoc.exists) {
                                     // Create new user
-                                    await FirestoreService().createUser(UserModel(
+                                    await ref.read(firestoreServiceProvider).createUser(UserModel(
                                       uid: user.uid,
                                       email: user.email ?? '',
                                       displayName: user.displayName ?? 'New User',

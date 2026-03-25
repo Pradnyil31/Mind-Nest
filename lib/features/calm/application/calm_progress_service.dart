@@ -5,9 +5,17 @@ import '../../../config/motive_config.dart';
 import 'mood_tracking_service.dart';
 
 class CalmProgressService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirestoreService _firestoreService = FirestoreService();
-  final MoodTrackingService _moodTrackingService = MoodTrackingService();
+  final FirebaseFirestore _firestore;
+  final FirestoreService _firestoreService;
+  final MoodTrackingService _moodTrackingService;
+
+  CalmProgressService({
+    FirebaseFirestore? firestore,
+    FirestoreService? firestoreService,
+    MoodTrackingService? moodTrackingService,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _firestoreService = firestoreService ?? FirestoreService(firestore: firestore ?? FirebaseFirestore.instance),
+        _moodTrackingService = moodTrackingService ?? MoodTrackingService(firestore: firestore ?? FirebaseFirestore.instance);
 
   CollectionReference get _sessionsCollection =>
       _firestore.collection('calm_sessions');

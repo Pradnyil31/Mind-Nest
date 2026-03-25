@@ -2,10 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/journal_entry.dart';
 import '../services/journal_service.dart';
 import 'auth_provider.dart';
+import 'user_provider.dart';
 
 /// Provider for JournalService instance
 final journalServiceProvider = Provider<JournalService>((ref) {
-  return JournalService();
+  return JournalService(firestoreService: ref.read(firestoreServiceProvider));
 });
 
 /// Stream provider for user's journal entries

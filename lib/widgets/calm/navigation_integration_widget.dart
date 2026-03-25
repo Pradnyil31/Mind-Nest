@@ -4,7 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../features/calm/application/navigation_integration_service.dart';
 import '../../features/calm/application/responsive_layout_service.dart';
 import '../../features/calm/application/accessibility_service.dart';
-import '../../services/auth_service.dart';
+import '../../providers/app_providers.dart';
+import '../../providers/auth_provider.dart';
 
 /// Widget that provides seamless navigation to existing breathing and meditation features
 class NavigationIntegrationWidget extends ConsumerStatefulWidget {
@@ -24,8 +25,8 @@ class NavigationIntegrationWidget extends ConsumerStatefulWidget {
 
 class _NavigationIntegrationWidgetState
     extends ConsumerState<NavigationIntegrationWidget> {
-  final NavigationIntegrationService _navigationService =
-      NavigationIntegrationService();
+  NavigationIntegrationService get _navigationService =>
+      ref.read(navigationIntegrationServiceProvider);
   Map<String, bool> _todayUsage = {};
   bool _isLoading = true;
 
@@ -36,7 +37,7 @@ class _NavigationIntegrationWidgetState
   }
 
   Future<void> _loadTodayUsage() async {
-    final user = AuthService().currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user != null) {
       try {
         final usage = await _navigationService.getTodayUsageStatus(user.uid);

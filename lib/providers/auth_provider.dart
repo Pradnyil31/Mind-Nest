@@ -1,10 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../services/auth_service.dart';
+
+/// Provider for shared FirebaseAuth instance
+final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
+  return FirebaseAuth.instance;
+});
+
+/// Provider for shared GoogleSignIn instance
+final googleSignInProvider = Provider<GoogleSignIn>((ref) {
+  return GoogleSignIn();
+});
 
 /// Provider for AuthService instance
 final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService();
+  return AuthService(
+    auth: ref.read(firebaseAuthProvider),
+    googleSignIn: ref.read(googleSignInProvider),
+  );
 });
 
 /// Stream provider for auth state changes

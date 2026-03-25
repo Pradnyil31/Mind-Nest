@@ -1,22 +1,24 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/voice_service.dart';
+import '../providers/app_providers.dart';
 
-class GroundingExerciseScreen extends StatefulWidget {
+class GroundingExerciseScreen extends ConsumerStatefulWidget {
   const GroundingExerciseScreen({Key? key}) : super(key: key);
 
   @override
-  State<GroundingExerciseScreen> createState() => _GroundingExerciseScreenState();
+  ConsumerState<GroundingExerciseScreen> createState() => _GroundingExerciseScreenState();
 }
 
-class _GroundingExerciseScreenState extends State<GroundingExerciseScreen>
+class _GroundingExerciseScreenState extends ConsumerState<GroundingExerciseScreen>
     with TickerProviderStateMixin {
   int _currentStep = 0;
   bool _isPaused = false;
   int _countdownSeconds = 0;
 
-  final VoiceService _voice = VoiceService();
+  late final VoiceService _voice;
   Timer? _stepTimer;
   late AnimationController _progressController;
   late AnimationController _bgController;
@@ -50,6 +52,7 @@ class _GroundingExerciseScreenState extends State<GroundingExerciseScreen>
   @override
   void initState() {
     super.initState();
+    _voice = ref.read(voiceServiceProvider);
     _progressController = AnimationController(vsync: this, duration: Duration(seconds: _stepDurations[0]));
     _bgController = AnimationController(vsync: this, duration: const Duration(seconds: 12))
       ..repeat(reverse: true);

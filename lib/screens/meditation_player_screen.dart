@@ -1,27 +1,28 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/guided_meditation.dart';
 import '../models/meditation_session.dart';
-import '../services/auth_service.dart';
-import '../services/meditation_service.dart';
-import '../services/meditation_analytics_service.dart';
 import '../services/voice_service.dart';
-import '../services/firestore_service.dart';
+import '../providers/app_providers.dart';
+import '../providers/auth_provider.dart';
+import '../providers/meditation_provider.dart';
+import '../providers/user_provider.dart';
 import '../widgets/activity_completion_dialog.dart';
 
-class MeditationPlayerScreen extends StatefulWidget {
+class MeditationPlayerScreen extends ConsumerStatefulWidget {
   final GuidedMeditation meditation;
 
   const MeditationPlayerScreen({Key? key, required this.meditation}) : super(key: key);
 
   @override
-  State<MeditationPlayerScreen> createState() => _MeditationPlayerScreenState();
+  ConsumerState<MeditationPlayerScreen> createState() => _MeditationPlayerScreenState();
 }
 
 enum MeditationPhase { script, breathing }
 
-class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with TickerProviderStateMixin {
+class _MeditationPlayerScreenState extends ConsumerState<MeditationPlayerScreen> with TickerProviderStateMixin {
   bool _isActive = false;
   int _currentStep = 0;
   int _remainingSeconds = 0;
@@ -29,7 +30,8 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
   Timer? _stepTimer;
   late AnimationController _breathingController;
   late AnimationController _bgController;
-  final VoiceService _voice = VoiceService();
+  DateTime? _sessionStartedAt;
+  late final VoiceService _voice;
   
   MeditationPhase _phase = MeditationPhase.script;
   bool _isInhale = true;
@@ -38,6 +40,7 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
   @override
   void initState() {
     super.initState();
+    _voice = ref.read(voiceServiceProvider);
     _breathingController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
@@ -120,6 +123,7 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
       _currentStep = 0;
       _phase = MeditationPhase.script;
       _isInhale = true;
+      _sessionStartedAt = DateTime.now();
     });
 
     _startSessionTimer();
@@ -183,7 +187,7 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
     // Stop any in-progress narration so it doesn't replay on unmute
     _voice.stop();
     
-    final user = AuthService().currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user != null) {
       await ActivityCompletionDialog.show(
         context,
@@ -193,24 +197,29 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
           final session = MeditationSession(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             userId: user.uid,
-            startTime: DateTime.now(),
+            startTime: _sessionStartedAt ?? DateTime.now(),
             durationMinutes: widget.meditation.durationMinutes,
             type: MeditationType.guided,
             meditationId: widget.meditation.id,
             completed: true,
           );
-          await MeditationService().saveSession(session);
+          await ref.read(meditationServiceProvider).saveSession(session);
 
           // Update analytics
-          await MeditationAnalyticsService().updateStats(user.uid, widget.meditation.durationMinutes);
+          await ref
+              .read(meditationAnalyticsProvider)
+              .updateStats(user.uid, widget.meditation.durationMinutes);
 
           // Log to activity_stats so badge system tracks meditation count
-          await FirestoreService().logActivityCompletion(user.uid, 'meditation');
+          await ref.read(firestoreServiceProvider).logActivityCompletion(user.uid, 'meditation');
         },
       );
     }
 
-    setState(() => _isActive = false);
+    setState(() {
+      _isActive = false;
+      _sessionStartedAt = null;
+    });
 
     if (mounted) {
       Navigator.pop(context);
@@ -220,7 +229,10 @@ class _MeditationPlayerScreenState extends State<MeditationPlayerScreen> with Ti
   void _stopMeditation() {
     _sessionTimer?.cancel();
     _voice.stop();
-    setState(() => _isActive = false);
+    setState(() {
+      _isActive = false;
+      _sessionStartedAt = null;
+    });
     Navigator.pop(context);
   }
 

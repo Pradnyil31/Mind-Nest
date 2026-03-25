@@ -2,10 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/smart_goal.dart';
 import '../services/goal_service.dart';
 import 'auth_provider.dart';
+import 'user_provider.dart';
 
 /// Provider for GoalService instance
 final goalServiceProvider = Provider<GoalService>((ref) {
-  return GoalService();
+  return GoalService(firestoreService: ref.read(firestoreServiceProvider));
 });
 
 /// Stream provider for user's smart goals

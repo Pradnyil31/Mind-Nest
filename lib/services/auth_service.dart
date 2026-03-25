@@ -32,7 +32,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
-      throw 'An error occurred. Please try again.';
+      throw Exception('An error occurred. Please try again.');
     }
   }
 
@@ -50,7 +50,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
-      throw 'An error occurred. Please try again.';
+      throw Exception('An error occurred. Please try again.');
     }
   }
 
@@ -108,7 +108,7 @@ class AuthService {
         _googleSignIn.signOut(),
       ]);
     } catch (e) {
-      throw 'Sign out failed. Please try again.';
+      throw Exception('Sign out failed. Please try again.');
     }
   }
 
@@ -117,7 +117,7 @@ class AuthService {
     try {
       await currentUser?.delete();
     } catch (e) {
-      throw 'Account deletion failed. Please try again.';
+      throw Exception('Account deletion failed. Please try again.');
     }
   }
 
@@ -128,7 +128,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     } catch (e) {
-      throw 'Failed to send password reset email.';
+      throw Exception('Failed to send password reset email.');
     }
   }
 

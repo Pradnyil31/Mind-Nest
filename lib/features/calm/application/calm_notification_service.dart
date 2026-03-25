@@ -6,13 +6,11 @@ import '../../../config/motive_config.dart';
 /// Service for managing calm-specific notifications including reminders,
 /// achievements, and emergency technique suggestions
 class CalmNotificationService {
-  static final CalmNotificationService _instance =
-      CalmNotificationService._internal();
-  factory CalmNotificationService() => _instance;
-  CalmNotificationService._internal();
-
   final Logger _logger = Logger();
-  final NotificationService _notificationService = NotificationService();
+  final NotificationService _notificationService;
+
+  CalmNotificationService({NotificationService? notificationService})
+    : _notificationService = notificationService ?? NotificationService();
 
   // Notification IDs for different types
   static const int _baseReminderId = 1000;

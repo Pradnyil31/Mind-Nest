@@ -1,15 +1,30 @@
 # MindNest Architecture Overview
 
-This project is being migrated towards a **feature-first** structure with clear layers.
+MindNest is moving toward a feature-first layered architecture with Riverpod-based dependency injection.
 
-## Structure
+## Target layering
 
-- `lib/features/<feature>/presentation` – Flutter widgets and screens (UI only).
-- `lib/features/<feature>/application` – Controllers/state (Riverpod notifiers/providers).
-- `lib/features/<feature>/domain` – Pure Dart models and business logic.
-- `lib/features/<feature>/infrastructure` – Data access (Firebase/HTTP, repositories, services).
+- `presentation`: Flutter screens/widgets (UI rendering only)
+- `application`: controllers/use-cases/orchestration
+- `domain`: entities/value objects/business rules
+- `infrastructure`: Firebase/services/repositories
 
-Shared cross-cutting code that is not specific to one feature (e.g. theme, core utilities) stays in existing top-level folders like `theme/`, `core/`, etc.
+## Current DI policy
 
-Over time, screens and logic from `lib/screens`, `lib/widgets`, `lib/services`, and `lib/providers` will be moved into the appropriate feature folders in **small, safe steps**, without changing behavior.
+- UI must not instantiate services directly.
+- UI must not perform direct Firestore collection queries.
+- Shared Firebase instances (`Auth`, `Firestore`, `Functions`) are exposed via providers.
+- Services receive dependencies through constructors/providers.
 
+## Current status
+
+- Home/Profile/Badges/Manage Routine and key widgets now consume provider-backed services only.
+- Server-mediated AI chat is routed through Firebase Functions (`chatProxy`) by default.
+- Firestore rules enforce owner access and immutable ownership fields for critical collections.
+- Rules tests cover critical collections plus immutable `uid`/`createdAt` checks for user docs.
+
+## Remaining migration direction
+
+- Move large legacy screens from `lib/screens` into feature modules incrementally.
+- Replace remaining singleton-like workflow classes with provider-injected orchestrators.
+- Expand typed repository interfaces for high-read domains (analytics/reporting).

@@ -49,6 +49,36 @@ class BadgeService {
     }
   }
 
+
+  /// Gets full earned badges (with earned date) for display surfaces.
+  Future<List<Badge>> getEarnedBadges(String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('badges')
+          .doc(userId)
+          .collection('earned')
+          .get();
+
+      final earned = <Badge>[];
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final matched = Badge.allBadges.where((b) => b.id == doc.id);
+        if (matched.isEmpty) continue;
+
+        final badge = matched.first;
+        earned.add(
+          badge.copyWith(
+            earnedDate: (data['earnedDate'] as Timestamp?)?.toDate(),
+          ),
+        );
+      }
+
+      return earned;
+    } catch (e, stackTrace) {
+      appLogger.e('Error getting earned badges with dates', error: e, stackTrace: stackTrace);
+      return [];
+    }
+  }
   /// Calculates the live progress for all locked badges
   Future<Map<String, BadgeProgress>> getAllBadgesProgress(String userId) async {
     final Map<String, BadgeProgress> progressMap = {};
@@ -176,3 +206,4 @@ class BadgeService {
     }
   }
 }
+

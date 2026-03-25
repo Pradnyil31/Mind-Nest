@@ -11,41 +11,63 @@ import 'mood_tracking_service.dart';
 /// Enhanced service for integrating calm features with the existing app ecosystem
 /// Implements Requirements 11.1-11.9 for comprehensive ecosystem integration
 class EcosystemIntegrationService {
-  static final EcosystemIntegrationService _instance =
-      EcosystemIntegrationService._internal();
-  factory EcosystemIntegrationService() => _instance;
-  EcosystemIntegrationService._internal();
+  final FirebaseFirestore _db;
+  final FirestoreService _firestore;
+  final MeditationAnalyticsService _analytics;
+  final JournalService _journal;
+  final CalmProgressService _calmProgress;
+  final MoodTrackingService _moodTracking;
 
-  FirestoreService? _firestoreService;
-  MeditationAnalyticsService? _meditationAnalytics;
-  JournalService? _journalService;
-  CalmProgressService? _calmProgressService;
-  MoodTrackingService? _moodTrackingService;
+  factory EcosystemIntegrationService({
+    FirebaseFirestore? firestore,
+    FirestoreService? firestoreService,
+    MeditationAnalyticsService? meditationAnalytics,
+    JournalService? journalService,
+    CalmProgressService? calmProgressService,
+    MoodTrackingService? moodTrackingService,
+  }) {
+    final resolvedFirestore = firestore ?? FirebaseFirestore.instance;
+    final resolvedFirestoreService =
+        firestoreService ?? FirestoreService(firestore: resolvedFirestore);
+    final resolvedMoodTracking =
+        moodTrackingService ?? MoodTrackingService(firestore: resolvedFirestore);
+    final resolvedCalmProgress = calmProgressService ??
+        CalmProgressService(
+          firestore: resolvedFirestore,
+          firestoreService: resolvedFirestoreService,
+          moodTrackingService: resolvedMoodTracking,
+        );
+    final resolvedAnalytics = meditationAnalytics ??
+        MeditationAnalyticsService(
+          firestore: resolvedFirestore,
+          firestoreService: resolvedFirestoreService,
+        );
+    final resolvedJournalService = journalService ??
+        JournalService(firestoreService: resolvedFirestoreService);
 
-  FirestoreService get _firestore {
-    _firestoreService ??= FirestoreService();
-    return _firestoreService!;
+    return EcosystemIntegrationService._internal(
+      firestore: resolvedFirestore,
+      firestoreService: resolvedFirestoreService,
+      meditationAnalytics: resolvedAnalytics,
+      journalService: resolvedJournalService,
+      calmProgressService: resolvedCalmProgress,
+      moodTrackingService: resolvedMoodTracking,
+    );
   }
 
-  MeditationAnalyticsService get _analytics {
-    _meditationAnalytics ??= MeditationAnalyticsService();
-    return _meditationAnalytics!;
-  }
-
-  JournalService get _journal {
-    _journalService ??= JournalService();
-    return _journalService!;
-  }
-
-  CalmProgressService get _calmProgress {
-    _calmProgressService ??= CalmProgressService();
-    return _calmProgressService!;
-  }
-
-  MoodTrackingService get _moodTracking {
-    _moodTrackingService ??= MoodTrackingService();
-    return _moodTrackingService!;
-  }
+  EcosystemIntegrationService._internal({
+    required FirebaseFirestore firestore,
+    required FirestoreService firestoreService,
+    required MeditationAnalyticsService meditationAnalytics,
+    required JournalService journalService,
+    required CalmProgressService calmProgressService,
+    required MoodTrackingService moodTrackingService,
+  })  : _db = firestore,
+        _firestore = firestoreService,
+        _analytics = meditationAnalytics,
+        _journal = journalService,
+        _calmProgress = calmProgressService,
+        _moodTracking = moodTrackingService;
 
   /// Integrate calm technique completion with daily routine system (Requirement 11.1)
   Future<void> contributeToDailyRoutine(
@@ -81,7 +103,7 @@ class EcosystemIntegrationService {
   ) async {
     try {
       // Get today's routine activities
-      final userDoc = await FirebaseFirestore.instance
+      final userDoc = await _db
           .collection('users')
           .doc(userId)
           .get();
@@ -497,7 +519,7 @@ class EcosystemIntegrationService {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      await FirebaseFirestore.instance
+      await _db
           .collection('users')
           .doc(userId)
           .collection('calm_preferences')
@@ -641,7 +663,7 @@ class EcosystemIntegrationService {
   /// Enhanced with comprehensive preference integration
   Future<Map<String, dynamic>> getAppPreferences(String userId) async {
     try {
-      final userDoc = await FirebaseFirestore.instance
+      final userDoc = await _db
           .collection('users')
           .doc(userId)
           .get();
@@ -725,7 +747,7 @@ class EcosystemIntegrationService {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      await FirebaseFirestore.instance
+      await _db
           .collection('users')
           .doc(userId)
           .collection('calm_preferences')
@@ -797,7 +819,7 @@ class EcosystemIntegrationService {
         }
       });
 
-      await FirebaseFirestore.instance
+      await _db
           .collection('users')
           .doc(userId)
           .collection('calm_preferences')
@@ -908,7 +930,7 @@ class EcosystemIntegrationService {
       final startOfDay = DateTime(today.year, today.month, today.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
-      final journalSnapshot = await FirebaseFirestore.instance
+      final journalSnapshot = await _db
           .collection('journal_entries')
           .where('userId', isEqualTo: userId)
           .where(
@@ -950,7 +972,7 @@ class EcosystemIntegrationService {
     String techniqueId,
     int durationMinutes,
   ) async {
-    final progressRef = FirebaseFirestore.instance
+    final progressRef = _db
         .collection('users')
         .doc(userId)
         .collection('calm_progress')
@@ -965,7 +987,7 @@ class EcosystemIntegrationService {
   }
 
   Future<Map<String, dynamic>> _getCalmStats(String userId) async {
-    final progressDoc = await FirebaseFirestore.instance
+    final progressDoc = await _db
         .collection('users')
         .doc(userId)
         .collection('calm_progress')
@@ -982,7 +1004,7 @@ class EcosystemIntegrationService {
   Future<List<Map<String, dynamic>>> _getRecentCalmActivity(
     String userId,
   ) async {
-    final recentSessions = await FirebaseFirestore.instance
+    final recentSessions = await _db
         .collection('calm_sessions')
         .where('userId', isEqualTo: userId)
         .orderBy('completedAt', descending: true)
@@ -998,7 +1020,7 @@ class EcosystemIntegrationService {
     final now = DateTime.now();
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
 
-    final weekSessions = await FirebaseFirestore.instance
+    final weekSessions = await _db
         .collection('calm_sessions')
         .where('userId', isEqualTo: userId)
         .where(
@@ -1038,7 +1060,7 @@ class EcosystemIntegrationService {
   }
 
   Future<String?> _getUserMotive(String userId) async {
-    final userDoc = await FirebaseFirestore.instance
+    final userDoc = await _db
         .collection('users')
         .doc(userId)
         .get();

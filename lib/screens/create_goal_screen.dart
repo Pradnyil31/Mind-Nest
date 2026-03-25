@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/smart_goal.dart';
-import '../services/goal_service.dart';
-import '../services/auth_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/goal_provider.dart';
 
-class CreateGoalScreen extends StatefulWidget {
+class CreateGoalScreen extends ConsumerStatefulWidget {
   const CreateGoalScreen({Key? key}) : super(key: key);
 
   @override
-  State<CreateGoalScreen> createState() => _CreateGoalScreenState();
+  ConsumerState<CreateGoalScreen> createState() => _CreateGoalScreenState();
 }
 
-class _CreateGoalScreenState extends State<CreateGoalScreen> {
+class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
   bool _isLoading = false;
@@ -74,10 +75,18 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
         return;
     }
 
+    final parsedTarget = double.tryParse(_targetController.text.trim());
+    if (parsedTarget == null || parsedTarget <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Target must be a valid number greater than 0')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      final user = AuthService().currentUser;
+      final user = ref.read(authServiceProvider).currentUser;
       if (user == null) throw 'User not logged in';
 
       final goal = SmartGoal(
@@ -85,14 +94,14 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
         userId: user.uid,
         title: _titleController.text.trim(),
         description: 'Achieve ${_targetController.text} ${_unitController.text} by ${DateFormat('MMM d').format(_deadline)}', // Auto-generated description
-        targetValue: double.parse(_targetController.text.trim()),
+        targetValue: parsedTarget,
         currentValue: 0,
         unit: _unitController.text.trim(),
         deadline: _deadline,
         colorValue: _selectedColor,
       );
 
-      await GoalService().addGoal(goal);
+      await ref.read(goalServiceProvider).addGoal(goal);
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {

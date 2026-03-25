@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/journal_entry.dart';
-import '../services/journal_service.dart';
-import '../services/auth_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/journal_provider.dart';
 import '../widgets/activity_completion_dialog.dart';
 
-class JournalEntryScreen extends StatefulWidget {
+class JournalEntryScreen extends ConsumerStatefulWidget {
   final JournalEntry? entry; // Null if creating a new entry
 
   const JournalEntryScreen({Key? key, this.entry}) : super(key: key);
 
   @override
-  State<JournalEntryScreen> createState() => _JournalEntryScreenState();
+  ConsumerState<JournalEntryScreen> createState() => _JournalEntryScreenState();
 }
 
-class _JournalEntryScreenState extends State<JournalEntryScreen> {
+class _JournalEntryScreenState extends ConsumerState<JournalEntryScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   String _selectedMood = 'Happy';
@@ -60,7 +61,7 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = AuthService().currentUser;
+      final user = ref.read(authServiceProvider).currentUser;
       if (user == null) throw 'User not logged in';
 
       final entry = JournalEntry(
@@ -73,7 +74,7 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
         tags: [],
       );
 
-      final service = JournalService();
+      final service = ref.read(journalServiceProvider);
       await ActivityCompletionDialog.show(
         context,
         savingText: 'Saving entry...',

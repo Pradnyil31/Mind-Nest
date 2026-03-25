@@ -1,29 +1,30 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/calm_technique.dart';
 import '../services/voice_service.dart';
-import '../services/firestore_service.dart';
-import '../services/auth_service.dart';
+import '../providers/app_providers.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/activity_completion_dialog.dart';
 
-class CalmTechniqueScreen extends StatefulWidget {
+class CalmTechniqueScreen extends ConsumerStatefulWidget {
   final CalmTechnique technique;
 
   const CalmTechniqueScreen({Key? key, required this.technique}) : super(key: key);
 
   @override
-  State<CalmTechniqueScreen> createState() => _CalmTechniqueScreenState();
+  ConsumerState<CalmTechniqueScreen> createState() => _CalmTechniqueScreenState();
 }
 
-class _CalmTechniqueScreenState extends State<CalmTechniqueScreen>
+class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
     with TickerProviderStateMixin {
   int _currentStep = 0;
   bool _isStarted = false;
   bool _isPaused = false;
   int _countdownSeconds = 0;
 
-  final VoiceService _voice = VoiceService();
+  late final VoiceService _voice;
   Timer? _stepTimer;
   late AnimationController _progressController;
   late AnimationController _bgController;
@@ -73,6 +74,7 @@ class _CalmTechniqueScreenState extends State<CalmTechniqueScreen>
   @override
   void initState() {
     super.initState();
+    _voice = ref.read(voiceServiceProvider);
     _progressController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 15),
@@ -507,13 +509,16 @@ class _CalmTechniqueScreenState extends State<CalmTechniqueScreen>
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
-                      final user = AuthService().currentUser;
+                      final user = ref.read(authServiceProvider).currentUser;
                       if (user != null) {
                         await ActivityCompletionDialog.show(
                           context,
                           savingText: 'Saving progress...',
                           onComplete: () async {
-                            await FirestoreService().logActivityCompletion(user.uid, 'calm_technique');
+                            await ref.read(firestoreServiceProvider).logActivityCompletion(
+                              user.uid,
+                              'calm_technique',
+                            );
                           },
                         );
                       }

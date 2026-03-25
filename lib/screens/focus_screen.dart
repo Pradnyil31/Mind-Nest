@@ -1,19 +1,21 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../models/focus_session.dart';
-import '../services/auth_service.dart';
-import '../services/focus_service.dart';
+import '../providers/auth_provider.dart';
+import '../providers/app_providers.dart';
 
-class FocusScreen extends StatefulWidget {
+class FocusScreen extends ConsumerStatefulWidget {
   const FocusScreen({Key? key}) : super(key: key);
 
   @override
-  State<FocusScreen> createState() => _FocusScreenState();
+  ConsumerState<FocusScreen> createState() => _FocusScreenState();
 }
 
-class _FocusScreenState extends State<FocusScreen> with TickerProviderStateMixin {
+class _FocusScreenState extends ConsumerState<FocusScreen> with TickerProviderStateMixin {
   // Config
   int _durationMinutes = 25;
   String _taskName = '';
@@ -25,6 +27,7 @@ class _FocusScreenState extends State<FocusScreen> with TickerProviderStateMixin
   late final ValueNotifier<int> _remainingSeconds;
   Timer? _timer;
   YoutubePlayerController? _videoController;
+  DateTime? _sessionStartedAt;
 
   // Animation
   late AnimationController _breathingController;
@@ -86,6 +89,7 @@ class _FocusScreenState extends State<FocusScreen> with TickerProviderStateMixin
     setState(() {
       _isActive = true;
       _remainingSeconds.value = _durationMinutes * 60;
+      _sessionStartedAt = DateTime.now();
     });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -101,22 +105,25 @@ class _FocusScreenState extends State<FocusScreen> with TickerProviderStateMixin
     _timer?.cancel();
     _videoController?.pause();
     
-    final user = AuthService().currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user != null) {
       final session = FocusSession(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         userId: user.uid,
-        startTime: DateTime.now(), // Technically started duration ago, but simplify
+        startTime: _sessionStartedAt ?? DateTime.now(),
         durationMinutes: _durationMinutes,
         taskName: _taskName,
         mode: _selectedMode,
         resourceId: _selectedResource,
         completed: true,
       );
-      await FocusService().saveSession(session);
+      await ref.read(focusServiceProvider).saveSession(session);
     }
     
-    setState(() => _isActive = false);
+    setState(() {
+      _isActive = false;
+      _sessionStartedAt = null;
+    });
     
     if (mounted) {
       showDialog(
@@ -138,7 +145,10 @@ class _FocusScreenState extends State<FocusScreen> with TickerProviderStateMixin
   void _stopFocus() {
     _timer?.cancel();
     _videoController?.pause();
-    setState(() => _isActive = false);
+    setState(() {
+      _isActive = false;
+      _sessionStartedAt = null;
+    });
   }
 
   @override
@@ -485,20 +495,20 @@ class _FocusScreenState extends State<FocusScreen> with TickerProviderStateMixin
             ),
           ),
 
-          // Debug Info
-          Positioned(
-            bottom: 110,
-            left: 24,
-            child: ValueListenableBuilder<YoutubePlayerValue>(
-              valueListenable: _videoController!,
-              builder: (context, value, _) {
-                 return Text(
-                   'ID: $_selectedResource\nStatus: ${value.playerState}\nErr: ${value.errorCode}\nBuf: ${value.buffered}s',
-                   style: const TextStyle(color: Colors.yellow, fontSize: 10, fontFamily: 'Courier'),
-                 );
-              },
+          if (kDebugMode)
+            Positioned(
+              bottom: 110,
+              left: 24,
+              child: ValueListenableBuilder<YoutubePlayerValue>(
+                valueListenable: _videoController!,
+                builder: (context, value, _) {
+                  return Text(
+                    'ID: $_selectedResource\nStatus: ${value.playerState}\nErr: ${value.errorCode}\nBuf: ${value.buffered}s',
+                    style: const TextStyle(color: Colors.yellow, fontSize: 10, fontFamily: 'Courier'),
+                  );
+                },
+              ),
             ),
-          ),
           
           // Refresh Button
           Positioned(

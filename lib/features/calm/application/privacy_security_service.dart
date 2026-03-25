@@ -20,11 +20,12 @@ class PrivacySecurityService {
   static const String _dataRetentionKey = 'calm_data_retention';
 
   late final Encrypter _encrypter;
-  late final IV _iv;
 
-  PrivacySecurityService()
-    : _errorRecovery = ErrorRecoveryService(),
-      _dataIntegrity = DataIntegrityService();
+  PrivacySecurityService({
+    ErrorRecoveryService? errorRecovery,
+    DataIntegrityService? dataIntegrity,
+  }) : _errorRecovery = errorRecovery ?? ErrorRecoveryService(),
+       _dataIntegrity = dataIntegrity ?? DataIntegrityService();
 
   /// Initializes encryption and privacy settings
   Future<bool> initialize() async {
@@ -55,14 +56,16 @@ class PrivacySecurityService {
   Future<String?> encryptSensitiveData(Map<String, dynamic> data) async {
     try {
       final jsonString = jsonEncode(data);
-      final encrypted = _encrypter.encrypt(jsonString, iv: _iv);
+      final iv = IV.fromSecureRandom(16);
+      final encrypted = _encrypter.encrypt(jsonString, iv: iv);
 
       developer.log(
         'Encrypted sensitive data (${data.keys.length} fields)',
         name: 'PrivacySecurityService',
       );
 
-      return encrypted.base64;
+      // Store IV with payload so decryption survives app restarts.
+      return '${iv.base64}:${encrypted.base64}';
     } catch (e) {
       developer.log(
         'Failed to encrypt sensitive data: $e',
@@ -78,8 +81,14 @@ class PrivacySecurityService {
     String encryptedData,
   ) async {
     try {
-      final encrypted = Encrypted.fromBase64(encryptedData);
-      final decrypted = _encrypter.decrypt(encrypted, iv: _iv);
+      final parts = encryptedData.split(':');
+      if (parts.length != 2) {
+        return null;
+      }
+
+      final iv = IV.fromBase64(parts[0]);
+      final encrypted = Encrypted.fromBase64(parts[1]);
+      final decrypted = _encrypter.decrypt(encrypted, iv: iv);
       final data = jsonDecode(decrypted) as Map<String, dynamic>;
 
       return data;
@@ -406,7 +415,6 @@ class PrivacySecurityService {
 
     final key = Key.fromBase64(keyString);
     _encrypter = Encrypter(AES(key));
-    _iv = IV.fromSecureRandom(16);
   }
 
   Future<void> _initializePrivacySettings() async {

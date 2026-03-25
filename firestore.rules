@@ -9,12 +9,46 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
+
+    function isValidUserCreate(userId) {
+      return isOwner(userId) &&
+        request.resource.data.uid == userId &&
+        request.resource.data.createdAt is timestamp;
+    }
+
+    function isValidUserUpdate(userId) {
+      return isOwner(userId) &&
+        resource.data.uid == userId &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function isOwnerDoc() {
+      return isAuthenticated() &&
+        resource != null &&
+        resource.data.userId == request.auth.uid;
+    }
+
+    function canReadOwnedDoc() {
+      return isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    function isValidOwnedCreate() {
+      return isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+
+    function isValidOwnedUpdate() {
+      return isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId;
+    }
     
     // User documents - users can only access their own data
     match /users/{userId} {
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId) && !exists(/databases/$(database)/documents/users/$(userId));
-      allow update: if isOwner(userId);
+      allow create: if isValidUserCreate(userId) &&
+        !exists(/databases/$(database)/documents/users/$(userId));
+      allow update: if isValidUserUpdate(userId);
       allow delete: if isOwner(userId);
       
       // User subcollections - using actual camelCase names from code
@@ -41,65 +75,90 @@ service cloud.firestore {
     
     // Daily check-ins
     match /daily_checkins/{checkInId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if canReadOwnedDoc();
+      allow create: if isValidOwnedCreate();
+      allow update: if isValidOwnedUpdate();
+      allow delete: if isOwnerDoc();
     }
     
     // Smart goals
     match /smart_goals/{goalId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if canReadOwnedDoc();
+      allow create: if isValidOwnedCreate();
+      allow update: if isValidOwnedUpdate();
+      allow delete: if isOwnerDoc();
     }
     
     // Journal entries
     match /journal_entries/{entryId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if canReadOwnedDoc();
+      allow create: if isValidOwnedCreate();
+      allow update: if isValidOwnedUpdate();
+      allow delete: if isOwnerDoc();
     }
     
     // Meditation sessions
     match /meditation_sessions/{sessionId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if canReadOwnedDoc();
+      allow create: if isValidOwnedCreate();
+      allow update: if isValidOwnedUpdate();
+      allow delete: if isOwnerDoc();
     }
 
     // Calm sessions - used by CalmProgressService / ecosystem dashboard
     match /calm_sessions/{sessionId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if canReadOwnedDoc();
+      allow create: if isValidOwnedCreate();
+      allow update: if isValidOwnedUpdate();
+      allow delete: if isOwnerDoc();
     }
     
     // Focus sessions
     match /focus_sessions/{sessionId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if canReadOwnedDoc();
+      allow create: if isValidOwnedCreate();
+      allow update: if isValidOwnedUpdate();
+      allow delete: if isOwnerDoc();
     }
     
     // Routine completions
     match /routine_completions/{completionId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if canReadOwnedDoc();
+      allow create: if isValidOwnedCreate();
+      allow update: if isValidOwnedUpdate();
+      allow delete: if isOwnerDoc();
     }
     
     // Mood sessions - for mood tracking functionality
     match /mood_sessions/{sessionId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if canReadOwnedDoc();
+      allow create: if isValidOwnedCreate();
+      allow update: if isValidOwnedUpdate();
+      allow delete: if isOwnerDoc();
     }
     
     // Motive adaptations - for personalized recommendations
     match /motive_adaptations/{adaptationId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if canReadOwnedDoc();
+      allow create: if isValidOwnedCreate();
+      allow update: if isValidOwnedUpdate();
+      allow delete: if isOwnerDoc();
+    }
+
+    // Motive transition analytics
+    match /motive_transitions/{transitionId} {
+      allow read: if canReadOwnedDoc();
+      allow create: if isValidOwnedCreate();
+      allow update: if isValidOwnedUpdate();
+      allow delete: if isOwnerDoc();
+    }
+
+    // Cross-motive effectiveness analytics
+    match /cross_motive_effectiveness/{bridgeId} {
+      allow read: if canReadOwnedDoc();
+      allow create: if isValidOwnedCreate();
+      allow update: if isValidOwnedUpdate();
+      allow delete: if isOwnerDoc();
     }
     
     // Badges

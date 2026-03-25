@@ -8,7 +8,7 @@ class JournalService {
 
   JournalService({FirebaseFirestore? firestore, FirestoreService? firestoreService})
       : _firestore = firestore ?? FirebaseFirestore.instance,
-        _firestoreService = firestoreService ?? FirestoreService();
+        _firestoreService = firestoreService ?? FirestoreService(firestore: firestore ?? FirebaseFirestore.instance);
 
   // Collection reference
   CollectionReference get _journalCollection => _firestore.collection('journal_entries');
@@ -23,7 +23,7 @@ class JournalService {
       // Log completion for badge system — only fires when entry is actually saved
       _firestoreService.logActivityCompletion(entry.userId, 'journaling');
     } catch (e) {
-      throw 'Failed to add journal entry: $e';
+      throw Exception('Failed to add journal entry: $e');
     }
   }
 
@@ -45,7 +45,7 @@ class JournalService {
     try {
       await _journalCollection.doc(entry.id).update(entry.toMap());
     } catch (e) {
-      throw 'Failed to update journal entry: $e';
+      throw Exception('Failed to update journal entry: $e');
     }
   }
 
@@ -54,7 +54,7 @@ class JournalService {
     try {
       await _journalCollection.doc(entryId).delete();
     } catch (e) {
-      throw 'Failed to delete journal entry: $e';
+      throw Exception('Failed to delete journal entry: $e');
     }
   }
 }

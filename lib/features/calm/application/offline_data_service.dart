@@ -12,14 +12,18 @@ import 'mood_tracking_service.dart';
 /// Service for managing offline data storage and synchronization
 /// Implements Requirements 9.1-9.6: Offline Capability and Data Synchronization
 class OfflineDataService {
-  static final OfflineDataService _instance = OfflineDataService._internal();
-  factory OfflineDataService() => _instance;
-  OfflineDataService._internal();
-
   final Logger _logger = Logger();
-  final FirestoreService _firestoreService = FirestoreService();
-  final CalmProgressService _progressService = CalmProgressService();
-  final MoodTrackingService _moodService = MoodTrackingService();
+  final FirestoreService _firestoreService;
+  final CalmProgressService _progressService;
+  final MoodTrackingService _moodService;
+
+  OfflineDataService({
+    FirestoreService? firestoreService,
+    CalmProgressService? progressService,
+    MoodTrackingService? moodService,
+  })  : _firestoreService = firestoreService ?? FirestoreService(),
+        _progressService = progressService ?? CalmProgressService(),
+        _moodService = moodService ?? MoodTrackingService();
 
   // Stream controllers for offline status
   final StreamController<bool> _offlineStatusController =

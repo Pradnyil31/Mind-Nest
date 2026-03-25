@@ -1,76 +1,92 @@
-# MindNest 🧠🪺
+# MindNest
 
-MindNest is a comprehensive personal wellness and routine tracking application designed to help users cultivate healthy habits, improve sleep, and maintain mental well-being. Built with Flutter and powered by Google Gemini AI, MindNest offers meaningful insights and a supportive companion for your daily journey.
+MindNest is a Flutter wellness application for daily routines, journaling, meditation/focus sessions, and progress tracking. It uses Firebase Auth + Firestore for identity/data and supports a server-mediated AI chat companion via Firebase Functions.
 
-## ✨ Features
+## Core capabilities
 
--   🤖 AI Companion: Chat with a supportive AI assistant powered by Google's Gemini API for encouragement, advice, and conversation.
--   📅 Routine Tracking: Create and manage daily routines with customizable schedules.
--   😴 Sleep Improvement: Track sleep patterns and get personalized motive-based recommendations for better rest.
--   📊 Progress & Analytics: Visualize your consistency and progress over time with interactive charts.
--   🧘 Mindfulness: Access breathing exercises and other mindfulness tools directly within the app.
--   🔐 Secure Authentication: Seamless sign-in with Google and Email/Password using Firebase Auth.
--   ☁️ Cloud Sync: Your data is synced across devices using Cloud Firestore.
+- Email/password and Google sign-in
+- Guided onboarding and personalized wellness goals
+- Daily routine generation and completion tracking
+- Daily check-ins, journaling, meditation, and focus sessions
+- Progress insights and badges
+- Server-mediated AI chat (`chatProxy`) with rate limiting and crisis-keyword guard
 
-## 🛠️ Tech Stack
+## Tech stack
 
--   Frontend: Flutter (Dart)
--   Backend / Database: Firebase (Firestore, Auth)
--   State Management: Riverpod
--   AI Integration: Google Generative AI (Gemini)
--   Charts: FL Chart
+- Frontend: Flutter (Dart)
+- State management: Riverpod
+- Backend: Firebase Auth, Firestore, Cloud Functions
+- Notifications: `flutter_local_notifications`
 
-## 🚀 Getting Started
+## Prerequisites
 
-### Prerequisites
+- Flutter SDK
+- Node.js 20+ (for functions and rules tests)
+- Firebase CLI
+- Firebase project credentials for native platforms
 
--   Flutter SDK installed ([Installation Guide](https://flutter.dev/docs/get-started/install))
--   A Firebase project set up ([Firebase Guide](https://firebase.google.com/docs/flutter/setup))
--   A Google Gemini API Key ([Get API Key](https://ai.google.dev/))
+## Setup
 
-### Installation
+1. Install app dependencies:
 
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/yourusername/mindnest.git
-    cd mindnest
-    ```
+```bash
+flutter pub get
+```
 
-2.  Install dependencies:
-    ```bash
-    flutter pub get
-    ```
+2. Install function dependencies:
 
-3.  Configure Firebase:
-    -   Place your `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) in the respective `android/app` and `ios/Runner` directories.
+```bash
+cd functions
+npm install
+cd ..
+```
 
-4.  **Set up API Keys (CRITICAL)**:
-    -   You must provide your Google Gemini API key when running or building the app.
-    -   **Option A: VS Code (Recommended)**
-        -   Open the project in VS Code.
-        -   Go to the "Run and Debug" tab.
-        -   Select "MindNest (Dev)" and click the Play button.
-        -   *(Note: The `launch.json` is pre-configured with a placeholder key. Update it in `.vscode/launch.json` if needed)*
+3. Configure native Firebase:
 
-    -   **Option B: Terminal**
-        -   Run with the key passed as a dart-define:
-        ```bash
-        flutter run --dart-define=GEMINI_API_KEY=YOUR_ACTUAL_API_KEY
-        ```
+- Android: place `android/app/google-services.json`
+- iOS: place `ios/Runner/GoogleService-Info.plist`
 
-5.  Run the app:
-    ```bash
-    flutter run --dart-define=GEMINI_API_KEY=YOUR_API_KEY
-    ```
+4. Configure function secret for server chat:
 
-## 📸 Screenshots
+```bash
+firebase functions:secrets:set GEMINI_API_KEY
+```
 
-| Home Screen | Routine Tracker | AI Chat |
-|:-----------:|:---------------:|:-------:|
-| ![Home](assets/images/home_placeholder.png) | ![Routine](assets/images/routine_placeholder.png) | ![Chat](assets/images/chat_placeholder.png) |
+5. Run app (server chat by default):
 
-(Note: Replace placeholder paths with actual screenshot paths)
+```bash
+flutter run --dart-define=USE_SERVER_CHAT=true
+```
 
-## 🤝 Contributing
+## Optional web setup
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Web builds require explicit Firebase web defines:
+
+```bash
+flutter run -d chrome \
+  --dart-define=FIREBASE_WEB_API_KEY=... \
+  --dart-define=FIREBASE_WEB_APP_ID=... \
+  --dart-define=FIREBASE_WEB_MESSAGING_SENDER_ID=... \
+  --dart-define=FIREBASE_WEB_PROJECT_ID=... \
+  --dart-define=FIREBASE_WEB_AUTH_DOMAIN=... \
+  --dart-define=FIREBASE_WEB_STORAGE_BUCKET=...
+```
+
+## Security and quality gates
+
+- Firestore rules enforce owner-only access and immutable ownership fields.
+- Rules tests cover critical collections and user profile immutability.
+- CI workflow: `.github/workflows/flutter-quality-gate.yml`
+
+Local checks:
+
+```bash
+./tools/quality_gate.sh
+./tools/firestore_rules_test.sh
+```
+
+(Windows PowerShell equivalents are in `tools/*.ps1`.)
+
+## Publication runbook
+
+Use `docs/publication_readiness_playbook.md` as the pre-submission checklist.

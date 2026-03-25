@@ -8,13 +8,11 @@ import '../../../services/audio_playback_service.dart';
 /// Service for performance optimization and resource management
 /// Implements Requirements 13.1-13.6: Performance and Resource Management
 class PerformanceOptimizationService {
-  static final PerformanceOptimizationService _instance =
-      PerformanceOptimizationService._internal();
-  factory PerformanceOptimizationService() => _instance;
-  PerformanceOptimizationService._internal();
-
   final Logger _logger = Logger();
-  final AudioPlaybackService _audioService = AudioPlaybackService();
+  final AudioPlaybackService _audioService;
+
+  PerformanceOptimizationService({AudioPlaybackService? audioService})
+    : _audioService = audioService ?? AudioPlaybackService();
 
   // Performance monitoring
   Timer? _memoryMonitorTimer;

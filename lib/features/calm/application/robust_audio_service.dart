@@ -19,8 +19,10 @@ class RobustAudioService {
   // Circuit breakers for different audio operations
   static const String _downloadCircuit = 'audio_download';
 
-  RobustAudioService(this._audioService)
-    : _errorRecovery = ErrorRecoveryService();
+  RobustAudioService(
+    this._audioService, {
+    ErrorRecoveryService? errorRecovery,
+  }) : _errorRecovery = errorRecovery ?? ErrorRecoveryService();
 
   /// Plays a sound with comprehensive error handling
   Future<bool> playSound(String soundId, double volume) async {

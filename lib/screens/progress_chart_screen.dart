@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../services/progress_insights_service.dart';
 import 'package:intl/intl.dart';
+import '../providers/app_providers.dart';
 
-class ProgressChartScreen extends StatefulWidget {
+class ProgressChartScreen extends ConsumerStatefulWidget {
   final String userId;
 
   const ProgressChartScreen({
@@ -13,11 +14,10 @@ class ProgressChartScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<ProgressChartScreen> createState() => _ProgressChartScreenState();
+  ConsumerState<ProgressChartScreen> createState() => _ProgressChartScreenState();
 }
 
-class _ProgressChartScreenState extends State<ProgressChartScreen> {
-  final _insightsService = ProgressInsightsService();
+class _ProgressChartScreenState extends ConsumerState<ProgressChartScreen> {
   int _selectedDays = 7;
   bool _isLoading = true;
   Map<DateTime, double> _completionHistory = {};
@@ -31,9 +31,10 @@ class _ProgressChartScreenState extends State<ProgressChartScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
+    final insightsService = ref.read(insightsServiceProvider);
     
-    final history = await _insightsService.getCompletionHistory(widget.userId, _selectedDays);
-    final breakdown = await _insightsService.getActivityBreakdown(widget.userId, _selectedDays);
+    final history = await insightsService.getCompletionHistory(widget.userId, _selectedDays);
+    final breakdown = await insightsService.getActivityBreakdown(widget.userId, _selectedDays);
     
     if (mounted) {
       setState(() {
