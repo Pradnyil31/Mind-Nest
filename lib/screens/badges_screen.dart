@@ -5,10 +5,9 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../models/badge.dart';
 import '../services/badge_service.dart';
 import '../providers/app_providers.dart';
-import '../providers/auth_provider.dart';
 
 class BadgesScreen extends ConsumerStatefulWidget {
-  const BadgesScreen({Key? key}) : super(key: key);
+  const BadgesScreen({super.key});
 
   @override
   ConsumerState<BadgesScreen> createState() => _BadgesScreenState();
@@ -125,7 +124,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                                   'You\'ve earned ${_earnedBadges.length} of ${Badge.allBadges.length} badges!',
                                   style: GoogleFonts.lato(
                                     fontSize: 14,
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withValues(alpha: 0.9),
                                   ),
                                 ),
                               ],
@@ -209,15 +208,15 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isEarned
-              ? const Color(0xFF6C63FF).withOpacity(0.3)
+              ? const Color(0xFF6C63FF).withValues(alpha: 0.3)
               : Colors.grey.shade200,
           width: isEarned ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: isEarned 
-                ? const Color(0xFF6C63FF).withOpacity(0.1) 
-                : Colors.black.withOpacity(0.04),
+                ? const Color(0xFF6C63FF).withValues(alpha: 0.1) 
+                : Colors.black.withValues(alpha: 0.04),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -246,7 +245,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
                 height: 60,
                 decoration: BoxDecoration(
                   color: isEarned
-                      ? const Color(0xFF6C63FF).withOpacity(0.1)
+                      ? const Color(0xFF6C63FF).withValues(alpha: 0.1)
                       : Colors.grey.shade50,
                   shape: BoxShape.circle,
                 ),
@@ -296,7 +295,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF6C63FF).withOpacity(0.1),
+                color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -385,6 +384,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen> {
     );
   }
 }
+
 
 
 

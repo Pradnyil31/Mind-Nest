@@ -9,7 +9,7 @@ import '../widgets/activity_completion_dialog.dart';
 class JournalEntryScreen extends ConsumerStatefulWidget {
   final JournalEntry? entry; // Null if creating a new entry
 
-  const JournalEntryScreen({Key? key, this.entry}) : super(key: key);
+  const JournalEntryScreen({super.key, this.entry});
 
   @override
   ConsumerState<JournalEntryScreen> createState() => _JournalEntryScreenState();
@@ -62,7 +62,14 @@ class _JournalEntryScreenState extends ConsumerState<JournalEntryScreen> {
 
     try {
       final user = ref.read(authServiceProvider).currentUser;
-      if (user == null) throw 'User not logged in';
+      if (user == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Your session expired. Please sign in again.')),
+          );
+        }
+        return;
+      }
 
       final entry = JournalEntry(
         id: widget.entry?.id ?? '', // Service will handle ID generation for empty string if needed, or we handle it.
@@ -91,7 +98,7 @@ class _JournalEntryScreenState extends ConsumerState<JournalEntryScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving entry: $e')),
+          SnackBar(content: Text('Failed to save entry: $e')),
         );
       }
     } finally {
@@ -165,7 +172,7 @@ class _JournalEntryScreenState extends ConsumerState<JournalEntryScreen> {
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: (mood['color'] as Color).withOpacity(0.3),
+                                  color: (mood['color'] as Color).withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 )
@@ -242,3 +249,4 @@ class _JournalEntryScreenState extends ConsumerState<JournalEntryScreen> {
     );
   }
 }
+

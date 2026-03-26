@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/motive_config.dart';
 import '../models/calm_technique.dart';
 import '../providers/app_providers.dart';
-import '../providers/auth_provider.dart';
 import '../widgets/calm/interactive_soundscape_widget.dart';
 import '../widgets/calm/mini_audio_player.dart';
 import '../widgets/calm/quick_access_panel.dart';

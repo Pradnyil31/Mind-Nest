@@ -5,7 +5,6 @@ import '../../features/calm/application/navigation_integration_service.dart';
 import '../../features/calm/application/responsive_layout_service.dart';
 import '../../features/calm/application/accessibility_service.dart';
 import '../../providers/app_providers.dart';
-import '../../providers/auth_provider.dart';
 
 /// Widget that provides seamless navigation to existing breathing and meditation features
 class NavigationIntegrationWidget extends ConsumerStatefulWidget {

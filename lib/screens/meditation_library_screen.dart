@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,7 +10,7 @@ import 'meditation_player_screen.dart';
 import 'meditation_timer_screen.dart';
 
 class MeditationLibraryScreen extends ConsumerStatefulWidget {
-  const MeditationLibraryScreen({Key? key}) : super(key: key);
+  const MeditationLibraryScreen({super.key});
 
   @override
   ConsumerState<MeditationLibraryScreen> createState() => _MeditationLibraryScreenState();
@@ -152,7 +151,7 @@ class _MeditationLibraryScreenState extends ConsumerState<MeditationLibraryScree
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF9575CD).withOpacity(0.3),
+            color: const Color(0xFF9575CD).withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -296,7 +295,7 @@ class _MeditationLibraryScreenState extends ConsumerState<MeditationLibraryScree
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -307,7 +306,7 @@ class _MeditationLibraryScreenState extends ConsumerState<MeditationLibraryScree
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 32),
@@ -345,7 +344,7 @@ class _MeditationLibraryScreenState extends ConsumerState<MeditationLibraryScree
               _getCategoryName(category),
               category,
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -427,7 +426,7 @@ class _MeditationLibraryScreenState extends ConsumerState<MeditationLibraryScree
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -439,7 +438,7 @@ class _MeditationLibraryScreenState extends ConsumerState<MeditationLibraryScree
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: categoryColor.withOpacity(0.15),
+                color: categoryColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
@@ -487,7 +486,7 @@ class _MeditationLibraryScreenState extends ConsumerState<MeditationLibraryScree
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF6C63FF).withOpacity(0.15),
+                            color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text(
@@ -615,7 +614,7 @@ class _MeditationLibraryScreenState extends ConsumerState<MeditationLibraryScree
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF7C4DFF).withOpacity(0.3),
+              color: const Color(0xFF7C4DFF).withValues(alpha: 0.3),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -642,7 +641,7 @@ class _MeditationLibraryScreenState extends ConsumerState<MeditationLibraryScree
                     subtitle,
                     style: GoogleFonts.lato(
                       fontSize: 13,
-                      color: Colors.white.withOpacity(0.85),
+                      color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
                 ],
@@ -659,3 +658,4 @@ class _MeditationLibraryScreenState extends ConsumerState<MeditationLibraryScree
     );
   }
 }
+

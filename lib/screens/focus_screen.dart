@@ -5,11 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../models/focus_session.dart';
-import '../providers/auth_provider.dart';
 import '../providers/app_providers.dart';
 
 class FocusScreen extends ConsumerStatefulWidget {
-  const FocusScreen({Key? key}) : super(key: key);
+  const FocusScreen({super.key});
 
   @override
   ConsumerState<FocusScreen> createState() => _FocusScreenState();
@@ -303,7 +302,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> with TickerProviderSt
                 width: 150,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF6C63FF).withOpacity(0.3) : Colors.white10,
+                  color: isSelected ? const Color(0xFF6C63FF).withValues(alpha: 0.3) : Colors.white10,
                   borderRadius: BorderRadius.circular(12),
                   border: isSelected ? Border.all(color: const Color(0xFF6C63FF)) : null,
                 ),
@@ -343,7 +342,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> with TickerProviderSt
                 width: 100,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Color(sound['color'] as int).withOpacity(isSelected ? 0.8 : 0.2),
+                  color: Color(sound['color'] as int).withValues(alpha: isSelected ? 0.8 : 0.2),
                   borderRadius: BorderRadius.circular(12),
                    border: isSelected ? Border.all(color: Colors.white) : null,
                 ),
@@ -380,7 +379,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> with TickerProviderSt
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          const Color(0xFF6C63FF).withOpacity(0.2),
+                          const Color(0xFF6C63FF).withValues(alpha: 0.2),
                           Colors.transparent,
                         ],
                       ),
@@ -566,3 +565,4 @@ class _FocusScreenState extends ConsumerState<FocusScreen> with TickerProviderSt
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 }
+

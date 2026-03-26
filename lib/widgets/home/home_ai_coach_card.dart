@@ -5,9 +5,9 @@ class HomeAICoachCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const HomeAICoachCard({
-    Key? key,
+    super.key,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +19,7 @@ class HomeAICoachCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFD7E8FF)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -81,3 +81,4 @@ class HomeAICoachCard extends StatelessWidget {
     );
   }
 }
+

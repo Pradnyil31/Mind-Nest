@@ -8,11 +8,11 @@ class HomeCheckInCard extends StatelessWidget {
   final Map<String, dynamic>? checkInData;
 
   const HomeCheckInCard({
-    Key? key,
+    super.key,
     required this.isCompleted,
     required this.onTap,
     this.checkInData,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +34,7 @@ class HomeCheckInCard extends StatelessWidget {
                 color: Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
-                  BoxShadow(color: Colors.green.withOpacity(0.1), blurRadius: 4),
+                  BoxShadow(color: Colors.green.withValues(alpha: 0.1), blurRadius: 4),
                 ],
               ),
               child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 24),
@@ -81,7 +81,7 @@ class HomeCheckInCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
              BoxShadow(
-               color: const Color(0xFF6C63FF).withOpacity(0.3),
+               color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
                blurRadius: 10,
                offset: const Offset(0, 4),
              ),
@@ -92,7 +92,7 @@ class HomeCheckInCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.wb_sunny, color: Colors.white),
@@ -115,7 +115,7 @@ class HomeCheckInCard extends StatelessWidget {
                     'Log sleep & mood to adapt routine.',
                     style: GoogleFonts.lato(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
@@ -134,3 +134,4 @@ class HomeCheckInCard extends StatelessWidget {
     return 'Evening';
   }
 }
+

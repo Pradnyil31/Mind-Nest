@@ -219,7 +219,7 @@ class EcosystemIntegrationService {
     final emoji = motiveProfile?.emoji ?? '🌱';
 
     if (currentStreak >= 7) {
-      return '$emoji ${currentStreak}-Day Calm Streak!';
+      return '$emoji $currentStreak-Day Calm Streak!';
     } else if (totalSessions >= 25) {
       return '$emoji Calm Practice Master';
     } else if (avgImprovement >= 3.0) {

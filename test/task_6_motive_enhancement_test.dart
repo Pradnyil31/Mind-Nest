@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/config/motive_config.dart';
-import '../lib/features/calm/application/motive_detection_service.dart';
+import 'package:fy_project/config/motive_config.dart';
+import 'package:fy_project/features/calm/application/motive_detection_service.dart';
 
 void main() {
   group('Task 6: Motive-Based Personalization Enhancement', () {

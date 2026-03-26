@@ -32,12 +32,13 @@ Each collection is tested for:
 - immutable `userId` on update
 - unauthenticated write denial
 - user profile immutability checks (`uid`, `createdAt`)
+- backend-only `chat_rate_limits` deny-all client access
 
 CI runs rules tests using Firestore Emulator via package script:
 
 - `npm --prefix firestore_rules_tests test`
 
-Java 17+ is required to run Firebase emulators locally.
+Java 21+ is recommended for Firebase emulators locally (Java 17 still works today, but firebase-tools is deprecating <21).
 
 ## Run locally
 
@@ -60,3 +61,4 @@ macOS/Linux
 - Prevents regressions before merge.
 - Provides reproducible validation for viva/demo.
 - Produces machine-generated evidence of correctness and security posture.
+

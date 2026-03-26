@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/calm_technique.dart';
 
 class AffirmationsScreen extends StatefulWidget {
-  const AffirmationsScreen({Key? key}) : super(key: key);
+  const AffirmationsScreen({super.key});
 
   @override
   State<AffirmationsScreen> createState() => _AffirmationsScreenState();
@@ -111,7 +111,7 @@ class _AffirmationsScreenState extends State<AffirmationsScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF9575CD).withOpacity(0.2),
+                color: const Color(0xFF9575CD).withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Text(
@@ -125,9 +125,9 @@ class _AffirmationsScreenState extends State<AffirmationsScreen> {
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
               ),
               child: Text(
                 affirmation,
@@ -158,3 +158,4 @@ class _AffirmationsScreenState extends State<AffirmationsScreen> {
     );
   }
 }
+

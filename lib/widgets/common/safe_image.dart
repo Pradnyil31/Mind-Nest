@@ -9,12 +9,12 @@ class SafeAssetImage extends StatelessWidget {
 
   const SafeAssetImage(
     this.assetName, {
-    Key? key,
+    super.key,
     this.fit,
     this.alignment = Alignment.center,
     this.width,
     this.height,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

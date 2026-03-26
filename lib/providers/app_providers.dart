@@ -14,6 +14,7 @@ import '../features/calm/application/calm_progress_service.dart';
 import '../features/calm/application/mood_tracking_service.dart';
 import '../features/calm/application/sound_preset_service.dart';
 import '../features/calm/application/offline_data_service.dart';
+import '../features/calm/application/complete_integration_workflow.dart';
 import 'user_provider.dart';
 import 'journal_provider.dart';
 import 'meditation_provider.dart';
@@ -49,7 +50,7 @@ final focusServiceProvider = Provider<FocusService>((ref) {
 final notificationServiceProvider = Provider<NotificationService>((ref) => NotificationService());
 final badgeServiceProvider = Provider<BadgeService>((ref) => BadgeService());
 final chatServiceProvider = Provider<ChatService>((ref) {
-  return ChatService(functions: ref.read(firebaseFunctionsProvider));
+  return ChatService();
 });
 final voiceServiceProvider = Provider<VoiceService>((ref) => VoiceService());
 final moodTrackingServiceProvider = Provider<MoodTrackingService>((ref) {
@@ -96,5 +97,13 @@ final offlineDataServiceProvider = Provider<OfflineDataService>((ref) {
     firestoreService: ref.read(firestoreServiceProvider),
     progressService: ref.read(calmProgressServiceProvider),
     moodService: ref.read(moodTrackingServiceProvider),
+  );
+});
+
+final completeIntegrationWorkflowProvider = Provider<CompleteIntegrationWorkflow>((ref) {
+  return CompleteIntegrationWorkflow(
+    firestore: ref.read(firebaseFirestoreProvider),
+    ecosystemService: ref.read(ecosystemIntegrationServiceProvider),
+    calmProgressService: ref.read(calmProgressServiceProvider),
   );
 });

@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../theme/app_colors.dart';
 import '../../screens/focus_screen.dart';
 import '../../screens/breathing_screen.dart';
 import '../../screens/meditation_library_screen.dart';
@@ -16,12 +15,12 @@ class HomeFavoritesList extends StatelessWidget {
   final VoidCallback onCheckInComplete;
 
   const HomeFavoritesList({
-    Key? key,
+    super.key,
     required this.activities,
     required this.routine,
     required this.textColor,
     required this.onCheckInComplete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +74,7 @@ class HomeFavoritesList extends StatelessWidget {
     switch (activity) {
       case 'Daily Check-ins':
         icon = Icons.calendar_today_outlined;
-        color = const Color(0xFF6C63FF).withOpacity(0.8);
+        color = const Color(0xFF6C63FF).withValues(alpha: 0.8);
         label = 'Daily\nCheck-ins';
         break;
       case 'Journaling':
@@ -169,12 +168,12 @@ class _FavoriteItem extends StatelessWidget {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9), 
+                  color: Colors.white.withValues(alpha: 0.9), 
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: Colors.white, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: (iconColor ?? Colors.grey).withOpacity(0.15),
+                      color: (iconColor ?? Colors.grey).withValues(alpha: 0.15),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -208,3 +207,4 @@ class _FavoriteItem extends StatelessWidget {
     );
   }
 }
+

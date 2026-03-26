@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
 import 'auth_provider.dart';
@@ -8,11 +7,6 @@ import 'auth_provider.dart';
 /// Provider for shared FirebaseFirestore instance
 final firebaseFirestoreProvider = Provider<FirebaseFirestore>((ref) {
   return FirebaseFirestore.instance;
-});
-
-/// Provider for shared Firebase Functions instance (server-mediated APIs)
-final firebaseFunctionsProvider = Provider<FirebaseFunctions>((ref) {
-  return FirebaseFunctions.instanceFor(region: 'us-central1');
 });
 
 /// Provider for FirestoreService instance
@@ -54,7 +48,7 @@ final hasCompletedOnboardingProvider = Provider<bool>((ref) {
       if (profile == null) return false;
       // Check if user has onboarding data
       // You can add more sophisticated checks here
-      return profile.displayName != null && profile.displayName!.isNotEmpty;
+      return profile.displayName.isNotEmpty;
     },
     loading: () => false,
     error: (_, __) => false,

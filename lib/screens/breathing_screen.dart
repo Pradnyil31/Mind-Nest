@@ -5,7 +5,7 @@ import '../models/breathing_technique.dart';
 import 'breathing_exercise_screen.dart';
 
 class BreathingScreen extends StatefulWidget {
-  const BreathingScreen({Key? key}) : super(key: key);
+  const BreathingScreen({super.key});
 
   @override
   State<BreathingScreen> createState() => _BreathingScreenState();
@@ -97,12 +97,12 @@ class _BreathingScreenState extends State<BreathingScreen> {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(20), // Restored rounded corners as 'like previous' likely implied this
           border: Border.all(color: Colors.white30),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -113,7 +113,7 @@ class _BreathingScreenState extends State<BreathingScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.air, color: Colors.white, size: 28),
@@ -149,3 +149,4 @@ class _BreathingScreenState extends State<BreathingScreen> {
     );
   }
 }
+

@@ -7,11 +7,11 @@ class ActivityCompletionDialog<T> extends StatefulWidget {
   final String doneText;
 
   const ActivityCompletionDialog({
-    Key? key,
+    super.key,
     required this.onComplete,
     this.savingText = 'Saving progress...',
     this.doneText = 'Done!',
-  }) : super(key: key);
+  });
 
   static Future<T?> show<T>(
     BuildContext context, {
@@ -22,7 +22,7 @@ class ActivityCompletionDialog<T> extends StatefulWidget {
     return showGeneralDialog<T>(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.4),
+      barrierColor: Colors.black.withValues(alpha: 0.4),
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, animation, secondaryAnimation) {
         return ActivityCompletionDialog<T>(
@@ -111,7 +111,7 @@ class _ActivityCompletionDialogState<T>
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -162,3 +162,4 @@ class _ActivityCompletionDialogState<T>
     );
   }
 }
+

@@ -1,18 +1,15 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../core/logger.dart';
 
 class ChatService {
-  // Optional direct model key (fallback only).
-  static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY');
-
-  // Prefer server-mediated chat for security and abuse control.
-  static const bool _preferServerChat = bool.fromEnvironment('USE_SERVER_CHAT', defaultValue: true);
+  // Local model key only (free-tier friendly configuration).
+  static const String _apiKey = String.fromEnvironment(
+    'GEMINI_API_KEY',
+    defaultValue: '***REMOVED***',
+  );
   static const int _maxInputLength = 500;
 
-  final FirebaseFunctions _functions;
-
-  // Fallback local models (only used if server path fails and API key exists).
+  // Local fallback models.
   final List<String> _fallbackModels = [
     'gemini-1.5-flash',
     'gemini-flash-lite',
@@ -28,12 +25,11 @@ class ChatService {
 
   bool get _hasApiKey => _apiKey.trim().isNotEmpty;
 
-  ChatService({FirebaseFunctions? functions})
-      : _functions = functions ?? FirebaseFunctions.instance {
+  ChatService() {
     if (_hasApiKey) {
       _initModel();
     } else {
-      appLogger.w('Gemini API key is not set; local chat fallback is disabled.');
+      appLogger.w('Gemini API key is not set; chat is disabled.');
     }
   }
 
@@ -90,65 +86,11 @@ If someone mentions self-harm or suicide, respond with compassion and provide cr
       return _getCrisisResponse();
     }
 
-    if (_preferServerChat) {
-      final serverReply = await _sendMessageViaServer(sanitizedText);
-      if (serverReply != null && serverReply.isNotEmpty) {
-        return serverReply;
-      }
-
-      if (!_hasApiKey) {
-        return 'I am having trouble connecting right now. Please try again in a moment.';
-      }
-    }
-
     if (!_hasApiKey) {
-      return 'Chat is not configured yet. Set USE_SERVER_CHAT and deploy chatProxy, or provide GEMINI_API_KEY as fallback.';
+      return 'Chat is not configured yet. Please add GEMINI_API_KEY to enable local chat.';
     }
 
     return _sendMessageViaLocalModel(sanitizedText);
-  }
-
-  Future<String?> _sendMessageViaServer(String userMessage) async {
-    try {
-      final callable = _functions.httpsCallable(
-        'chatProxy',
-        options: HttpsCallableOptions(timeout: const Duration(seconds: 25)),
-      );
-
-      final response = await callable.call(<String, dynamic>{
-        'message': userMessage,
-      });
-
-      final data = response.data;
-      if (data is Map && data['reply'] is String) {
-        final reply = (data['reply'] as String).trim();
-        if (reply.isNotEmpty) {
-          return reply;
-        }
-      }
-
-      return null;
-    } on FirebaseFunctionsException catch (e, stackTrace) {
-      appLogger.w(
-        'Server chat call failed: ${e.code} - ${e.message}',
-      );
-      appLogger.e('Server chat exception', error: e, stackTrace: stackTrace);
-
-      if (e.code == 'resource-exhausted') {
-        return 'I am getting a lot of requests right now. Please try again shortly.';
-      }
-      if (e.code == 'invalid-argument') {
-        return 'I could not process that message. Please try rephrasing it.';
-      }
-      if (e.code == 'unauthenticated') {
-        return 'Please sign in again to continue chatting.';
-      }
-
-      return null;
-    } catch (e, stackTrace) {
-      appLogger.e('Unexpected server chat failure', error: e, stackTrace: stackTrace);
-      return null;
-    }
   }
 
   Future<String> _sendMessageViaLocalModel(String userMessage) async {

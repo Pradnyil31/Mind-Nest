@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../lib/features/calm/application/calm_recommendation_service.dart';
-import '../../lib/models/calm_technique.dart';
-import '../../lib/config/motive_config.dart';
+import 'package:fy_project/features/calm/application/calm_recommendation_service.dart';
+import 'package:fy_project/models/calm_technique.dart';
+import 'package:fy_project/config/motive_config.dart';
 
 // Mock CalmProgressService for testing
 class MockCalmProgressService {

@@ -5,15 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../lib/features/calm/application/error_recovery_service.dart';
-import '../../lib/features/calm/application/robust_audio_service.dart';
-import '../../lib/features/calm/application/data_integrity_service.dart';
-import '../../lib/features/calm/application/cache_management_service.dart';
-import '../../lib/features/calm/application/privacy_security_service.dart';
-import '../../lib/services/audio_playback_service.dart';
-import '../../lib/screens/enhanced_calm_screen.dart';
-import '../../lib/widgets/calm/interactive_soundscape_widget.dart';
-import '../../lib/widgets/calm/quick_access_panel.dart';
+import 'package:fy_project/features/calm/application/error_recovery_service.dart';
+import 'package:fy_project/features/calm/application/robust_audio_service.dart';
+import 'package:fy_project/features/calm/application/data_integrity_service.dart';
+import 'package:fy_project/features/calm/application/cache_management_service.dart';
+import 'package:fy_project/features/calm/application/privacy_security_service.dart';
+import 'package:fy_project/services/audio_playback_service.dart';
+import 'package:fy_project/screens/enhanced_calm_screen.dart';
+import 'package:fy_project/widgets/calm/interactive_soundscape_widget.dart';
+import 'package:fy_project/widgets/calm/quick_access_panel.dart';
 
 /// Comprehensive integration tests for Task 12 - Final integration and testing phase
 /// Tests cross-feature integration, error handling, data privacy, and system robustness

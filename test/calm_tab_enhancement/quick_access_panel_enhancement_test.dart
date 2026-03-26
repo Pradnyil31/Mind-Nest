@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../lib/widgets/calm/quick_access_panel.dart';
-import '../../lib/models/calm_technique.dart';
+import 'package:fy_project/widgets/calm/quick_access_panel.dart';
+import 'package:fy_project/models/calm_technique.dart';
 
 void main() {
   group('Quick Access Panel Enhancement Tests', () {

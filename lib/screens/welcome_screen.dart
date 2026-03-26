@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'onboarding_intro_screen.dart';
 import 'login_screen.dart';
+import '../theme/app_colors.dart';
 
 class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({Key? key}) : super(key: key);
+  const WelcomeScreen({super.key});
 
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
@@ -50,8 +51,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -61,8 +60,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFF5EFFF),
-              Color(0xFFFAF7FD),
+              AppColors.primaryLight,
+              AppColors.backgroundSubtle,
             ],
           ),
         ),
@@ -91,7 +90,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Colors.black.withOpacity(0.1),
+                                Colors.black.withValues(alpha: 0.1),
                                 Colors.transparent,
                               ],
                             ),
@@ -117,7 +116,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                       Shadow(
                                         offset: const Offset(0, 2),
                                         blurRadius: 8,
-                                        color: Colors.black.withOpacity(0.3),
+                                        color: Colors.black.withValues(alpha: 0.3),
                                       ),
                                     ],
                                   ),
@@ -137,7 +136,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                       Shadow(
                                         offset: const Offset(0, 1),
                                         blurRadius: 6,
-                                        color: Colors.black.withOpacity(0.3),
+                                        color: Colors.black.withValues(alpha: 0.3),
                                       ),
                                     ],
                                   ),
@@ -181,7 +180,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFA78BFA),
+                                backgroundColor: AppColors.primaryDark,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shadowColor: Colors.transparent,
@@ -217,9 +216,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.grey[700],
+                                color: AppColors.textSecondary,
                                 decoration: TextDecoration.underline,
-                                decorationColor: Colors.grey[700],
+                                decorationColor: AppColors.textSecondary,
                               ),
                             ),
                           ),

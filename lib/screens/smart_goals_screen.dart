@@ -9,7 +9,7 @@ import 'create_goal_screen.dart';
 import '../widgets/activity_completion_dialog.dart';
 
 class SmartGoalsScreen extends ConsumerWidget {
-  const SmartGoalsScreen({Key? key}) : super(key: key);
+  const SmartGoalsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,7 +40,7 @@ class SmartGoalsScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF667EEA).withOpacity(0.4),
+              color: const Color(0xFF667EEA).withValues(alpha: 0.4),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -156,7 +156,7 @@ class SmartGoalsScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -178,7 +178,7 @@ class SmartGoalsScreen extends ConsumerWidget {
                        height: 60,
                        child: CircularProgressIndicator(
                          value: progress,
-                         backgroundColor: color.withOpacity(0.1),
+                         backgroundColor: color.withValues(alpha: 0.1),
                          valueColor: AlwaysStoppedAnimation(color),
                          strokeWidth: 6,
                        ),
@@ -263,7 +263,7 @@ class SmartGoalsScreen extends ConsumerWidget {
                    child: Container(
                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                      decoration: BoxDecoration(
-                       color: color.withOpacity(0.1),
+                       color: color.withValues(alpha: 0.1),
                        borderRadius: BorderRadius.circular(20),
                      ),
                      child: Row(
@@ -313,3 +313,4 @@ class SmartGoalsScreen extends ConsumerWidget {
     );
   }
 }
+

@@ -7,7 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/goal_provider.dart';
 
 class CreateGoalScreen extends ConsumerStatefulWidget {
-  const CreateGoalScreen({Key? key}) : super(key: key);
+  const CreateGoalScreen({super.key});
 
   @override
   ConsumerState<CreateGoalScreen> createState() => _CreateGoalScreenState();
@@ -87,7 +87,14 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
 
     try {
       final user = ref.read(authServiceProvider).currentUser;
-      if (user == null) throw 'User not logged in';
+      if (user == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Your session expired. Please sign in again.')),
+          );
+        }
+        return;
+      }
 
       final goal = SmartGoal(
         id: '', // Service handles ID
@@ -105,7 +112,9 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create goal: $e')),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -204,7 +213,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
         Container(
            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
            decoration: BoxDecoration(
-             color: Color(_selectedColor).withOpacity(0.1),
+             color: Color(_selectedColor).withValues(alpha: 0.1),
              borderRadius: BorderRadius.circular(8),
            ),
            child: Text(
@@ -345,7 +354,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Color(_selectedColor).withOpacity(0.3), width: 2),
+                border: Border.all(color: Color(_selectedColor).withValues(alpha: 0.3), width: 2),
               ),
               child: Row(
                 children: [
@@ -395,7 +404,7 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
                     border: isSelected ? Border.all(color: Colors.white, width: 4) : null,
                     boxShadow: [
                       BoxShadow(
-                        color: Color(color).withOpacity(0.4),
+                        color: Color(color).withValues(alpha: 0.4),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -411,3 +420,4 @@ class _CreateGoalScreenState extends ConsumerState<CreateGoalScreen> {
     );
   }
 }
+

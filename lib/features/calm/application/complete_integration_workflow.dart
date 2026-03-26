@@ -11,18 +11,12 @@ class CompleteIntegrationWorkflow {
   final FirebaseFirestore _db;
 
   CompleteIntegrationWorkflow({
-    EcosystemIntegrationService? ecosystemService,
-    CalmProgressService? calmProgressService,
-    FirebaseFirestore? firestore,
-  })  : _db = firestore ?? FirebaseFirestore.instance,
-        _ecosystemService = ecosystemService ??
-            EcosystemIntegrationService(
-              firestore: firestore ?? FirebaseFirestore.instance,
-            ),
-        _calmProgress = calmProgressService ??
-            CalmProgressService(
-              firestore: firestore ?? FirebaseFirestore.instance,
-            );
+    required EcosystemIntegrationService ecosystemService,
+    required CalmProgressService calmProgressService,
+    required FirebaseFirestore firestore,
+  })  : _db = firestore,
+        _ecosystemService = ecosystemService,
+        _calmProgress = calmProgressService;
   /// Execute complete integration workflow when a calm technique is completed
   /// This is the main entry point for all ecosystem integrations
   Future<void> executeCompleteIntegration({

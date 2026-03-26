@@ -5,13 +5,12 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/calm_technique.dart';
 import '../services/voice_service.dart';
 import '../providers/app_providers.dart';
-import '../providers/auth_provider.dart';
 import '../widgets/activity_completion_dialog.dart';
 
 class CalmTechniqueScreen extends ConsumerStatefulWidget {
   final CalmTechnique technique;
 
-  const CalmTechniqueScreen({Key? key, required this.technique}) : super(key: key);
+  const CalmTechniqueScreen({super.key, required this.technique});
 
   @override
   ConsumerState<CalmTechniqueScreen> createState() => _CalmTechniqueScreenState();

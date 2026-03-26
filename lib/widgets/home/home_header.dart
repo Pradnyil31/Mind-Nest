@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_colors.dart';
-import '../../screens/profile_screen.dart';
 import '../../screens/badges_screen.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../../config/tour_keys.dart';
@@ -14,13 +13,13 @@ class HomeHeader extends StatelessWidget {
   final VoidCallback? onNotificationTap;
 
   const HomeHeader({
-    Key? key,
+    super.key,
     required this.displayName,
     required this.greeting,
     this.textColor = AppColors.textPrimary,
     this.motiveHint,
     this.onNotificationTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +35,7 @@ class HomeHeader extends StatelessWidget {
                 style: GoogleFonts.lato(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: textColor.withOpacity(0.8),
+                  color: textColor.withValues(alpha: 0.8),
                 ),
               ),
               Text(
@@ -54,7 +53,7 @@ class HomeHeader extends StatelessWidget {
                   style: GoogleFonts.lato(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: textColor.withOpacity(0.65),
+                    color: textColor.withValues(alpha: 0.65),
                   ),
                 ),
               ],
@@ -98,3 +97,4 @@ class HomeHeader extends StatelessWidget {
     );
   }
 }
+

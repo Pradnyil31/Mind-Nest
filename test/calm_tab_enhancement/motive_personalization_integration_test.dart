@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 
-import '../../lib/features/calm/application/motive_detection_service.dart';
-import '../../lib/features/calm/application/theme_transition_service.dart';
-import '../../lib/config/motive_config.dart';
+import 'package:fy_project/features/calm/application/motive_detection_service.dart';
+import 'package:fy_project/features/calm/application/theme_transition_service.dart';
+import 'package:fy_project/config/motive_config.dart';
 
 void main() {
   group('Motive-Based Personalization Integration Tests', () {

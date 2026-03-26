@@ -8,12 +8,12 @@ class TodaysRoutineCard extends StatelessWidget {
   final Function(String) onActivityToggle;
 
   const TodaysRoutineCard({
-    Key? key,
+    super.key,
     required this.allActivities,
     required this.completedActivities,
     required this.streak,
     required this.onActivityToggle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +27,7 @@ class TodaysRoutineCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -199,3 +199,4 @@ class TodaysRoutineCard extends StatelessWidget {
     );
   }
 }
+

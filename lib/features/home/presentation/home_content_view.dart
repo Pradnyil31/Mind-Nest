@@ -37,7 +37,7 @@ import '../../home/application/home_routine_engine.dart';
 /// now living in the Home feature's presentation layer so that we can
 /// progressively move logic into `HomeController` and `HomeState`.
 class HomeContentView extends ConsumerStatefulWidget {
-  const HomeContentView({Key? key}) : super(key: key);
+  const HomeContentView({super.key});
 
   @override
   ConsumerState<HomeContentView> createState() => _HomeContentViewState();
@@ -113,7 +113,7 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
 
     bool isNewDay = lastGenerated == null;
     if (!isNewDay) {
-      final lastDate = DateTime.parse(lastGenerated!);
+      final lastDate = DateTime.parse(lastGenerated);
       final lastDateStr = "${lastDate.year}-${lastDate.month}-${lastDate.day}";
       if (lastDateStr != todayStr) isNewDay = true;
     }
@@ -201,7 +201,8 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
         List<String> currentRoutine = [];
         if (userDoc.exists) {
           final data = userDoc.data();
-          currentRoutine = List<String>.from(data?['routineActivities'] ?? []);
+          final mapData = data is Map<String, dynamic> ? data : <String, dynamic>{};
+          currentRoutine = List<String>.from(mapData['routineActivities'] ?? []);
         }
 
         await ref
@@ -361,7 +362,7 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -373,7 +374,7 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7).withOpacity(0.5),
+                  color: const Color(0xFFFEF3C7).withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
                 child: const Text('✨', style: TextStyle(fontSize: 32)),
@@ -896,3 +897,4 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
     );
   }
 }
+

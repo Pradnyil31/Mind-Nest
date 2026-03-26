@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:showcaseview/showcaseview.dart';
 
 import '../features/home/presentation/home_content_view.dart';
@@ -12,7 +11,7 @@ import 'chat_screen.dart';
 import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -33,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (hour >= 5 && hour < 12) {
       return AppColors.morningSky;
     } else if (hour >= 12 && hour < 17) {
-      return AppColors.afternoonSun.withOpacity(0.5);
+      return AppColors.afternoonSun.withValues(alpha: 0.5);
     } else if (hour >= 17 && hour < 20) {
       return AppColors.eveningDark;
     } else {
@@ -71,7 +70,8 @@ class _HomeScreenState extends State<HomeScreen> {
             alignment: Alignment.topCenter,
           ),
         ),
-        Positioned.fill(child: Container(color: Colors.white.withOpacity(0.1))),
+        Positioned.fill(child: Container(color: Colors.white.withValues(alpha: 0.1))),
+        // ignore: deprecated_member_use
         ShowCaseWidget(
           enableAutoScroll: true,
           onFinish: () {
@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     left: 0,
                     right: 0,
                     bottom: kBottomNavigationBarHeight + MediaQuery.of(context).padding.bottom,
-                    child: MiniAudioPlayer(primaryColor: const Color(0xFF4DB6AC)),
+                    child: const MiniAudioPlayer(primaryColor: AppColors.info),
                   ),
                 ],
               ),
@@ -131,13 +131,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       type: BottomNavigationBarType.fixed,
                       backgroundColor: AppColors.backgroundLight,
-                      selectedItemColor: AppColors.primary,
+                      selectedItemColor: AppColors.primaryDark,
                       unselectedItemColor: AppColors.navBarUnselected,
-                      selectedLabelStyle: GoogleFonts.lato(
+                      selectedLabelStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
-                      unselectedLabelStyle: GoogleFonts.lato(fontSize: 12),
+                      unselectedLabelStyle: Theme.of(
+                        context,
+                      ).textTheme.labelSmall?.copyWith(fontSize: 12),
                       elevation: 0,
                       items: const [
                         BottomNavigationBarItem(

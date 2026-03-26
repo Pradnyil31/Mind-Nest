@@ -1,66 +1,108 @@
 # MindNest
 
-MindNest is a Flutter wellness application for daily routines, journaling, meditation/focus sessions, and progress tracking. It uses Firebase Auth + Firestore for identity/data and supports a server-mediated AI chat companion via Firebase Functions.
+**MindNest: A Cross-Platform Mental Wellness App with Personalized Routines and Activity Analytics**
 
-## Core capabilities
+MindNest is a Flutter + Firebase mental wellness system designed for daily practice support through personalized routines, check-ins, journaling, meditation/focus sessions, and progress analytics.
 
-- Email/password and Google sign-in
-- Guided onboarding and personalized wellness goals
-- Daily routine generation and completion tracking
-- Daily check-ins, journaling, meditation, and focus sessions
-- Progress insights and badges
-- Server-mediated AI chat (`chatProxy`) with rate limiting and crisis-keyword guard
+This repository is prepared as both:
+- an engineering project artifact
+- a research-paper support artifact (reproducible build + evaluation guidance)
 
-## Tech stack
+## 1. Research Abstract (Project Framing)
+
+MindNest addresses a common gap in digital wellness tools: many apps provide isolated features (journal, breathing, timers), but few provide a unified personalized workflow with measurable daily activity tracking.  
+The system combines onboarding-derived personalization, structured routine execution, and activity analytics in a single cross-platform mobile architecture.  
+The implementation emphasizes practical deployability (Flutter + Firebase), user-level data isolation (rules-based ownership), and reproducible engineering workflows for academic reporting.
+
+## 2. Problem Statement
+
+Students and early professionals often struggle to maintain consistent wellness habits due to:
+- fragmented tools
+- low personalization
+- weak progress visibility
+
+MindNest aims to provide a single adaptive workflow from onboarding to daily completion tracking and insights.
+
+## 3. Technical Contributions
+
+The codebase currently supports the following defensible technical contributions:
+- Cross-platform Flutter wellness app with multi-feature integration.
+- Personalized routine flow based on onboarding profile and user motive.
+- Activity event persistence and user-scoped analytics via Firestore.
+- Owner-only Firestore and Storage access model with immutable ownership checks.
+- Local on-device AI chat integration path using runtime configuration.
+- Quality gate scripts for analyzer/tests/rules checks to improve reproducibility.
+
+## 4. System Overview
+
+```mermaid
+flowchart LR
+    A["Flutter Client (UI + Riverpod State)"] --> B["Firebase Auth"]
+    A --> C["Firestore (User Data + Activity Events)"]
+    A --> D["Local Notifications"]
+    A --> E["LLM Provider API (Configured API Key)"]
+```
+
+### Core modules
+- Authentication: Email/password + Google sign-in.
+- Onboarding: motive, schedule, personalization baseline.
+- Home/Routine: daily tasks, check-ins, guided actions.
+- Wellness tools: meditation, focus, breathing, grounding.
+- Journaling and goals: structured reflection and progress.
+- Analytics/badges: streaks, completion trends, activity summaries.
+
+## 5. Tech Stack
 
 - Frontend: Flutter (Dart)
 - State management: Riverpod
-- Backend: Firebase Auth, Firestore, Cloud Functions
+- Backend: Firebase Auth, Firestore
 - Notifications: `flutter_local_notifications`
+- Optional AI path: local chat model access via configured API key
 
-## Prerequisites
+## 6. Security Model Summary
 
+- Firestore rules enforce authenticated, owner-only reads/writes for user-owned data.
+- Critical collections enforce immutable `userId` ownership semantics.
+- Storage rules follow owner-path model (`users/{uid}/...`) with validation constraints.
+
+See:
+- `firestore.rules`
+- `storage.rules`
+
+## 7. Reproducibility and Setup
+
+### Prerequisites
 - Flutter SDK
-- Node.js 20+ (for functions and rules tests)
 - Firebase CLI
-- Firebase project credentials for native platforms
+- Java 21+ recommended for emulators
 
-## Setup
-
-1. Install app dependencies:
+### Install
 
 ```bash
 flutter pub get
 ```
 
-2. Install function dependencies:
+### Generate logo-based app icon and native splash
 
 ```bash
-cd functions
-npm install
-cd ..
+dart run flutter_launcher_icons
+dart run flutter_native_splash:create
 ```
 
-3. Configure native Firebase:
+Logo source path:
+- `assets/images/app_logo.jpg`
 
-- Android: place `android/app/google-services.json`
-- iOS: place `ios/Runner/GoogleService-Info.plist`
+### Firebase native configuration
+- Android: add `android/app/google-services.json`
+- iOS: add `ios/Runner/GoogleService-Info.plist`
 
-4. Configure function secret for server chat:
+### Run app
 
 ```bash
-firebase functions:secrets:set GEMINI_API_KEY
+flutter run --dart-define=GEMINI_API_KEY=YOUR_KEY
 ```
 
-5. Run app (server chat by default):
-
-```bash
-flutter run --dart-define=USE_SERVER_CHAT=true
-```
-
-## Optional web setup
-
-Web builds require explicit Firebase web defines:
+### Optional web defines
 
 ```bash
 flutter run -d chrome \
@@ -72,21 +114,89 @@ flutter run -d chrome \
   --dart-define=FIREBASE_WEB_STORAGE_BUCKET=...
 ```
 
-## Security and quality gates
+## 8. Quality Gates (For Paper Appendix / Viva Defense)
 
-- Firestore rules enforce owner-only access and immutable ownership fields.
-- Rules tests cover critical collections and user profile immutability.
-- CI workflow: `.github/workflows/flutter-quality-gate.yml`
-
-Local checks:
+Run local verification:
 
 ```bash
 ./tools/quality_gate.sh
 ./tools/firestore_rules_test.sh
 ```
 
-(Windows PowerShell equivalents are in `tools/*.ps1`.)
+PowerShell equivalents:
+- `tools/quality_gate.ps1`
+- `tools/firestore_rules_test.ps1`
 
-## Publication runbook
+Reference:
+- `.github/workflows/flutter-quality-gate.yml`
+- `docs/QUALITY_GATES.md`
 
-Use `docs/publication_readiness_playbook.md` as the pre-submission checklist.
+## 9. Evaluation Plan for Research Paper
+
+Recommended metrics to report:
+- Feature action latency: p50/p95 (auth, check-in save, routine completion, journal save).
+- Firestore operations per user session (read/write count).
+- Crash-free sessions.
+- Completion adherence (daily/weekly routine completion rate).
+- Retention proxy (streak continuity distribution).
+- AI chat fallback/error rate (if included in study).
+
+Recommended tables/figures:
+- Feature-to-architecture mapping table.
+- Latency chart by feature flow.
+- Cost estimate table (Firestore reads/writes per DAU scenario).
+- User flow completion funnel.
+
+## 10. Scope, Claims, and Limitations
+
+### Claims supported by current implementation
+- Feature-rich cross-platform prototype for mental wellness workflows.
+- Personalized routine support with tracked activity analytics.
+- Rule-based user data isolation model in Firebase.
+
+### Claims not supported yet (avoid in paper)
+- Clinical efficacy or therapeutic outcome claims.
+- Large-scale production readiness without further load/security validation.
+- Medical-grade intervention performance.
+
+### Known limitations
+- Limited large-scale performance benchmarking.
+- Limited longitudinal user-study evidence.
+- Some advanced hardening is still incremental.
+
+## 11. Ethics and Privacy Notes
+
+- No clinical diagnosis claims are made by the system.
+- User-generated wellness content should be handled as sensitive data.
+- Any study publication should include informed consent and anonymization process.
+- Crisis support behavior should not be represented as professional medical care.
+
+## 12. Repository Structure (High-Level)
+
+- `lib/`: Flutter application (screens, features, services, models, widgets)
+- `test/`: unit/integration/widget/rules-related tests
+- `tools/`: quality gates and test helpers
+- `docs/`: security and publication-readiness documentation
+
+## 13. Paper-Ready Checklist
+
+Before final submission/demo, complete:
+- Final analyzer/test/rules pass with archived outputs.
+- Updated architecture diagram and sanitized DB/rules screenshots.
+- Metric table population from real runs.
+- Limitation and threats-to-validity sections aligned with actual evidence.
+
+Use:
+- `docs/publication_readiness_playbook.md`
+
+## 14. Citation (Template)
+
+```bibtex
+@software{mindnest2026,
+  title  = {MindNest: A Cross-Platform Mental Wellness App with Personalized Routines and Activity Analytics},
+  author = {Your Name},
+  year   = {2026},
+  note   = {Flutter/Firebase-based research prototype},
+  url    = {https://github.com/your-repo/mindnest}
+}
+```

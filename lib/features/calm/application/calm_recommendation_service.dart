@@ -2,13 +2,30 @@ import '../../../config/motive_config.dart';
 import '../../../models/calm_technique.dart';
 import 'calm_progress_service.dart';
 
+typedef TechniqueEffectivenessFetcher =
+    Future<Map<String, double>> Function(String userId);
+
 /// Service for providing personalized calm technique recommendations
 /// Based on user motive, time of day, effectiveness data, and usage patterns
 class CalmRecommendationService {
-  final CalmProgressService _progressService;
+  final TechniqueEffectivenessFetcher _fetchTechniqueEffectiveness;
 
-  CalmRecommendationService({CalmProgressService? progressService})
-    : _progressService = progressService ?? CalmProgressService();
+  CalmRecommendationService({
+    CalmProgressService? progressService,
+    TechniqueEffectivenessFetcher? techniqueEffectivenessFetcher,
+  }) : _fetchTechniqueEffectiveness =
+           techniqueEffectivenessFetcher ??
+           (progressService != null
+               ? progressService.getTechniqueEffectiveness
+               : _defaultTechniqueEffectiveness);
+
+  static Future<Map<String, double>> _defaultTechniqueEffectiveness(
+    String _,
+  ) async {
+    // Safe no-op fallback for pure unit tests and offline scenarios.
+    // Production wiring should inject CalmProgressService through providers.
+    return {};
+  }
 
   /// Get personalized technique recommendations for the main calm screen
   /// Returns 2-3 techniques prioritized by motive, effectiveness, and time of day
@@ -18,7 +35,7 @@ class CalmRecommendationService {
   ) async {
     try {
       // Get user's technique effectiveness data
-      final effectiveness = await _progressService.getTechniqueEffectiveness(
+      final effectiveness = await _fetchTechniqueEffectiveness(
         userId,
       );
 
@@ -42,14 +59,91 @@ class CalmRecommendationService {
       // Sort by score (highest first) and return top 3
       scoredTechniques.sort((a, b) => b.score.compareTo(a.score));
 
-      return scoredTechniques
+      final recommendations = scoredTechniques
           .take(3)
           .map((scored) => scored.technique)
           .toList();
+
+      return _enforceMotiveCoverage(
+        recommendations: recommendations,
+        motive: motive,
+        scoredTechniques: scoredTechniques,
+      );
     } catch (e) {
       // Fallback to motive-based recommendations if error occurs
       return _getMotiveBasedFallback(motive);
     }
+  }
+
+  List<CalmTechnique> _enforceMotiveCoverage({
+    required List<CalmTechnique> recommendations,
+    required String? motive,
+    required List<_ScoredTechnique> scoredTechniques,
+  }) {
+    if (motive == null || recommendations.isEmpty) {
+      return recommendations;
+    }
+
+    final normalizedMotive = motive.toLowerCase();
+
+    if (normalizedMotive == 'habit building') {
+      final alreadyHasAffirmation = recommendations.any(
+        (t) => t.type == TechniqueType.affirmation,
+      );
+      if (alreadyHasAffirmation) {
+        return recommendations;
+      }
+
+      CalmTechnique? topAffirmation;
+      for (final scored in scoredTechniques) {
+        if (scored.technique.type == TechniqueType.affirmation) {
+          topAffirmation = scored.technique;
+          break;
+        }
+      }
+
+      if (topAffirmation == null) {
+        return recommendations;
+      }
+
+      final updated = List<CalmTechnique>.from(recommendations);
+      updated[updated.length - 1] = topAffirmation;
+      recommendations = updated;
+    }
+
+    final priorities = MotiveConfig.getCalmTechniquePriorities(motive);
+
+    bool isPriorityAligned(CalmTechnique technique) {
+      final techniqueTypeName = _getTechniqueTypeName(technique.type);
+      for (final priority in priorities) {
+        if (priority.toLowerCase().contains(techniqueTypeName.toLowerCase()) ||
+            techniqueTypeName.toLowerCase().contains(priority.toLowerCase())) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    final hasAlignedRecommendation = recommendations.any(isPriorityAligned);
+    if (hasAlignedRecommendation) {
+      return recommendations;
+    }
+
+    CalmTechnique? topAlignedTechnique;
+    for (final scored in scoredTechniques) {
+      if (isPriorityAligned(scored.technique)) {
+        topAlignedTechnique = scored.technique;
+        break;
+      }
+    }
+
+    if (topAlignedTechnique == null) {
+      return recommendations;
+    }
+
+    final updated = List<CalmTechnique>.from(recommendations);
+    updated[updated.length - 1] = topAlignedTechnique;
+    return updated;
   }
 
   /// Get techniques optimized for Quick Access Emergency Panel
@@ -61,7 +155,7 @@ class CalmRecommendationService {
   ) async {
     try {
       // Get user's technique effectiveness data
-      final effectiveness = await _progressService.getTechniqueEffectiveness(
+      final effectiveness = await _fetchTechniqueEffectiveness(
         userId,
       );
 

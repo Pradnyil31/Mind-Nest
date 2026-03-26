@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:ui';
-import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
 
 class SleepRecoveryScreen extends StatefulWidget {
   final Map<String, dynamic> sleepData;
   final String displayName;
 
   const SleepRecoveryScreen({
-    Key? key, 
+    super.key, 
     required this.sleepData,
     required this.displayName,
-  }) : super(key: key);
+  });
 
   @override
   State<SleepRecoveryScreen> createState() => _SleepRecoveryScreenState();
@@ -119,11 +116,11 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF6C5CE7).withOpacity(0.9), // Soft Indigo
+        color: const Color(0xFF6C5CE7).withValues(alpha: 0.9), // Soft Indigo
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6C5CE7).withOpacity(0.3),
+            color: const Color(0xFF6C5CE7).withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -230,12 +227,12 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
             ),
           ),
           const SizedBox(height: 16),
-           Divider(color: Colors.white.withOpacity(0.2)),
+           Divider(color: Colors.white.withValues(alpha: 0.2)),
            const SizedBox(height: 12),
            Text(
              'One short night doesn\'t define you. Focus on gentle movement and hydration today.',
              style: GoogleFonts.lato(
-               color: Colors.white.withOpacity(0.9),
+               color: Colors.white.withValues(alpha: 0.9),
                fontSize: 14,
                fontStyle: FontStyle.italic,
              ),
@@ -285,7 +282,7 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -356,7 +353,7 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border(left: BorderSide(color: color, width: 4)),
         boxShadow: [
-           BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+           BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -450,7 +447,7 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFDFE6E9).withOpacity(0.3),
+        color: const Color(0xFFDFE6E9).withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -471,7 +468,7 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5)),
+           BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5)),
         ],
       ),
       child: Column(
@@ -535,7 +532,7 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6C5CE7).withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? const Color(0xFF6C5CE7).withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: isSelected ? const Color(0xFF6C5CE7) : Colors.grey.shade300),
         ),
@@ -573,3 +570,4 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
     );
   }
 }
+

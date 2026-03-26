@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/routine_completion.dart';
 import '../core/logger.dart';
-import 'progress_insights_service.dart';
 
 class RoutineTrackingService {
   final FirebaseFirestore _firestore;

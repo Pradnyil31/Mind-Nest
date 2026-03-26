@@ -7,7 +7,7 @@ import '../providers/user_provider.dart';
 import 'home_screen.dart';
 
 class OnboardingFlowScreen extends ConsumerStatefulWidget {
-  const OnboardingFlowScreen({Key? key}) : super(key: key);
+  const OnboardingFlowScreen({super.key});
 
   @override
   ConsumerState<OnboardingFlowScreen> createState() => _OnboardingFlowScreenState();
@@ -406,7 +406,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFA78BFA).withOpacity(0.1) : Colors.white,
+                    color: isSelected ? const Color(0xFFA78BFA).withValues(alpha: 0.1) : Colors.white,
                     border: Border.all(
                       color: isSelected ? const Color(0xFFA78BFA) : const Color(0xFFEEEEEE),
                       width: 2,
@@ -490,7 +490,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                     margin: const EdgeInsets.only(bottom: 16),
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF667EEA).withOpacity(0.1) : Colors.white,
+                      color: isSelected ? const Color(0xFF667EEA).withValues(alpha: 0.1) : Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isSelected ? const Color(0xFF667EEA) : Colors.grey.shade200,
@@ -499,7 +499,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                       boxShadow: [
                         if (!isSelected)
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -513,7 +513,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                           height: 60,
                           decoration: BoxDecoration(
                             color: isSelected 
-                                ? const Color(0xFF667EEA).withOpacity(0.2)
+                                ? const Color(0xFF667EEA).withValues(alpha: 0.2)
                                 : Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -623,7 +623,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                       border: Border.all(color: const Color(0xFFA78BFA), width: 2),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFA78BFA).withOpacity(0.1),
+                          color: const Color(0xFFA78BFA).withValues(alpha: 0.1),
                           blurRadius: 15,
                           offset: const Offset(0, 5),
                         ),
@@ -655,3 +655,4 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     );
   }
 }
+

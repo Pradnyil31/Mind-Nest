@@ -5,15 +5,16 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/logger.dart';
 import '../services/voice_service.dart';
 import '../providers/app_providers.dart';
-import '../providers/auth_provider.dart';
 import '../config/motive_config.dart';
 import '../config/notification_content.dart';
+import '../theme/app_colors.dart';
 import 'welcome_screen.dart';
 import 'privacy_screen.dart';
 import 'about_screen.dart';
+import '../widgets/compact_progress_insights.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
@@ -35,12 +36,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     if (user == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF9FAFB),
+        backgroundColor: AppColors.backgroundSubtle,
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.person_off_outlined, size: 48, color: Colors.grey),
+              const Icon(
+                Icons.person_off_outlined,
+                size: 48,
+                color: AppColors.textSecondary,
+              ),
               const SizedBox(height: 12),
               Text('Session expired', style: GoogleFonts.lato(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
@@ -60,7 +65,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColors.backgroundSubtle,
       body: StreamBuilder<DocumentSnapshot>(
         stream: ref.read(firestoreServiceProvider).getUserStream(user.uid),
         builder: (context, snapshot) {
@@ -110,6 +115,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       _buildSectionHeader('My Goal'),
                       _buildMotiveCard(context, primaryMotive, dailyCommitment, supportAreas),
                       const SizedBox(height: 32),
+
+                      _buildSectionHeader('Progress Insights'),
+                      const SizedBox(height: 16),
+                      CompactProgressInsights(userId: user.uid),
+                      const SizedBox(height: 32),
                       
                       _buildSectionHeader('Routine Settings'),
                       const SizedBox(height: 16),
@@ -119,7 +129,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         iconColor: Colors.orange,
                         title: 'Wake Up Time',
                         value: _formatTime(wakeTime),
-                        onTap: () => _pickTime(context, user?.uid, 'wakeUpTime', wakeTime),
+                        onTap: () => _pickTime(context, user.uid, 'wakeUpTime', wakeTime),
                       ),
                       const SizedBox(height: 12),
                       _buildSettingTile(
@@ -128,10 +138,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         iconColor: Colors.indigo,
                         title: 'Bedtime',
                         value: _formatTime(bedTime),
-                        onTap: () => _pickTime(context, user?.uid, 'bedTime', bedTime),
+                        onTap: () => _pickTime(context, user.uid, 'bedTime', bedTime),
                       ),
                        const SizedBox(height: 12),
-                      _buildCommitmentSection(context, dailyCommitment, primaryMotive, supportAreas),
+                      _buildCommitmentSection(
+                        context,
+                        dailyCommitment,
+                        primaryMotive,
+                        supportAreas,
+                      ),
 
                       const SizedBox(height: 32),
                       _buildSectionHeader('Account'),
@@ -139,7 +154,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                        _buildActionTile(
                         icon: Icons.edit_outlined,
                         title: 'Edit Profile',
-                        onTap: () => _editProfile(context, user?.uid, displayName, email, avatarEmoji, avatarColor),
+                        onTap: () => _editProfile(
+                          context,
+                          user.uid,
+                          displayName,
+                          email,
+                          avatarEmoji,
+                          avatarColor,
+                        ),
                       ),
                       _buildActionTile(
                         icon: Icons.notifications_none_rounded,
@@ -147,7 +169,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         trailing: Switch(
                            value: true, 
                            onChanged: (val) {}, 
-                           activeColor: const Color(0xFF6C63FF),
+                           activeThumbColor: AppColors.primaryDark,
                         ),
                         onTap: () {},
                       ),
@@ -160,7 +182,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                              await ref.read(voiceServiceProvider).setEnabled(val);
                              setState(() => _voiceEnabled = val);
                            },
-                           activeColor: const Color(0xFF6C63FF),
+                           activeThumbColor: AppColors.primaryDark,
                          ),
                          onTap: () {},
                        ),
@@ -192,7 +214,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                              }
                           },
                           style: TextButton.styleFrom(
-                            foregroundColor: Colors.red.shade400,
+                            foregroundColor: AppColors.error,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                           child: Text(
@@ -221,12 +243,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       expandedHeight: 200.0,
       floating: false,
       pinned: true,
-      backgroundColor: const Color(0xFF6C63FF),
+      backgroundColor: AppColors.primaryDark,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF6C63FF), Color(0xFF8B85FF)],
+              colors: [AppColors.primaryDark, AppColors.primary],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -242,10 +264,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Color(avatarColor),
-                  border: Border.all(color: Colors.white.withOpacity(0.5), width: 4),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    width: 4,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -257,7 +282,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     style: GoogleFonts.lato(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Color(avatarColor) == Colors.white ? const Color(0xFF6C63FF) : Colors.white,
+                      color:
+                          Color(avatarColor) == Colors.white
+                              ? AppColors.primaryDark
+                              : Colors.white,
                     ),
                   ),
                 ),
@@ -274,7 +302,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Text(
                 email,
                 style: GoogleFonts.lato(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 14,
                 ),
               ),
@@ -291,7 +319,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       style: GoogleFonts.lato(
         fontSize: 14,
         fontWeight: FontWeight.bold,
-        color: Colors.grey.shade600,
+        color: AppColors.textSecondary,
         letterSpacing: 0.5,
       ),
     );
@@ -305,11 +333,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Container(
       margin: const EdgeInsets.only(top: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: AppColors.shadowColor,
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -327,7 +355,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: AppColors.surfaceMuted,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Text(emoji, style: const TextStyle(fontSize: 24)),
@@ -342,7 +370,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         style: GoogleFonts.lato(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1F2937),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -350,13 +378,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         'Tap to change your focus',
                         style: GoogleFonts.lato(
                           fontSize: 13,
-                          color: Colors.grey.shade500,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey.shade400),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: AppColors.navBarUnselected,
+                ),
               ],
             ),
           ),
@@ -375,11 +407,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: AppColors.shadowColor,
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -394,7 +426,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           leading: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor, size: 22),
@@ -404,7 +436,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             style: GoogleFonts.lato(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF374151),
+              color: AppColors.textPrimary,
             ),
           ),
           trailing: Row(
@@ -415,11 +447,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 style: GoogleFonts.lato(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
-                  color: const Color(0xFF6C63FF),
+                  color: AppColors.primaryDark,
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey.shade300),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: AppColors.navBarUnselected,
+              ),
             ],
           ),
         ),
@@ -436,11 +472,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
        decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: AppColors.shadowColor,
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -450,16 +486,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-        leading: Icon(icon, color: Colors.grey.shade600, size: 24),
+        leading: Icon(icon, color: AppColors.textSecondary, size: 24),
         title: Text(
           title,
           style: GoogleFonts.lato(
             fontSize: 16,
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF374151),
+            color: AppColors.textPrimary,
           ),
         ),
-        trailing: trailing ?? Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey.shade300),
+        trailing:
+            trailing ??
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: AppColors.navBarUnselected,
+            ),
       ),
     );
   }
@@ -471,11 +513,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: AppColors.shadowColor,
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -494,7 +536,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                    Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.teal.withOpacity(0.1),
+                      color: Colors.teal.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.timer_rounded, color: Colors.teal, size: 22),
@@ -503,20 +545,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                    Column(
                      crossAxisAlignment: CrossAxisAlignment.start,
                      children: [
-                       Text('Daily Commitment', style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF374151))),
+                       Text(
+                         'Daily Commitment',
+                         style: GoogleFonts.lato(
+                           fontSize: 16,
+                           fontWeight: FontWeight.w600,
+                           color: AppColors.textPrimary,
+                         ),
+                       ),
                        const SizedBox(height: 4),
                        Text(
-                         currentCommitment, 
-                         style: GoogleFonts.lato(fontSize: 15, fontWeight: FontWeight.w500, color: const Color(0xFF6C63FF)),
-                       ),
-                     ],
-                   ),
+                          currentCommitment, 
+                          style: GoogleFonts.lato(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.primaryDark),
+                        ),
+                      ],
+                    ),
                 ],
               ),
               const SizedBox(height: 12),
               Text(
                  "Based on your selection: ${_getCommitmentDescription(currentCommitment)}",
-                 style: GoogleFonts.lato(fontSize: 13, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+                 style: GoogleFonts.lato(fontSize: 13, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
               ),
             ],
           ),
@@ -592,13 +641,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
              const SizedBox(height: 16),
              Text('Daily Commitment', style: GoogleFonts.lato(fontSize: 18, fontWeight: FontWeight.bold)),
              const SizedBox(height: 16),
-             ...options.map((opt) => ListTile(
-               title: Text(opt, style: GoogleFonts.lato(fontSize: 16)),
-               leading: opt == current 
-                  ? const Icon(Icons.check_circle, color: Color(0xFF6C63FF))
+              ...options.map((opt) => ListTile(
+                title: Text(opt, style: GoogleFonts.lato(fontSize: 16)),
+                leading: opt == current 
+                  ? const Icon(Icons.check_circle, color: AppColors.primaryDark)
                   : const Icon(Icons.circle_outlined, color: Colors.grey),
-               onTap: () => Navigator.pop(context, opt),
-             )),
+                onTap: () => Navigator.pop(context, opt),
+              )),
              const SizedBox(height: 16),
            ],
          ),
@@ -631,7 +680,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     int selectedColor = currentColor;
 
     final List<String> emojiOptions = ['U', '😊', '🐼', '🦊', '🐱', '🐶', '🐯', '🦉', '🦋', '🌟', '🚀', '🎯'];
-    final List<int> colorOptions = [0xFF6C63FF, 0xFF4CAF50, 0xFFFF9800, 0xFFE91E63, 0xFF00BCD4, 0xFF9C27B0, 0xFF795548, 0xFF607D8B];
+    final List<int> colorOptions = [0xFF8B6FE8, 0xFF4CAF50, 0xFFFF9800, 0xFFE91E63, 0xFF00BCD4, 0xFF9C27B0, 0xFF795548, 0xFF607D8B];
 
     await showModalBottomSheet(
       context: context,
@@ -640,7 +689,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: EdgeInsets.only(
@@ -696,9 +745,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: selectedEmoji == e ? Colors.grey.shade200 : Colors.transparent,
+                        color: selectedEmoji == e ? AppColors.surfaceMuted : Colors.transparent,
                         shape: BoxShape.circle,
-                        border: Border.all(color: selectedEmoji == e ? const Color(0xFF6C63FF) : Colors.grey.shade300),
+                        border: Border.all(color: selectedEmoji == e ? AppColors.primaryDark : AppColors.border),
                       ),
                       child: Text(e, style: const TextStyle(fontSize: 24)),
                     ),
@@ -728,7 +777,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6C63FF),
+                      backgroundColor: AppColors.primaryDark,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -836,7 +885,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: AppColors.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -848,7 +897,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 style: GoogleFonts.lato(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF2D2D2D),
+                  color: AppColors.textPrimary,
                 ),
               ),
             ),
@@ -910,7 +959,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                  actions: [
                                    TextButton(
                                      onPressed: () => Navigator.pop(ctx),
-                                     child: Text('Got it', style: GoogleFonts.lato(color: const Color(0xFF6C63FF), fontWeight: FontWeight.bold)),
+                                      child: Text('Got it', style: GoogleFonts.lato(color: AppColors.primaryDark, fontWeight: FontWeight.bold)),
                                    )
                                  ],
                                ),
@@ -949,7 +998,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                  actions: [
                                    TextButton(
                                      onPressed: () => Navigator.pop(ctx),
-                                     child: Text('Let\'s Go', style: GoogleFonts.lato(color: const Color(0xFF6C63FF), fontWeight: FontWeight.bold)),
+                                      child: Text('Let\'s Go', style: GoogleFonts.lato(color: AppColors.primaryDark, fontWeight: FontWeight.bold)),
                                    )
                                  ],
                                ),
@@ -963,13 +1012,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: isSelected 
-                            ? const Color(0xFF6C63FF).withOpacity(0.08) 
-                            : Colors.white,
+                            ? AppColors.primaryDark.withValues(alpha: 0.08) 
+                            : AppColors.surface,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected 
-                              ? const Color(0xFF6C63FF) 
-                              : Colors.grey.shade200,
+                              ? AppColors.primaryDark 
+                              : AppColors.border,
                           width: isSelected ? 2 : 1,
                         ),
                       ),
@@ -1000,7 +1049,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                           ),
                           if (isSelected)
-                            const Icon(Icons.check_circle, color: Color(0xFF6C63FF)),
+                            const Icon(Icons.check_circle, color: AppColors.primaryDark),
                         ],
                       ),
                     ),

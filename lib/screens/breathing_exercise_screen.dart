@@ -5,12 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/breathing_technique.dart';
 import '../services/voice_service.dart';
 import '../providers/app_providers.dart';
-import '../providers/auth_provider.dart';
 
 class BreathingExerciseScreen extends ConsumerStatefulWidget {
   final BreathingTechnique technique;
 
-  const BreathingExerciseScreen({Key? key, required this.technique}) : super(key: key);
+  const BreathingExerciseScreen({super.key, required this.technique});
 
   @override
   ConsumerState<BreathingExerciseScreen> createState() => _BreathingExerciseScreenState();
@@ -266,7 +265,7 @@ class _BreathingExerciseScreenState extends ConsumerState<BreathingExerciseScree
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF26C6DA).withOpacity(0.15),
+                color: const Color(0xFF26C6DA).withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.air, size: 80, color: Color(0xFF26C6DA)),
@@ -322,7 +321,7 @@ class _BreathingExerciseScreenState extends ConsumerState<BreathingExerciseScree
         width: 80,
         height: 80,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white30),
         ),
@@ -525,3 +524,4 @@ class _BreathingExerciseScreenState extends ConsumerState<BreathingExerciseScree
     );
   }
 }
+

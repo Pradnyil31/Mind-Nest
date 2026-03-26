@@ -24,8 +24,8 @@ Verify all of the following:
 
 - Firestore rules deployed from `firestore.rules`
 - Storage rules deployed from `storage.rules`
-- Cloud Function `chatProxy` deployed with `GEMINI_API_KEY` Firebase Secret
 - No hardcoded API keys in tracked files
+- Client-side chat validation/safety checks enabled
 
 ## 3) Performance evidence (minimum)
 
@@ -55,7 +55,7 @@ Test and record pass/fail for:
 
 Generate at least:
 
-- Architecture diagram (client layers + Firebase boundaries + function boundary)
+- Architecture diagram (client layers + Firebase boundaries)
 - Security model table (threat, mitigation, residual risk)
 - Performance table (p50/p95 and sample size)
 - Usability table (task completion rate / SUS or equivalent)
@@ -65,7 +65,7 @@ Generate at least:
 Safe claims:
 
 - Feature-complete prototype with owner-scoped data isolation and automated rules checks.
-- Server-mediated AI chat with authentication and rate-limiting controls.
+- Local AI chat with validation and crisis-safety response handling.
 
 Do not claim yet unless evaluated:
 

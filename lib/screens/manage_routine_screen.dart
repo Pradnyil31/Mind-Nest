@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/logger.dart';
-import '../providers/auth_provider.dart';
 import '../providers/app_providers.dart';
 import '../config/motive_config.dart';
 import '../config/notification_content.dart';
 import '../config/routine_config.dart';
 
 class ManageRoutineScreen extends ConsumerStatefulWidget {
-  const ManageRoutineScreen({Key? key}) : super(key: key);
+  const ManageRoutineScreen({super.key});
 
   @override
   ConsumerState<ManageRoutineScreen> createState() => _ManageRoutineScreenState();
@@ -414,7 +413,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
       leading: Icon(icon, color: color),
       title: Text(period, style: GoogleFonts.lato(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
       trailing: isSelected ? const Icon(Icons.check, color: Color(0xFF6C63FF)) : null,
-      tileColor: isSelected ? color.withOpacity(0.1) : null,
+      tileColor: isSelected ? color.withValues(alpha: 0.1) : null,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onTap: () => Navigator.pop(context, period),
     );
@@ -458,7 +457,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.add_task, color: Colors.white, size: 28),
@@ -481,7 +480,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
                               'Create your own routine activity',
                               style: GoogleFonts.lato(
                                 fontSize: 13,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                               ),
                             ),
                           ],
@@ -656,7 +655,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.15) : Colors.grey.shade100,
+          color: isSelected ? color.withValues(alpha: 0.15) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? color : Colors.transparent,
@@ -723,7 +722,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF667EEA).withOpacity(0.4),
+              color: const Color(0xFF667EEA).withValues(alpha: 0.4),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -755,7 +754,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [const Color(0xFF667EEA).withOpacity(0.1), const Color(0xFF764BA2).withOpacity(0.1)],
+                        colors: [const Color(0xFF667EEA).withValues(alpha: 0.1), const Color(0xFF764BA2).withValues(alpha: 0.1)],
                       ),
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -808,7 +807,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: const Color(0xFF6C63FF).withOpacity(0.1),
+            color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -921,7 +920,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.info_outline_rounded, color: Colors.white, size: 26),
@@ -966,7 +965,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6C63FF).withOpacity(0.07),
+                          color: const Color(0xFF6C63FF).withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
@@ -1000,7 +999,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF00B89A).withOpacity(0.07),
+                          color: const Color(0xFF00B89A).withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
@@ -1122,7 +1121,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isSelected ? color.withOpacity(0.1) : Colors.white,
+            color: isSelected ? color.withValues(alpha: 0.1) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isLocked ? Colors.grey.shade300 : (isSelected ? color : Colors.transparent),
@@ -1131,7 +1130,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
             boxShadow: [
                if (!isSelected && !isLocked)
                  BoxShadow(
-                   color: Colors.black.withOpacity(0.03),
+                   color: Colors.black.withValues(alpha: 0.03),
                    blurRadius: 10,
                    offset: const Offset(0, 4),
                  ),
@@ -1202,7 +1201,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
                  child: Container(
                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                    decoration: BoxDecoration(
-                     color: isLocked ? Colors.grey.shade200 : _getTimePeriodColor(timePeriod!).withOpacity(0.2),
+                     color: isLocked ? Colors.grey.shade200 : _getTimePeriodColor(timePeriod).withValues(alpha: 0.2),
                      borderRadius: BorderRadius.circular(8),
                      border: Border.all(color: isLocked ? Colors.grey : _getTimePeriodColor(timePeriod)),
                    ),
@@ -1231,7 +1230,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text('⭐', style: TextStyle(fontSize: 12)),
@@ -1368,6 +1367,7 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
     return "$h:$m $period";
   }
 }
+
 
 
 

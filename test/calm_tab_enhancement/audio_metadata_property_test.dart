@@ -53,7 +53,7 @@ void main() {
           // Generate random valid audio file paths
           final validFormats = ['mp3', 'aac', 'ogg', 'm4a', 'wav'];
           final format = validFormats[random.nextInt(validFormats.length)];
-          final fileName = 'test_audio_${iteration}.$format';
+          final fileName = 'test_audio_$iteration.$format';
 
           // First parsing: Parse original file
           final originalMetadata = await audioService.parseAudioMetadata(
@@ -135,7 +135,7 @@ void main() {
             final invalidFormats = ['txt', 'jpg', 'pdf', 'doc', 'exe', 'zip'];
             final format =
                 invalidFormats[random.nextInt(invalidFormats.length)];
-            final fileName = 'invalid_file_${iteration}.$format';
+            final fileName = 'invalid_file_$iteration.$format';
 
             // Parsing should fail gracefully for invalid formats
             final metadata = await audioService.parseAudioMetadata(fileName);
@@ -285,7 +285,7 @@ void main() {
             'pdf',
           ];
           final format = allFormats[random.nextInt(allFormats.length)];
-          final fileName = 'consistency_test_${iteration}.$format';
+          final fileName = 'consistency_test_$iteration.$format';
 
           // Check format validation
           final isValid = audioService.isValidAudioFormat(fileName);

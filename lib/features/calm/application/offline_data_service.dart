@@ -1,10 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:logger/logger.dart';
-import '../../../core/logger.dart';
 import '../../../services/firestore_service.dart';
 import 'calm_progress_service.dart';
 import 'mood_tracking_service.dart';
@@ -13,17 +10,27 @@ import 'mood_tracking_service.dart';
 /// Implements Requirements 9.1-9.6: Offline Capability and Data Synchronization
 class OfflineDataService {
   final Logger _logger = Logger();
-  final FirestoreService _firestoreService;
-  final CalmProgressService _progressService;
-  final MoodTrackingService _moodService;
+  final FirestoreService? _providedFirestoreService;
+  final CalmProgressService? _providedProgressService;
+  final MoodTrackingService? _providedMoodService;
 
   OfflineDataService({
     FirestoreService? firestoreService,
     CalmProgressService? progressService,
     MoodTrackingService? moodService,
-  })  : _firestoreService = firestoreService ?? FirestoreService(),
-        _progressService = progressService ?? CalmProgressService(),
-        _moodService = moodService ?? MoodTrackingService();
+  })  : _providedFirestoreService = firestoreService,
+        _providedProgressService = progressService,
+        _providedMoodService = moodService;
+
+  late final FirestoreService _firestoreService =
+      _providedFirestoreService ?? FirestoreService();
+
+  late final CalmProgressService _progressService =
+      _providedProgressService ??
+      CalmProgressService(firestoreService: _firestoreService);
+
+  late final MoodTrackingService _moodService =
+      _providedMoodService ?? MoodTrackingService();
 
   // Stream controllers for offline status
   final StreamController<bool> _offlineStatusController =

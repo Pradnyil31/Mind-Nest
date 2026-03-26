@@ -6,15 +6,13 @@ import '../models/guided_meditation.dart';
 import '../models/meditation_session.dart';
 import '../services/voice_service.dart';
 import '../providers/app_providers.dart';
-import '../providers/auth_provider.dart';
 import '../providers/meditation_provider.dart';
-import '../providers/user_provider.dart';
 import '../widgets/activity_completion_dialog.dart';
 
 class MeditationPlayerScreen extends ConsumerStatefulWidget {
   final GuidedMeditation meditation;
 
-  const MeditationPlayerScreen({Key? key, required this.meditation}) : super(key: key);
+  const MeditationPlayerScreen({super.key, required this.meditation});
 
   @override
   ConsumerState<MeditationPlayerScreen> createState() => _MeditationPlayerScreenState();

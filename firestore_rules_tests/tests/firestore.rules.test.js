@@ -156,6 +156,40 @@ describe("Firestore security rules - critical collections", () => {
       })
     );
   });
+
+  test("client cannot write chat_rate_limits collection", async () => {
+    await assertFails(
+      setDoc(doc(aliceDb(), "chat_rate_limits", "alice"), {
+        windowStartMs: Date.now(),
+        count: 1
+      })
+    );
+  });
+
+  test("client cannot read chat_rate_limits collection", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "chat_rate_limits", "alice"), {
+        windowStartMs: Date.now(),
+        count: 5
+      });
+    });
+
+    await assertFails(getDoc(doc(aliceDb(), "chat_rate_limits", "alice")));
+    await assertFails(getDoc(doc(anonDb(), "chat_rate_limits", "alice")));
+  });
+
+  test("client cannot query chat_rate_limits collection", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "chat_rate_limits", "alice"), {
+        windowStartMs: Date.now(),
+        count: 5
+      });
+    });
+
+    const q = query(collection(aliceDb(), "chat_rate_limits"));
+    await assertFails(getDocs(q));
+  });
+
   test.each(CRITICAL_COLLECTIONS)(
     "%s: owner can create when userId matches auth.uid",
     async (collectionName) => {
@@ -343,5 +377,4 @@ describe("Firestore security rules - critical collections", () => {
     }
   );
 });
-
 

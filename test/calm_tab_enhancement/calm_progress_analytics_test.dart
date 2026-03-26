@@ -142,12 +142,15 @@ void main() {
         for (final sessionCount in testSessions) {
           final earnedBadges = <String>[];
 
-          if (sessionCount >= 10)
+          if (sessionCount >= 10) {
             earnedBadges.add('calm_technique_10_sessions');
-          if (sessionCount >= 25)
+          }
+          if (sessionCount >= 25) {
             earnedBadges.add('calm_technique_25_sessions');
-          if (sessionCount >= 50)
+          }
+          if (sessionCount >= 50) {
             earnedBadges.add('calm_technique_50_sessions');
+          }
 
           // Verify correct badges are earned
           if (sessionCount < 10) {

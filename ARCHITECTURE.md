@@ -13,13 +13,13 @@ MindNest is moving toward a feature-first layered architecture with Riverpod-bas
 
 - UI must not instantiate services directly.
 - UI must not perform direct Firestore collection queries.
-- Shared Firebase instances (`Auth`, `Firestore`, `Functions`) are exposed via providers.
+- Shared Firebase instances (`Auth`, `Firestore`) are exposed via providers.
 - Services receive dependencies through constructors/providers.
 
 ## Current status
 
 - Home/Profile/Badges/Manage Routine and key widgets now consume provider-backed services only.
-- Server-mediated AI chat is routed through Firebase Functions (`chatProxy`) by default.
+- AI chat uses local model calls from client runtime configuration (`GEMINI_API_KEY`).
 - Firestore rules enforce owner access and immutable ownership fields for critical collections.
 - Rules tests cover critical collections plus immutable `uid`/`createdAt` checks for user docs.
 

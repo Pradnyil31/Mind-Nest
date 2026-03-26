@@ -8,7 +8,7 @@ import '../theme/app_colors.dart';
 class ProgressMiniChart extends ConsumerWidget {
   final String userId;
 
-  const ProgressMiniChart({Key? key, required this.userId}) : super(key: key);
+  const ProgressMiniChart({super.key, required this.userId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,7 +38,7 @@ class ProgressMiniChart extends ConsumerWidget {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
+            color: Colors.white.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
@@ -114,5 +114,6 @@ class ProgressMiniChart extends ConsumerWidget {
     );
   }
 }
+
 
 

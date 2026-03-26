@@ -1,64 +1,109 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import 'config/app_branding.dart';
 import 'firebase_options.dart';
-import 'screens/welcome_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/onboarding_flow_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/user_provider.dart';
+import 'screens/home_screen.dart';
+import 'screens/onboarding_flow_screen.dart';
+import 'screens/welcome_screen.dart';
 import 'services/notification_service.dart';
+import 'theme/app_theme.dart';
 
-void main() async {
-  try {
-    // Force rebuild timestamp 2
-    WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const AppBootstrapper());
+}
 
-    // Initialize Firebase with proper configuration.
-    //
-    // In rare cases (hot restart / plugin pre-init), the native layer may have
-    // already created the default app even if `Firebase.apps` is not yet
-    // populated on the Dart side. Treat duplicate-app as a no-op.
-    if (Firebase.apps.isEmpty) {
-      try {
-        if (kIsWeb) {
-          await Firebase.initializeApp(
-            options: DefaultFirebaseOptions.currentPlatform,
-          );
-        } else {
-          await Firebase.initializeApp();
-        }
-      } on FirebaseException catch (e) {
-        if (e.code != 'duplicate-app') rethrow;
-        debugPrint('Firebase default app already exists; continuing.');
-      }
-    } else {
+class AppBootstrapper extends StatefulWidget {
+  const AppBootstrapper({super.key});
+
+  @override
+  State<AppBootstrapper> createState() => _AppBootstrapperState();
+}
+
+class _AppBootstrapperState extends State<AppBootstrapper> {
+  bool _initialized = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    setState(() {
+      _error = null;
+      _initialized = false;
+    });
+
+    try {
+      await _initializeFirebase().timeout(const Duration(seconds: 15));
+      await _initializeNotifications().timeout(const Duration(seconds: 8));
+      await _configureFirestore().timeout(const Duration(seconds: 6));
+      await _configureSystemUi();
+
+      if (!mounted) return;
+      setState(() {
+        _initialized = true;
+      });
+    } catch (e, stackTrace) {
+      debugPrint('App bootstrap failed: $e');
+      debugPrint('Bootstrap stack trace: $stackTrace');
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
+    }
+  }
+
+  Future<void> _initializeFirebase() async {
+    if (Firebase.apps.isNotEmpty) {
       debugPrint('Firebase already initialized');
+      return;
     }
 
-    // Initialize Notifications
+    try {
+      if (kIsWeb) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      } else {
+        await Firebase.initializeApp();
+      }
+    } on FirebaseException catch (e) {
+      if (e.code != 'duplicate-app') rethrow;
+      debugPrint('Firebase default app already exists; continuing.');
+    }
+  }
+
+  Future<void> _initializeNotifications() async {
     try {
       await NotificationService().init();
     } catch (e) {
-      // Notification initialization failure shouldn't block app startup
       debugPrint('Notification initialization failed: $e');
     }
+  }
 
-    // Enable Firestore offline persistence
+  Future<void> _configureFirestore() async {
     try {
       FirebaseFirestore.instance.settings = const Settings(
         persistenceEnabled: true,
         cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
       );
     } catch (e) {
-      // Firestore settings failure shouldn't block app startup
       debugPrint('Firestore settings failed: $e');
     }
+  }
 
-    // Set edge-to-edge display
+  Future<void> _configureSystemUi() async {
     try {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       SystemChrome.setSystemUIOverlayStyle(
@@ -68,50 +113,143 @@ void main() async {
         ),
       );
     } catch (e) {
-      // UI settings failure shouldn't block app startup
       debugPrint('System UI settings failed: $e');
     }
+  }
 
-    runApp(
-      // Wrap the entire app with ProviderScope to enable Riverpod
-      const ProviderScope(child: MindNestApp()),
+  @override
+  Widget build(BuildContext context) {
+    if (_initialized) {
+      return const ProviderScope(child: MindNestApp());
+    }
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: _BrandedBootScreen(
+        error: _error,
+        onRetry: _initialize,
+      ),
     );
-  } catch (e, stackTrace) {
-    // If Firebase initialization fails, show error screen
-    debugPrint('App initialization failed: $e');
-    debugPrint('Stack trace: $stackTrace');
+  }
+}
 
-    runApp(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                const Text(
-                  'App Initialization Failed',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Error: $e',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 14),
+class _BrandedBootScreen extends StatelessWidget {
+  final String? error;
+  final Future<void> Function() onRetry;
+
+  const _BrandedBootScreen({
+    required this.error,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF9FBFF), Color(0xFFEEF8F6)],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 124,
+                    height: 124,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x22000000),
+                          blurRadius: 18,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Image.asset(
+                      AppBranding.logoAssetPath,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        AppBranding.logoAssetPathAlt,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Image.asset(
+                          AppBranding.logoAssetPathFallback,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.spa_rounded,
+                            size: 66,
+                            color: Color(0xFF6A8DFF),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    // Restart the app
-                    main();
-                  },
-                  child: const Text('Retry'),
-                ),
-              ],
+                  const SizedBox(height: 18),
+                  Text(
+                    AppBranding.appName,
+                    style: GoogleFonts.lato(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF1A2530),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    AppBranding.tagline,
+                    style: GoogleFonts.lato(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  if (error == null) ...[
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Starting app...',
+                      style: GoogleFonts.lato(
+                        fontSize: 13,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ] else ...[
+                    const Icon(Icons.error_outline, color: Colors.red, size: 36),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Startup failed',
+                      style: GoogleFonts.lato(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF991B1B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      error!,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.lato(
+                        fontSize: 12,
+                        color: const Color(0xFF7F1D1D),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton(
+                      onPressed: onRetry,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ),
@@ -126,16 +264,9 @@ class MindNestApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MindNest',
+      title: AppBranding.appName,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFA78BFA),
-          primary: const Color(0xFFA78BFA),
-          secondary: const Color(0xFFF5C9D6),
-        ),
-        useMaterial3: true,
-        fontFamily: 'Inter',
+      theme: AppTheme.lightTheme.copyWith(
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             TargetPlatform.android: ZoomPageTransitionsBuilder(),
@@ -148,40 +279,31 @@ class MindNestApp extends StatelessWidget {
   }
 }
 
-// Authentication wrapper using Riverpod
 class AuthWrapper extends ConsumerWidget {
   const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch auth state using Riverpod
     final authState = ref.watch(authStateProvider);
 
     return authState.when(
       data: (user) {
         if (user == null) {
-          // User not signed in -> show welcome screen
           return const WelcomeScreen();
         }
 
-        // User signed in -> check onboarding status
         final userProfile = ref.watch(userProfileProvider);
 
         return userProfile.when(
           data: (profile) {
             if (profile == null) {
-              // Profile doesn't exist yet (shouldn't happen, but handle gracefully)
               return const WelcomeScreen();
             }
 
-            // Check if user has completed onboarding
-            final hasCompletedOnboarding = profile.onboardingCompleted;
-
-            if (hasCompletedOnboarding) {
+            if (profile.onboardingCompleted) {
               return const HomeScreen();
-            } else {
-              return const OnboardingFlowScreen();
             }
+            return const OnboardingFlowScreen();
           },
           loading: () => const Scaffold(
             body: Center(
@@ -200,43 +322,38 @@ class AuthWrapper extends ConsumerWidget {
             debugPrint('Stack trace: $stack');
             return Scaffold(
               body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('Error loading profile'),
-                    const SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Retry by invalidating the provider
-                        ref.invalidate(userProfileProvider);
-                      },
-                      child: const Text('Retry'),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () {
-                        // Fallback to welcome screen
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (context) => const WelcomeScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text('Go to Welcome'),
-                    ),
-                  ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                      const SizedBox(height: 16),
+                      const Text('Error loading profile'),
+                      const SizedBox(height: 8),
+                      Text(
+                        error.toString(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => ref.invalidate(userProfileProvider),
+                        child: const Text('Retry'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => const WelcomeScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text('Go to Welcome'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -260,39 +377,38 @@ class AuthWrapper extends ConsumerWidget {
         debugPrint('Stack trace: $stack');
         return Scaffold(
           body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 16),
-                const Text('Authentication Error'),
-                const SizedBox(height: 8),
-                Text(
-                  error.toString(),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    // Retry by invalidating the provider
-                    ref.invalidate(authStateProvider);
-                  },
-                  child: const Text('Retry'),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () {
-                    // Fallback to welcome screen
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) => const WelcomeScreen(),
-                      ),
-                    );
-                  },
-                  child: const Text('Continue Offline'),
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  const Text('Authentication Error'),
+                  const SizedBox(height: 8),
+                  Text(
+                    error.toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => ref.invalidate(authStateProvider),
+                    child: const Text('Retry'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => const WelcomeScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('Continue'),
+                  ),
+                ],
+              ),
             ),
           ),
         );

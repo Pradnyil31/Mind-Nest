@@ -5,6 +5,8 @@ class AppColors {
   static const Color primary = Color(0xFFA78BFA);
   static const Color secondary = Color(0xFFF5C9D6);
   static const Color accent = Color(0xFFF6903D);
+  static const Color primaryDark = Color(0xFF8B6FE8);
+  static const Color primaryLight = Color(0xFFEDE7FF);
   
   // Text Colors
   static const Color textPrimary = Color(0xFF2D3436);
@@ -12,6 +14,9 @@ class AppColors {
   
   // Background Colors
   static const Color backgroundLight = Color(0xFFFFFFFF);
+  static const Color backgroundSubtle = Color(0xFFF8F7FF);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color surfaceMuted = Color(0xFFF3F4F6);
   
   // Time-based Backgrounds
   static const Color morningSky = Color(0xFFE0F7FA);
@@ -27,4 +32,6 @@ class AppColors {
   static const Color success = Color(0xFF55EFC4);
   static const Color error = Color(0xFFFF7675);
   static const Color warning = Color(0xFFFDCB6E);
+  static const Color info = Color(0xFF4E8EF7);
+  static const Color border = Color(0xFFE4E7EC);
 }

@@ -9,7 +9,7 @@ import 'home_screen.dart';
 import 'onboarding_flow_screen.dart';
 
 class AuthOptionsScreen extends ConsumerWidget {
-  const AuthOptionsScreen({Key? key}) : super(key: key);
+  const AuthOptionsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,7 +31,7 @@ class AuthOptionsScreen extends ConsumerWidget {
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
+                color: Colors.white.withValues(alpha: 0.95),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(40),
                   topRight: Radius.circular(40),
@@ -73,7 +73,10 @@ class AuthOptionsScreen extends ConsumerWidget {
                                       signInMethod: 'google',
                                     ));
                                  } else {
-                                   onboardingCompleted = userDoc.data()?['onboardingCompleted'] ?? false;
+                                    final data = userDoc.data();
+                                    final mapData =
+                                        data is Map<String, dynamic> ? data : <String, dynamic>{};
+                                    onboardingCompleted = mapData['onboardingCompleted'] == true;
                                  }
                                  
                                  if (context.mounted) {
@@ -234,3 +237,4 @@ class AuthOptionsScreen extends ConsumerWidget {
     );
   }
 }
+

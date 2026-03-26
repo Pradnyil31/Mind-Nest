@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../lib/models/calm_technique.dart';
-import '../../lib/config/motive_config.dart';
+import 'package:fy_project/models/calm_technique.dart';
+import 'package:fy_project/config/motive_config.dart';
 
 void main() {
   group('CalmRecommendationService Logic Tests', () {

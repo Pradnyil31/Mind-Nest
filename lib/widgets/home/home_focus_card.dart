@@ -16,7 +16,7 @@ class HomeFocusCard extends StatelessWidget {
   final String? hint;
 
   const HomeFocusCard({
-    Key? key,
+    super.key,
     required this.displayName,
     required this.goals,
     required this.routine,
@@ -27,7 +27,7 @@ class HomeFocusCard extends StatelessWidget {
     this.title,
     this.subtitle,
     this.hint,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +43,7 @@ class HomeFocusCard extends StatelessWidget {
     }
 
     final String resolvedTitle = title ?? 'Start ${_getTimePeriod()} routine';
-    final String? resolvedSubtitle = subtitle ?? 'Focus: $todaysFocus';
+    final String resolvedSubtitle = subtitle ?? 'Focus: $todaysFocus';
 
     return GestureDetector(
       onTap: () {
@@ -84,7 +84,7 @@ class HomeFocusCard extends StatelessWidget {
                           color: const Color(0xFF2D3436),
                         ),
                       ),
-                      if (resolvedSubtitle != null) ...[
+                      ...[
                         const SizedBox(height: 6),
                         Text(
                           resolvedSubtitle,
@@ -106,7 +106,7 @@ class HomeFocusCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -189,7 +189,7 @@ class _WeeklyTracker extends StatelessWidget {
       border = Border.all(color: const Color(0xFFF6903D), width: 2);
     } else if (isActive) {
       // Previous day with completions: green fill
-      bgColor = AppColors.primary.withOpacity(0.15);
+      bgColor = AppColors.primary.withValues(alpha: 0.15);
       textColor = AppColors.primary;
       border = Border.all(color: AppColors.primary, width: 1.5);
     } else {
@@ -220,3 +220,4 @@ class _WeeklyTracker extends StatelessWidget {
     );
   }
 }
+

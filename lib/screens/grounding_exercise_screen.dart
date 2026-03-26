@@ -6,7 +6,7 @@ import '../services/voice_service.dart';
 import '../providers/app_providers.dart';
 
 class GroundingExerciseScreen extends ConsumerStatefulWidget {
-  const GroundingExerciseScreen({Key? key}) : super(key: key);
+  const GroundingExerciseScreen({super.key});
 
   @override
   ConsumerState<GroundingExerciseScreen> createState() => _GroundingExerciseScreenState();

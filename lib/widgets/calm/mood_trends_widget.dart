@@ -153,7 +153,7 @@ class MoodTrendsWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -266,7 +266,7 @@ class MoodTrendsWidget extends StatelessWidget {
             ),
             belowBarData: BarAreaData(
               show: true,
-              color: primaryColor.withOpacity(0.1),
+              color: primaryColor.withValues(alpha: 0.1),
             ),
           ),
         ],
@@ -370,3 +370,4 @@ class MoodTrendsWidget extends StatelessWidget {
     }
   }
 }
+

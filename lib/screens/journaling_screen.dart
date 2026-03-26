@@ -8,7 +8,7 @@ import '../providers/journal_provider.dart';
 import 'journal_entry_screen.dart';
 
 class JournalingScreen extends ConsumerWidget {
-  const JournalingScreen({Key? key}) : super(key: key);
+  const JournalingScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -153,7 +153,7 @@ class JournalingScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -170,7 +170,7 @@ class JournalingScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: moodColor.withOpacity(0.15),
+                        color: moodColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(moodIcon, color: moodColor, size: 20),
@@ -223,3 +223,4 @@ class JournalingScreen extends ConsumerWidget {
     );
   }
 }
+

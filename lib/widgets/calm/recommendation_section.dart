@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/calm/application/calm_recommendation_service.dart';
 import '../../models/calm_technique.dart';
 import '../../providers/app_providers.dart';
-import '../../providers/auth_provider.dart';
 
 /// Widget that displays personalized technique recommendations
 /// This would be integrated into the EnhancedCalmScreen
@@ -163,7 +162,7 @@ class _RecommendationCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
+                        color: primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -213,7 +212,7 @@ class _RecommendationCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getTypeColor(technique.type).withOpacity(0.1),
+                    color: _getTypeColor(technique.type).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -259,3 +258,4 @@ class _RecommendationCard extends StatelessWidget {
     }
   }
 }
+

@@ -1,5 +1,6 @@
 /// Example usage of the enhanced CalmProgressService for task 3.3
 /// This demonstrates how to use the comprehensive user statistics dashboard
+library;
 
 import 'calm_progress_service.dart';
 
@@ -142,7 +143,7 @@ class CalmProgressUsageExample {
         final streakMessage = stats['streakMessage'] as String;
         final currentStreak = stats['currentStreak'] as int;
 
-        print('  $motive (${currentStreak} days): $streakMessage');
+        print('  $motive ($currentStreak days): $streakMessage');
       } catch (e) {
         print('  Error for $motive: $e');
       }

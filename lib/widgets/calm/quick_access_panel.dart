@@ -5,7 +5,6 @@ import '../../features/calm/application/technique_library_service.dart';
 import '../../models/calm_technique.dart';
 import '../../models/breathing_technique.dart';
 import '../../providers/app_providers.dart';
-import '../../providers/auth_provider.dart';
 import '../../screens/grounding_exercise_screen.dart';
 import '../../screens/affirmations_screen.dart';
 import '../../screens/calm_technique_screen.dart';

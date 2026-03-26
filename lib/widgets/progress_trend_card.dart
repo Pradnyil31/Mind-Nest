@@ -8,12 +8,12 @@ class ProgressTrendCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const ProgressTrendCard({
-    Key? key,
+    super.key,
     required this.encouragingMessage,
     required this.trendDirection,
     required this.highlights,
     this.onTap,
-  }) : super(key: key);
+  });
 
   Color _getTrendColor() {
     switch (trendDirection) {
@@ -50,15 +50,15 @@ class ProgressTrendCard extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              _getTrendColor().withOpacity(0.1),
-              _getTrendColor().withOpacity(0.05),
+              _getTrendColor().withValues(alpha: 0.1),
+              _getTrendColor().withValues(alpha: 0.05),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: _getTrendColor().withOpacity(0.3),
+            color: _getTrendColor().withValues(alpha: 0.3),
             width: 2,
           ),
         ),
@@ -166,3 +166,4 @@ class ProgressTrendCard extends StatelessWidget {
     );
   }
 }
+

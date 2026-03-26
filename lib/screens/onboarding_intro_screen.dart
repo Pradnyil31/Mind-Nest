@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'auth_options_screen.dart';
 
 class OnboardingIntroductionScreen extends StatefulWidget {
-  const OnboardingIntroductionScreen({Key? key}) : super(key: key);
+  const OnboardingIntroductionScreen({super.key});
 
   @override
   State<OnboardingIntroductionScreen> createState() => _OnboardingIntroductionScreenState();
@@ -78,10 +78,10 @@ class _OnboardingIntroductionScreenState extends State<OnboardingIntroductionScr
                       width: double.infinity,
                       padding: const EdgeInsets.fromLTRB(32, 48, 32, 48),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.7), // Semi-transparent white
+                        color: Colors.white.withValues(alpha: 0.7), // Semi-transparent white
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
                         border: Border(
-                          top: BorderSide(color: Colors.white.withOpacity(0.5), width: 1.5),
+                          top: BorderSide(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
                         ),
                       ),
                       child: Column(
@@ -136,7 +136,7 @@ class _OnboardingIntroductionScreenState extends State<OnboardingIntroductionScr
                                 backgroundColor: const Color(0xFF6C63FF),
                                 foregroundColor: Colors.white,
                                 elevation: 8,
-                                shadowColor: const Color(0xFF6C63FF).withOpacity(0.4),
+                                shadowColor: const Color(0xFF6C63FF).withValues(alpha: 0.4),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(24),
                                 ),
@@ -171,3 +171,4 @@ class _OnboardingIntroductionScreenState extends State<OnboardingIntroductionScr
     );
   }
 }
+

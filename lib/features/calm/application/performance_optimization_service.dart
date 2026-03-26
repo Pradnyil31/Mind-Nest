@@ -1,8 +1,5 @@
 import 'dart:async';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
-import '../../../core/logger.dart';
 import '../../../services/audio_playback_service.dart';
 
 /// Service for performance optimization and resource management

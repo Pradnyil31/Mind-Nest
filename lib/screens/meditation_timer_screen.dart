@@ -9,7 +9,7 @@ import '../providers/user_provider.dart';
 import '../widgets/activity_completion_dialog.dart';
 
 class MeditationTimerScreen extends ConsumerStatefulWidget {
-  const MeditationTimerScreen({Key? key}) : super(key: key);
+  const MeditationTimerScreen({super.key});
 
   @override
   ConsumerState<MeditationTimerScreen> createState() => _MeditationTimerScreenState();
@@ -140,7 +140,7 @@ class _MeditationTimerScreenState extends ConsumerState<MeditationTimerScreen> w
                   Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF81C784).withOpacity(0.15),
+                      color: const Color(0xFF81C784).withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -199,7 +199,7 @@ class _MeditationTimerScreenState extends ConsumerState<MeditationTimerScreen> w
                             ),
                             boxShadow: isSelected ? [
                               BoxShadow(
-                                color: const Color(0xFF81C784).withOpacity(0.3),
+                                color: const Color(0xFF81C784).withValues(alpha: 0.3),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -278,7 +278,7 @@ class _MeditationTimerScreenState extends ConsumerState<MeditationTimerScreen> w
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          const Color(0xFF81C784).withOpacity(0.3),
+                          const Color(0xFF81C784).withValues(alpha: 0.3),
                           Colors.transparent,
                         ],
                       ),
@@ -340,3 +340,4 @@ class _MeditationTimerScreenState extends ConsumerState<MeditationTimerScreen> w
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 }
+

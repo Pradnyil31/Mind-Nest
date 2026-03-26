@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/config/motive_config.dart';
+import 'package:fy_project/config/motive_config.dart';
 
 void main() {
   group('CalmProgressService Enhanced (Task 3.3) - Logic Tests', () {

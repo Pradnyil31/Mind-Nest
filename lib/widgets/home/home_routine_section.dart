@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../theme/app_colors.dart';
 import '../../config/routine_config.dart';
 
 class HomeRoutineSection extends StatelessWidget {
@@ -16,7 +15,7 @@ class HomeRoutineSection extends StatelessWidget {
   final int streak;
 
   const HomeRoutineSection({
-    Key? key,
+    super.key,
     required this.selectedActivities,
     required this.temporarySchedule,
     required this.routineSchedule,
@@ -26,7 +25,7 @@ class HomeRoutineSection extends StatelessWidget {
     required this.onToggleActivity,
     required this.textColor,
     this.streak = 0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -58,8 +57,9 @@ class HomeRoutineSection extends StatelessWidget {
           try {
             final t = _parseTime(rawPeriod);
             final double val = t.hour + t.minute / 60.0;
-            if (val < 12.0) category = 'Morning';
-            else if (val < 17.0) category = 'Afternoon';
+            if (val < 12.0) {
+              category = 'Morning';
+            } else if (val < 17.0) category = 'Afternoon';
             else category = 'Evening';
           } catch (e) {
             category = 'Morning';
@@ -102,10 +102,10 @@ class HomeRoutineSection extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF6C63FF).withOpacity(0.15),
+                    color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: const Color(0xFF6C63FF).withOpacity(0.3),
+                      color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
                       width: 1.5,
                     ),
                   ),
@@ -249,7 +249,7 @@ class HomeRoutineSection extends StatelessWidget {
                onToggleActivity(item, false);
              }
           },
-        )).toList(),
+        )),
       ],
     );
   }
@@ -307,7 +307,7 @@ class HomeRoutineSection extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.info_outline_rounded,
@@ -355,7 +355,7 @@ class HomeRoutineSection extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6C63FF).withOpacity(0.07),
+                          color: const Color(0xFF6C63FF).withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
@@ -390,7 +390,7 @@ class HomeRoutineSection extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF00B89A).withOpacity(0.07),
+                          color: const Color(0xFF00B89A).withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
@@ -485,18 +485,18 @@ class _RoutineItemCard extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: isCompleted 
-                    ? const Color(0xFF55EFC4).withOpacity(0.2)
-                    : Colors.white.withOpacity(0.1),
+                    ? const Color(0xFF55EFC4).withValues(alpha: 0.2)
+                    : Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isCompleted 
-                      ? const Color(0xFF55EFC4).withOpacity(0.5)
-                      : Colors.white.withOpacity(0.2),
+                      ? const Color(0xFF55EFC4).withValues(alpha: 0.5)
+                      : Colors.white.withValues(alpha: 0.2),
                   width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8, // Fixed
                     offset: const Offset(0, 2),
                   ),
@@ -576,3 +576,4 @@ class _RoutineItemCard extends StatelessWidget {
     );
   }
 }
+

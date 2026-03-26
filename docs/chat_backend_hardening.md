@@ -1,32 +1,27 @@
-# Chat Backend Hardening (Production)
+# Chat Configuration Hardening (Free-Tier)
 
-This project now includes a server-mediated chat endpoint:
+This project now uses local model-based chat from the mobile client runtime.
 
-- Function: `chatProxy`
-- Location: `functions/index.js`
-- Invocation: Firebase callable function (`us-central1`)
+## Current mode
 
-## Security controls implemented
+- No Firebase Cloud Functions dependency
+- No callable backend for chat
+- Chat uses `GEMINI_API_KEY` passed at runtime
 
-- Auth required (`request.auth.uid`)
-- Message length validation (`<= 500` chars)
-- Basic crisis keyword interception on server
-- Per-user rate limiting in Firestore (`chat_rate_limits/{uid}`)
-- Gemini key kept on server via Firebase Secret (`GEMINI_API_KEY`)
+## Security and safety controls still applied in app
 
-## Deploy
+- Input length validation (`<= 500` chars)
+- Crisis keyword interception with emergency resources
+- Error/fallback messaging for quota/connectivity failures
 
-1. Install function dependencies:
-   - `cd functions`
-   - `npm install`
-2. Set Firebase secret:
-   - `firebase functions:secrets:set GEMINI_API_KEY`
-3. Deploy:
-   - `firebase deploy --only functions`
+## Run mode
 
-## Client behavior
+Use:
 
-`lib/services/chat_service.dart` now prefers server chat by default:
+```bash
+flutter run --dart-define=GEMINI_API_KEY=YOUR_KEY
+```
 
-- `USE_SERVER_CHAT=true` (default)
-- Falls back to local Gemini only if server is unavailable and `GEMINI_API_KEY` is present in app runtime.
+## Important note
+
+Because chat is now client-side, avoid committing keys and rotate keys regularly.

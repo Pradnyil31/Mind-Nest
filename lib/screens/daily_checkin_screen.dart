@@ -1,15 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/daily_checkin.dart';
 import '../models/smart_goal.dart';
-import '../providers/auth_provider.dart';
 import '../providers/goal_provider.dart';
 import '../providers/app_providers.dart';
 import '../widgets/activity_completion_dialog.dart';
 
 class DailyCheckInScreen extends ConsumerStatefulWidget {
-  const DailyCheckInScreen({Key? key}) : super(key: key);
+  const DailyCheckInScreen({super.key});
 
   @override
   ConsumerState<DailyCheckInScreen> createState() => _DailyCheckInScreenState();
@@ -25,7 +25,7 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
   int _energyLevel = 5;
   String _selectedMood = '';
   List<SmartGoal> _activeGoals = [];
-  List<String> _checkedGoals = [];
+  final List<String> _checkedGoals = [];
 
   @override
   void initState() {
@@ -86,7 +86,7 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
             return await ref.read(checkInServiceProvider)
                 .submitCheckIn(checkIn)
                 .timeout(const Duration(seconds: 10), onTimeout: () {
-                  throw 'Connection timed out. Please check internet.';
+                  throw TimeoutException('Connection timed out');
                 });
           },
         );
@@ -100,8 +100,7 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
                title: Text(safeActivities.isNotEmpty ? 'Routine Updated' : 'Check-in Complete'),
                content: Text(
                  safeActivities.isNotEmpty 
-                   ? 'Based on your check-in, we added the following to your routine:\n\n' + 
-                     safeActivities.map((e) => '• $e').join('\n')
+                   ? 'Based on your check-in, we added the following to your routine:\n\n${safeActivities.map((e) => '• $e').join('\n')}'
                    : 'Great job checking in! Your routine looks good for today.'
                ),
                actions: [
@@ -126,6 +125,17 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
             actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
           ),
         );
+      }
+    } on TimeoutException {
+      if (mounted) {
+         await showDialog(
+           context: context,
+           builder: (context) => AlertDialog(
+             title: const Text('Connection issue'),
+             content: const Text('Request timed out. Please check your internet and try again.'),
+             actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+           ),
+         );
       }
     } catch (e) {
       if (mounted) {
@@ -267,7 +277,7 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
               activeTrackColor: const Color(0xFF6C63FF),
               inactiveTrackColor: Colors.grey.shade200,
               thumbColor: const Color(0xFF6C63FF),
-              overlayColor: const Color(0xFF6C63FF).withOpacity(0.2),
+              overlayColor: const Color(0xFF6C63FF).withValues(alpha: 0.2),
               trackHeight: 8,
             ),
             child: Slider(
@@ -325,7 +335,7 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
                    width: 100,
                    padding: const EdgeInsets.symmetric(vertical: 16),
                    decoration: BoxDecoration(
-                     color: Color(mood['color'] as int).withOpacity(isSelected ? 1 : 0.4),
+                     color: Color(mood['color'] as int).withValues(alpha: isSelected ? 1 : 0.4),
                      borderRadius: BorderRadius.circular(16),
                      border: isSelected ? Border.all(color: Colors.black, width: 2) : null,
                    ),
@@ -374,7 +384,7 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
               activeTrackColor: const Color(0xFFEF8934),
               inactiveTrackColor: Colors.grey.shade200,
               thumbColor: const Color(0xFFEF8934),
-              overlayColor: const Color(0xFFEF8934).withOpacity(0.2),
+              overlayColor: const Color(0xFFEF8934).withValues(alpha: 0.2),
               trackHeight: 8,
             ),
             child: Slider(
@@ -438,7 +448,7 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -480,4 +490,5 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
     return 'Good Evening! 🌙';
   }
 }
+
 

@@ -19,89 +19,59 @@ class AppException implements Exception {
 /// Network-related exceptions (connectivity, timeouts, etc.)
 class NetworkException extends AppException {
   NetworkException(
-    String message, {
-    String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-          message,
-          code: code,
-          originalError: originalError,
-          stackTrace: stackTrace,
-        );
+    super.message, {
+    super.code,
+    super.originalError,
+    super.stackTrace,
+  });
 }
 
 /// Authentication-related exceptions
 class AuthenticationException extends AppException {
   AuthenticationException(
-    String message, {
-    String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-          message,
-          code: code,
-          originalError: originalError,
-          stackTrace: stackTrace,
-        );
+    super.message, {
+    super.code,
+    super.originalError,
+    super.stackTrace,
+  });
 }
 
 /// Firestore database exceptions
 class FirestoreException extends AppException {
   FirestoreException(
-    String message, {
-    String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-          message,
-          code: code,
-          originalError: originalError,
-          stackTrace: stackTrace,
-        );
+    super.message, {
+    super.code,
+    super.originalError,
+    super.stackTrace,
+  });
 }
 
 /// Goal-related exceptions
 class GoalException extends AppException {
   GoalException(
-    String message, {
-    String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-          message,
-          code: code,
-          originalError: originalError,
-          stackTrace: stackTrace,
-        );
+    super.message, {
+    super.code,
+    super.originalError,
+    super.stackTrace,
+  });
 }
 
 /// Journal-related exceptions
 class JournalException extends AppException {
   JournalException(
-    String message, {
-    String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-          message,
-          code: code,
-          originalError: originalError,
-          stackTrace: stackTrace,
-        );
+    super.message, {
+    super.code,
+    super.originalError,
+    super.stackTrace,
+  });
 }
 
 /// Chat service exceptions
 class ChatException extends AppException {
   ChatException(
-    String message, {
-    String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-          message,
-          code: code,
-          originalError: originalError,
-          stackTrace: stackTrace,
-        );
+    super.message, {
+    super.code,
+    super.originalError,
+    super.stackTrace,
+  });
 }

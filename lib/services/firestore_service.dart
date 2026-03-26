@@ -6,12 +6,15 @@ import 'dart:async';
 import '../core/logger.dart';
 
 class FirestoreService {
-  final FirebaseFirestore _firestore;
+  final FirebaseFirestore? _providedFirestore;
   final BadgeService? _badgeService;
 
   FirestoreService({FirebaseFirestore? firestore, BadgeService? badgeService})
-    : _firestore = firestore ?? FirebaseFirestore.instance,
+    : _providedFirestore = firestore,
       _badgeService = badgeService;
+
+  FirebaseFirestore get _firestore =>
+      _providedFirestore ?? FirebaseFirestore.instance;
 
   // Collection reference
   CollectionReference get _usersCollection => _firestore.collection('users');

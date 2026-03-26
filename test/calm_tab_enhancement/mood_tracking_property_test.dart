@@ -256,9 +256,9 @@ void main() {
         ];
 
         for (final testCase in testCases) {
-          final preMood = testCase[0] as int;
-          final postMood = testCase[1] as int;
-          final expectedImprovement = testCase[2] as int;
+          final preMood = testCase[0];
+          final postMood = testCase[1];
+          final expectedImprovement = testCase[2];
 
           final session = MoodSession(
             id: 'test',

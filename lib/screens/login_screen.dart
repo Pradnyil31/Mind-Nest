@@ -6,9 +6,10 @@ import 'signup_screen.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
+import '../theme/app_colors.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -53,8 +54,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               TextButton(
                 onPressed: () async {
                   final email = emailController.text.trim();
+                  final messenger = ScaffoldMessenger.of(context);
                   if (!email.contains('@')) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       const SnackBar(content: Text('Please enter a valid email')),
                     );
                     return;
@@ -62,18 +64,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   try {
                     await ref.read(authServiceProvider).sendPasswordResetEmail(email);
-                    if (context.mounted) {
-                      Navigator.pop(dialogContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Password reset email sent')),
-                      );
-                    }
+                    if (!context.mounted || !dialogContext.mounted) return;
+                    Navigator.of(dialogContext).pop();
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Password reset email sent')),
+                    );
                   } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(e.toString())),
-                      );
-                    }
+                    if (!context.mounted) return;
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(e.toString())),
+                    );
                   }
                 },
                 child: const Text('Send'),
@@ -110,14 +110,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         bool onboardingCompleted = false;
         if (userDoc.exists) {
           final data = userDoc.data();
-          onboardingCompleted = data?['onboardingCompleted'] ?? false;
+          final mapData = data is Map<String, dynamic> ? data : <String, dynamic>{};
+          onboardingCompleted = mapData['onboardingCompleted'] == true;
         }
 
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Welcome back! 👋'),
-              backgroundColor: Color(0xFFA78BFA),
+              content: Text('Welcome back!'),
+              backgroundColor: AppColors.primaryDark,
               duration: Duration(seconds: 1),
             ),
           );
@@ -138,7 +139,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString()),
-            backgroundColor: Colors.red[400],
+            backgroundColor: AppColors.error,
             duration: const Duration(seconds: 3),
           ),
         );
@@ -155,18 +156,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7FD),
+      backgroundColor: AppColors.backgroundSubtle,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF4A4A4A)),
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Log in',
           style: TextStyle(
-            color: Color(0xFF4A4A4A),
+            color: AppColors.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
@@ -188,18 +189,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   style: const TextStyle(
                     fontSize: 16,
-                    color: Color(0xFF4A4A4A),
+                    color: AppColors.textPrimary,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Email',
                     hintStyle: TextStyle(
-                      color: Colors.grey[600],
+                      color: AppColors.textSecondary,
                       fontSize: 16,
                     ),
                     filled: true,
-                    fillColor: const Color(0xFFF0EDF5),
+                    fillColor: AppColors.surfaceMuted,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
                     ),
                     contentPadding: const EdgeInsets.symmetric(
@@ -226,18 +227,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   obscureText: !_isPasswordVisible,
                   style: const TextStyle(
                     fontSize: 16,
-                    color: Color(0xFF4A4A4A),
+                    color: AppColors.textPrimary,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Password',
                     hintStyle: TextStyle(
-                      color: Colors.grey[600],
+                      color: AppColors.textSecondary,
                       fontSize: 16,
                     ),
                     filled: true,
-                    fillColor: const Color(0xFFF0EDF5),
+                    fillColor: AppColors.surfaceMuted,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
                     ),
                     contentPadding: const EdgeInsets.symmetric(
@@ -249,7 +250,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         _isPasswordVisible
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
-                        color: Colors.grey[600],
+                        color: AppColors.textSecondary,
                       ),
                       onPressed: () {
                         setState(() {
@@ -276,7 +277,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Text(
                       'Forgot Password?',
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: AppColors.textSecondary,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -295,12 +296,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     );
                   },
                   child: Text(
-                    'I don’t have an account',
+                    "I don't have an account",
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.grey[700],
+                      color: AppColors.textSecondary,
                       decoration: TextDecoration.underline,
-                      decorationColor: Colors.grey[700],
+                      decorationColor: AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -314,7 +315,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFA78BFA),
+                      backgroundColor: AppColors.primaryDark,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -345,12 +346,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Divider
                 Row(
                   children: [
-                    Expanded(child: Divider(color: Colors.grey[300])),
+                    const Expanded(child: Divider(color: AppColors.border)),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text('Or continue with', style: TextStyle(color: Colors.grey[500])),
+                      child: const Text(
+                        'Or continue with',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                     ),
-                    Expanded(child: Divider(color: Colors.grey[300])),
+                    const Expanded(child: Divider(color: AppColors.border)),
                   ],
                 ),
                 
@@ -379,14 +383,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 signInMethod: 'google',
                               ));
                            } else {
-                             onboardingCompleted = userDoc.data()?['onboardingCompleted'] ?? false;
+                             final data = userDoc.data();
+                             final mapData =
+                                 data is Map<String, dynamic> ? data : <String, dynamic>{};
+                             onboardingCompleted = mapData['onboardingCompleted'] == true;
                            }
                            
                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Welcome back! 👋'),
-                                  backgroundColor: Color(0xFFA78BFA),
+                                  content: Text('Welcome back!'),
+                                  backgroundColor: AppColors.primaryDark,
                                   duration: Duration(seconds: 1),
                                 ),
                               );
@@ -408,14 +415,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     },
                     style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                      side: BorderSide(color: Colors.grey[300]!),
+                      side: const BorderSide(color: AppColors.border),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Image.asset('assets/images/google_logo.png', width: 24),
                         const SizedBox(width: 12),
-                        const Text('Sign in with Google', style: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Sign in with Google',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),

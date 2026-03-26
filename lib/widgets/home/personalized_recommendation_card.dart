@@ -9,12 +9,12 @@ class PersonalizedRecommendationCard extends StatelessWidget {
   final String buttonLabel;
 
   const PersonalizedRecommendationCard({
-    Key? key,
+    super.key,
     required this.recommendation,
     required this.subtitle,
     required this.onTap,
     this.buttonLabel = 'Try this',
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,7 @@ class PersonalizedRecommendationCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE4D9FF)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -108,3 +108,4 @@ class PersonalizedRecommendationCard extends StatelessWidget {
     );
   }
 }
+

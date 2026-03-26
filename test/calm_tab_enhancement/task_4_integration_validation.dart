@@ -2,9 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fy_project/services/audio_playback_service.dart';
 import 'package:fy_project/features/calm/application/ambient_sound_controller.dart';
-import 'package:fy_project/models/ambient_sound.dart';
-import 'package:fy_project/models/calm_technique.dart';
-import 'package:fy_project/config/motive_config.dart';
 
 /// Task 4: Core Services Integration Validation
 ///

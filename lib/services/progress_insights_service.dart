@@ -1,4 +1,3 @@
-import '../models/progress_insights.dart';
 import '../models/routine_completion.dart';
 import '../models/badge.dart';
 import 'routine_tracking_service.dart';
@@ -101,18 +100,18 @@ class ProgressInsightsService {
       if (streak >= 7 && userMotive != null) {
         // Import MotiveConfig messages
         final streakMessages = {
-          'Sleep': '🌙 ${streak} nights of better sleep habits!',
-          'Stress': '💆 ${streak} days of stress management!',
-          'Anxiety': '🌊 ${streak} days of building calm!',
-          'Focus': '🎯 ${streak} days of mental clarity!',
-          'Habit Building': '📈 ${streak} days of consistency!',
+          'Sleep': '🌙 $streak nights of better sleep habits!',
+          'Stress': '💆 $streak days of stress management!',
+          'Anxiety': '🌊 $streak days of building calm!',
+          'Focus': '🎯 $streak days of mental clarity!',
+          'Habit Building': '📈 $streak days of consistency!',
         };
-        return streakMessages[userMotive] ?? '🌟 Amazing! ${streak} days in a row!';
+        return streakMessages[userMotive] ?? '🌟 Amazing! $streak days in a row!';
       }
       else if (streak >= 7) {
-        return '🌟 Amazing! ${streak} days in a row! You\'re building incredible habits!';
+        return '🌟 Amazing! $streak days in a row! You\'re building incredible habits!';
       } else if (streak >= 3) {
-        return '💪 ${streak} days strong! Keep the momentum going!';
+        return '💪 $streak days strong! Keep the momentum going!';
       } else if (highlights.length >= 3) {
         return '✨ You\'re doing great this week! Keep it up!';
       } else if (highlights.isNotEmpty) {
@@ -294,7 +293,7 @@ class ProgressInsightsService {
       // Create a map for quick lookup
       final Map<String, RoutineCompletion> completionMap = {};
       for (var doc in snapshot.docs) {
-         final completion = RoutineCompletion.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+         final completion = RoutineCompletion.fromMap(doc.data(), doc.id);
          final dateStr = "${completion.date.year}-${completion.date.month}-${completion.date.day}";
          completionMap[dateStr] = completion;
       }
@@ -336,7 +335,7 @@ class ProgressInsightsService {
           .get();
       
       for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         final completedActivities = List<String>.from(data['completedActivities'] ?? []);
         
         // Count each activity
@@ -368,7 +367,7 @@ class ProgressInsightsService {
     // Count total completed activities across all documents for this day
     int totalCompletions = 0;
     for (var doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
       final activities = List<String>.from(data['completedActivities'] ?? []);
       totalCompletions += activities.length;
     }

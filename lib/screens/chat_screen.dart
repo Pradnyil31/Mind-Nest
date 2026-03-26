@@ -4,9 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/chat_message.dart';
 import '../services/chat_service.dart';
 import '../providers/app_providers.dart';
+import '../theme/app_colors.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({Key? key}) : super(key: key);
+  const ChatScreen({super.key});
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -21,12 +22,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   ChatService get _chatService => ref.read(chatServiceProvider);
 
   final List<String> _suggestedPrompts = [
-    "I'm feeling anxious 😰",
-    "I can't sleep 😴",
-    "I'm stressed about work 💼",
-    "I need motivation 💪",
-    "I'm feeling lonely 😔",
-    "Celebrate a win with me! 🎉",
+    "I'm feeling anxious",
+    "I can't sleep",
+    "I'm stressed about work",
+    "I need motivation",
+    "I'm feeling lonely",
+    "Celebrate a win with me",
   ];
 
   @override
@@ -38,7 +39,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _addWelcomeMessage() {
     setState(() {
       _messages.add(ChatMessage(
-        text: "Hey there! 👋 I'm here to chat whenever you need. How are you feeling today?",
+        text: "Hey there. I'm here to chat whenever you need. How are you feeling today?",
         isUser: false,
       ));
     });
@@ -86,7 +87,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     } catch (e) {
       setState(() {
         _messages.add(ChatMessage(
-          text: "Oops! I'm having trouble right now 🤔 Try again in a moment?",
+          text: "I'm having trouble right now. Please try again in a moment.",
           isUser: false,
         ));
         _isLoading = false;
@@ -109,7 +110,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F9),
+      backgroundColor: AppColors.backgroundSubtle,
       appBar: AppBar(
         title: Row(
           children: [
@@ -117,7 +118,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFF9575CD),
+                color: AppColors.primaryDark,
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -133,14 +134,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   style: GoogleFonts.lato(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF2D2D2D),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 Text(
                   'Your AI friend',
                   style: GoogleFonts.lato(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -151,7 +152,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF2D2D2D)),
+            icon: const Icon(Icons.refresh, color: AppColors.textPrimary),
             onPressed: () {
               setState(() {
                 _messages.clear();
@@ -192,7 +193,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -207,7 +208,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              const Color(0xFF9575CD),
+                              AppColors.primaryDark,
                             ),
                           ),
                         ),
@@ -216,7 +217,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           'Typing...',
                           style: GoogleFonts.lato(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: AppColors.textSecondary,
                             fontStyle: FontStyle.italic,
                           ),
                         ),
@@ -245,7 +246,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF9575CD).withOpacity(0.15),
+              color: AppColors.primaryDark.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Text('💬', style: TextStyle(fontSize: 48)),
@@ -256,7 +257,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             style: GoogleFonts.lato(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF2D2D2D),
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -264,7 +265,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             'I\'m here to listen and support you',
             style: GoogleFonts.lato(
               fontSize: 14,
-              color: Colors.grey.shade600,
+              color: AppColors.textSecondary,
             ),
           ),
         ],
@@ -285,7 +286,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: const Color(0xFF9575CD).withOpacity(0.2),
+                color: AppColors.primaryDark.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -299,7 +300,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: message.isUser
-                    ? const Color(0xFF9575CD)
+                    ? AppColors.primaryDark
                     : Colors.white,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
@@ -309,7 +310,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -319,7 +320,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 message.text,
                 style: GoogleFonts.lato(
                   fontSize: 15,
-                  color: message.isUser ? Colors.white : const Color(0xFF2D2D2D),
+                  color: message.isUser ? Colors.white : AppColors.textPrimary,
                   height: 1.4,
                 ),
               ),
@@ -331,7 +332,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: const Color(0xFF64B5F6).withOpacity(0.2),
+                color: AppColors.info.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -355,7 +356,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             style: GoogleFonts.lato(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 8),
@@ -370,13 +371,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF9575CD).withOpacity(0.3)),
+                    border: Border.all(color: AppColors.primaryDark.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     prompt,
                     style: GoogleFonts.lato(
                       fontSize: 13,
-                      color: const Color(0xFF9575CD),
+                      color: AppColors.primaryDark,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -396,7 +397,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -409,7 +410,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F9),
+                  color: AppColors.backgroundSubtle,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: TextField(
@@ -417,7 +418,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   decoration: InputDecoration(
                     hintText: 'Type a message...',
                     hintStyle: GoogleFonts.lato(
-                      color: Colors.grey.shade600,
+                      color: AppColors.textSecondary,
                       fontSize: 15,
                     ),
                     border: InputBorder.none,
@@ -436,11 +437,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF9575CD),
+                  color: AppColors.primaryDark,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF9575CD).withOpacity(0.3),
+                      color: AppColors.primaryDark.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -459,3 +460,5 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 }
+
+

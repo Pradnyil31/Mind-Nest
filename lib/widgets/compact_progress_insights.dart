@@ -10,10 +10,10 @@ class CompactProgressInsights extends ConsumerStatefulWidget {
   final Map<String, dynamic>? todayCheckInData;
 
   const CompactProgressInsights({
-    Key? key,
+    super.key,
     required this.userId,
     this.todayCheckInData,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<CompactProgressInsights> createState() =>
@@ -86,11 +86,11 @@ class _CompactProgressInsightsState
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
+            color: Colors.white.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -332,8 +332,9 @@ class _CompactProgressInsightsState
       return 'Your best was $_bestStreak days. Start fresh today!';
     }
     if (_completionRate >= 0.8) return 'You\'re crushing it this week!';
-    if (_totalActivities == 0)
+    if (_totalActivities == 0) {
       return 'Start your journey to better habits today.';
+    }
     return 'Every step counts. Keep going!';
   }
 
@@ -355,11 +356,11 @@ class _CompactProgressInsightsState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -492,4 +493,5 @@ class _ProgressRingPainter extends CustomPainter {
     return oldDelegate.progress != progress || oldDelegate.color != color;
   }
 }
+
 

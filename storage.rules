@@ -1,6 +1,10 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function maxUploadSizeBytes() {
+      return 10 * 1024 * 1024; // 10 MB
+    }
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -12,8 +16,25 @@ service firebase.storage {
       );
     }
 
+    function hasAllowedContentType() {
+      return request.resource != null &&
+        (
+          request.resource.contentType.matches('^image/.*') ||
+          request.resource.contentType.matches('^audio/.*') ||
+          request.resource.contentType.matches('^text/plain$') ||
+          request.resource.contentType.matches('^application/pdf$')
+        );
+    }
+
+    function hasAllowedUploadSize() {
+      return request.resource != null &&
+        request.resource.size > 0 &&
+        request.resource.size <= maxUploadSizeBytes();
+    }
+
     match /{allPaths=**} {
-      allow read, write: if isUserOwnedPath();
+      allow read: if isUserOwnedPath();
+      allow write: if isUserOwnedPath() && hasAllowedUploadSize() && hasAllowedContentType();
     }
   }
 }
