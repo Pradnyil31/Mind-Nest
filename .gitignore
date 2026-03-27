@@ -73,3 +73,6 @@ ios/Runner/GoogleService-Info.plist
 # Node dependencies
 **/node_modules/
 
+
+# BFG Repo-Cleaner report
+..bfg-report/

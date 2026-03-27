@@ -1,5 +1,0 @@
-Fix: Continuous exercise flow and voice assistant muting logic
-
-- Ensured current audio cues complete naturally when timers expire before concluding exercises
-- Prevented UI freezing during exercises when the voice assistant is muted
-- Updated completion handling across breathing, grounding, calm techniques, and meditation screens
