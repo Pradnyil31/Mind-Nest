@@ -1,202 +1,181 @@
-# MindNest
+<div align="center">
 
-**MindNest: A Cross-Platform Mental Wellness App with Personalized Routines and Activity Analytics**
+# 🌿 MindNest
 
-MindNest is a Flutter + Firebase mental wellness system designed for daily practice support through personalized routines, check-ins, journaling, meditation/focus sessions, and progress analytics.
+### Your Personal Mental Wellness Companion
 
-This repository is prepared as both:
-- an engineering project artifact
-- a research-paper support artifact (reproducible build + evaluation guidance)
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart&logoColor=white)](https://dart.dev)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%7C%20Auth-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-lightgrey?logo=android)](https://flutter.dev)
 
-## 1. Research Abstract (Project Framing)
+**MindNest** is a cross-platform mobile app built with Flutter and Firebase that helps you build and maintain healthy mental wellness habits — through personalized routines, guided meditation, AI chat support, focus sessions, journaling, and progress analytics.
 
-MindNest addresses a common gap in digital wellness tools: many apps provide isolated features (journal, breathing, timers), but few provide a unified personalized workflow with measurable daily activity tracking.  
-The system combines onboarding-derived personalization, structured routine execution, and activity analytics in a single cross-platform mobile architecture.  
-The implementation emphasizes practical deployability (Flutter + Firebase), user-level data isolation (rules-based ownership), and reproducible engineering workflows for academic reporting.
+</div>
 
-## 2. Problem Statement
+---
 
-Students and early professionals often struggle to maintain consistent wellness habits due to:
-- fragmented tools
-- low personalization
-- weak progress visibility
+## 📸 Screenshots
 
-MindNest aims to provide a single adaptive workflow from onboarding to daily completion tracking and insights.
+<div align="center">
+<table>
+  <tr>
+    <td align="center"><img src="assets/screenshots/home.png" width="200" alt="Home Screen"/><br/><b>Home</b></td>
+    <td align="center"><img src="assets/screenshots/meditation.png" width="200" alt="Meditation Screen"/><br/><b>Meditation</b></td>
+    <td align="center"><img src="assets/screenshots/chat.png" width="200" alt="AI Chat Screen"/><br/><b>AI Chat</b></td>
+    <td align="center"><img src="assets/screenshots/profile.png" width="200" alt="Profile Screen"/><br/><b>Profile</b></td>
+  </tr>
+</table>
+</div>
 
-## 3. Technical Contributions
+---
 
-The codebase currently supports the following defensible technical contributions:
-- Cross-platform Flutter wellness app with multi-feature integration.
-- Personalized routine flow based on onboarding profile and user motive.
-- Activity event persistence and user-scoped analytics via Firestore.
-- Owner-only Firestore and Storage access model with immutable ownership checks.
-- Local on-device AI chat integration path using runtime configuration.
-- Quality gate scripts for analyzer/tests/rules checks to improve reproducibility.
+## ✨ Features
 
-## 4. System Overview
+- 🤖 **AI Chat Companion** — Personal AI friend powered by Gemini, ready to listen and suggest wellness activities
+- 📋 **Smart Routines** — Personalized daily routines with streak tracking and completion analytics
+- 🧘 **Meditation Library** — Guided meditations with categories (Sleep, Stress Relief, Focus), quick timers, and audio playback
+- ⏱️ **Focus Sessions** — Pomodoro-style focus timer to boost productivity
+- 🌬️ **Breathing Exercises** — Guided breathing techniques for anxiety and stress relief
+- 🌿 **Grounding Exercises** — Science-backed grounding techniques for mindfulness
+- 📓 **Journaling** — Private journal with mood-aware reflection prompts
+- 🎯 **Smart Goals** — Create, track, and complete personal wellness goals
+- ✅ **Daily Check-ins** — Mood check-ins that influence personalized content recommendations
+- 📊 **Progress Analytics** — Streak tracking, weekly summaries, and activity insights
+- 🏅 **Badges & Rewards** — Earn badges as you build consistent habits
+- 🔔 **Smart Notifications** — Personalized reminders for routines and upcoming tasks
+- 🎵 **Ambient Sounds** — Relaxing soundscapes (rain, piano, violin, singing bowls) to accompany any session
 
-```mermaid
-flowchart LR
-    A["Flutter Client (UI + Riverpod State)"] --> B["Firebase Auth"]
-    A --> C["Firestore (User Data + Activity Events)"]
-    A --> D["Local Notifications"]
-    A --> E["LLM Provider API (Configured API Key)"]
-```
+---
 
-### Core modules
-- Authentication: Email/password + Google sign-in.
-- Onboarding: motive, schedule, personalization baseline.
-- Home/Routine: daily tasks, check-ins, guided actions.
-- Wellness tools: meditation, focus, breathing, grounding.
-- Journaling and goals: structured reflection and progress.
-- Analytics/badges: streaks, completion trends, activity summaries.
+## 🛠️ Tech Stack
 
-## 5. Tech Stack
+| Technology | Purpose |
+|---|---|
+| **Flutter** | Cross-platform UI framework |
+| **Dart** | Programming language |
+| **Firebase Auth** | User authentication (Email + Google Sign-In) |
+| **Cloud Firestore** | Real-time database & user data storage |
+| **Riverpod** | State management & dependency injection |
+| **Google Gemini AI** | AI chat companion |
+| **just_audio** | Ambient sound & meditation audio playback |
+| **flutter_local_notifications** | Routine & task reminders |
+| **flutter_dotenv** | Secure environment variable management |
 
-- Frontend: Flutter (Dart)
-- State management: Riverpod
-- Backend: Firebase Auth, Firestore
-- Notifications: `flutter_local_notifications`
-- Optional AI path: local chat model access via configured API key
+---
 
-## 6. Security Model Summary
-
-- Firestore rules enforce authenticated, owner-only reads/writes for user-owned data.
-- Critical collections enforce immutable `userId` ownership semantics.
-- Storage rules follow owner-path model (`users/{uid}/...`) with validation constraints.
-
-See:
-- `firestore.rules`
-- `storage.rules`
-
-## 7. Reproducibility and Setup
+## 🚀 Getting Started
 
 ### Prerequisites
-- Flutter SDK
-- Firebase CLI
-- Java 21+ recommended for emulators
 
-### Install
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.x or above)
+- [Firebase CLI](https://firebase.google.com/docs/cli)
+- A Firebase project with **Firestore** and **Authentication** enabled
+- A [Google AI Studio](https://aistudio.google.com/) Gemini API key
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Pradnyil31/Mind-Nest.git
+cd Mind-Nest
+```
+
+### 2. Install dependencies
 
 ```bash
 flutter pub get
 ```
 
-### Generate logo-based app icon and native splash
+### 3. Configure Firebase
+
+Add your Firebase config files:
+- **Android:** `android/app/google-services.json`
+- **iOS:** `ios/Runner/GoogleService-Info.plist`
+
+> These files are gitignored for security. Download them from your [Firebase Console](https://console.firebase.google.com/).
+
+### 4. Configure API Key
+
+Create a `.env` file in the project root:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+> The `.env` file is gitignored and never committed to version control.
+
+### 5. Run the app
 
 ```bash
-dart run flutter_launcher_icons
-dart run flutter_native_splash:create
+flutter run
 ```
 
-Logo source path:
-- `assets/images/app_logo.jpg`
+---
 
-### Firebase native configuration
-- Android: add `android/app/google-services.json`
-- iOS: add `ios/Runner/GoogleService-Info.plist`
+## 📁 Project Structure
 
-### Run app
-
-```bash
-flutter run --dart-define=GEMINI_API_KEY=YOUR_KEY
+```
+Mind-Nest/
+├── lib/
+│   ├── config/          # App branding, theme tokens
+│   ├── core/            # Logger, utilities
+│   ├── features/        # Feature modules (calm, routines, meditation, journal)
+│   ├── models/          # Data models
+│   ├── providers/       # Riverpod providers
+│   ├── screens/         # App screens
+│   ├── services/        # Firebase, AI, notifications, audio services
+│   ├── theme/           # App theme
+│   ├── widgets/         # Reusable UI components
+│   └── main.dart        # App entry point
+├── assets/
+│   ├── audio/           # Ambient sound files
+│   ├── images/          # App logo and images
+│   └── screenshots/     # App screenshots (for README)
+├── test/                # Unit and integration tests
+├── tools/               # Quality gate scripts
+├── docs/                # Architecture and research documentation
+├── firestore.rules      # Firestore security rules
+├── storage.rules        # Firebase Storage security rules
+└── .env                 # API keys (gitignored)
 ```
 
-### Optional web defines
+---
 
-```bash
-flutter run -d chrome \
-  --dart-define=FIREBASE_WEB_API_KEY=... \
-  --dart-define=FIREBASE_WEB_APP_ID=... \
-  --dart-define=FIREBASE_WEB_MESSAGING_SENDER_ID=... \
-  --dart-define=FIREBASE_WEB_PROJECT_ID=... \
-  --dart-define=FIREBASE_WEB_AUTH_DOMAIN=... \
-  --dart-define=FIREBASE_WEB_STORAGE_BUCKET=...
-```
+## 🔒 Security
 
-## 8. Quality Gates (For Paper Appendix / Viva Defense)
+- **Firestore Rules** — All user data is protected with owner-only read/write rules. Users can only access their own data.
+- **Immutable Ownership** — Critical fields like `userId` and `createdAt` cannot be modified after creation.
+- **Secrets Management** — API keys are stored in a `.env` file, never committed to version control.
+- **Firebase Auth** — All requests require valid authentication tokens.
 
-Run local verification:
+See [`firestore.rules`](firestore.rules) and [`storage.rules`](storage.rules) for details.
 
-```bash
-./tools/quality_gate.sh
-./tools/firestore_rules_test.sh
-```
+---
 
-PowerShell equivalents:
-- `tools/quality_gate.ps1`
-- `tools/firestore_rules_test.ps1`
+## 🤝 Contributing
 
-Reference:
-- `.github/workflows/flutter-quality-gate.yml`
-- `docs/QUALITY_GATES.md`
+Contributions, issues, and feature requests are welcome!  
+Feel free to check the [issues page](https://github.com/Pradnyil31/Mind-Nest/issues).
 
-## 9. Evaluation Plan for Research Paper
+1. Fork the repository
+2. Create your feature branch: `git checkout -b feature/AmazingFeature`
+3. Commit your changes: `git commit -m 'Add some AmazingFeature'`
+4. Push to the branch: `git push origin feature/AmazingFeature`
+5. Open a Pull Request
 
-Recommended metrics to report:
-- Feature action latency: p50/p95 (auth, check-in save, routine completion, journal save).
-- Firestore operations per user session (read/write count).
-- Crash-free sessions.
-- Completion adherence (daily/weekly routine completion rate).
-- Retention proxy (streak continuity distribution).
-- AI chat fallback/error rate (if included in study).
+---
 
-Recommended tables/figures:
-- Feature-to-architecture mapping table.
-- Latency chart by feature flow.
-- Cost estimate table (Firestore reads/writes per DAU scenario).
-- User flow completion funnel.
+## 📄 License
 
-## 10. Scope, Claims, and Limitations
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
-### Claims supported by current implementation
-- Feature-rich cross-platform prototype for mental wellness workflows.
-- Personalized routine support with tracked activity analytics.
-- Rule-based user data isolation model in Firebase.
+---
 
-### Claims not supported yet (avoid in paper)
-- Clinical efficacy or therapeutic outcome claims.
-- Large-scale production readiness without further load/security validation.
-- Medical-grade intervention performance.
+<div align="center">
 
-### Known limitations
-- Limited large-scale performance benchmarking.
-- Limited longitudinal user-study evidence.
-- Some advanced hardening is still incremental.
+Made with ❤️ by **Pradnyil Patil**
 
-## 11. Ethics and Privacy Notes
+*"Your mental wellness journey, one habit at a time."*
 
-- No clinical diagnosis claims are made by the system.
-- User-generated wellness content should be handled as sensitive data.
-- Any study publication should include informed consent and anonymization process.
-- Crisis support behavior should not be represented as professional medical care.
-
-## 12. Repository Structure (High-Level)
-
-- `lib/`: Flutter application (screens, features, services, models, widgets)
-- `test/`: unit/integration/widget/rules-related tests
-- `tools/`: quality gates and test helpers
-- `docs/`: security and publication-readiness documentation
-
-## 13. Paper-Ready Checklist
-
-Before final submission/demo, complete:
-- Final analyzer/test/rules pass with archived outputs.
-- Updated architecture diagram and sanitized DB/rules screenshots.
-- Metric table population from real runs.
-- Limitation and threats-to-validity sections aligned with actual evidence.
-
-Use:
-- `docs/publication_readiness_playbook.md`
-
-## 14. Citation (Template)
-
-```bibtex
-@software{mindnest2026,
-  title  = {MindNest: A Cross-Platform Mental Wellness App with Personalized Routines and Activity Analytics},
-  author = {Your Name},
-  year   = {2026},
-  note   = {Flutter/Firebase-based research prototype},
-  url    = {https://github.com/your-repo/mindnest}
-}
-```
+</div>
