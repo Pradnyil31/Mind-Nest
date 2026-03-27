@@ -354,22 +354,7 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                                 letterSpacing: 1.2,
                               ),
                             ),
-                            StatefulBuilder(
-                              builder: (ctx, setLS) => IconButton(
-                                icon: Icon(
-                                  _voice.isEnabled
-                                      ? Icons.volume_up_rounded
-                                      : Icons.volume_off_rounded,
-                                  color: Colors.white38,
-                                  size: 20,
-                                ),
-                                onPressed: () async {
-                                  await _voice.setEnabled(!_voice.isEnabled);
-                                  setLS(() {});
-                                  setState(() {});
-                                },
-                              ),
-                            ),
+                            
                           ],
                         ),
                       ),

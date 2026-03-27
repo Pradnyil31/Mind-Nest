@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../features/calm/application/ambient_sound_controller.dart';
+import '../features/calm/application/enhanced_audio_controller.dart';
 import '../models/ambient_sound.dart';
 
 class AudioPlayerScreen extends ConsumerStatefulWidget {
@@ -30,8 +30,8 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final soundState = ref.watch(ambientSoundControllerProvider);
-    final soundController = ref.read(ambientSoundControllerProvider.notifier);
+    final soundState = ref.watch(enhancedAudioControllerProvider);
+    final soundController = ref.read(enhancedAudioControllerProvider.notifier);
 
     final selectedSound = AmbientSound.defaults.firstWhere(
       (sound) => sound.id == _selectedSoundId,
@@ -60,7 +60,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
             children: [
               _buildCurrentSoundCard(selectedSound, isPlaying),
               const SizedBox(height: 16),
-              _buildPlaybackSection(soundController, isPlaying),
+              _buildPlaybackSection(soundController, isPlaying, selectedSound),
               const SizedBox(height: 16),
               _buildVolumeSection(soundState, soundController),
               const SizedBox(height: 20),
@@ -146,8 +146,9 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
   }
 
   Widget _buildPlaybackSection(
-    AmbientSoundController controller,
+    EnhancedAudioController controller,
     bool isPlaying,
+    AmbientSound selectedSound,
   ) {
     return Container(
       width: double.infinity,
@@ -160,7 +161,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
         children: [
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () => controller.toggleSound(_selectedSoundId),
+              onPressed: () => controller.toggleSound(selectedSound, openPlayer: false),
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
@@ -195,8 +196,8 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
   }
 
   Widget _buildVolumeSection(
-    AmbientSoundState soundState,
-    AmbientSoundController controller,
+    EnhancedAudioState soundState,
+    EnhancedAudioController controller,
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -236,8 +237,8 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
   }
 
   Widget _buildSoundList({
-    required AmbientSoundState soundState,
-    required AmbientSoundController soundController,
+    required EnhancedAudioState soundState,
+    required EnhancedAudioController soundController,
   }) {
     return ListView.separated(
       itemCount: AmbientSound.defaults.length,
@@ -257,7 +258,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
               });
 
               if (soundState.isPlaying && !isActive) {
-                await soundController.toggleSound(sound.id);
+                await soundController.toggleSound(sound, openPlayer: false);
               }
             },
             child: Container(

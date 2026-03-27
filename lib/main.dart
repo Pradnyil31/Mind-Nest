@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'config/app_branding.dart';
 import 'firebase_options.dart';
@@ -45,6 +46,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
     });
 
     try {
+      await dotenv.load(fileName: ".env");
       await _initializeFirebase().timeout(const Duration(seconds: 15));
       await _initializeNotifications().timeout(const Duration(seconds: 8));
       await _configureFirestore().timeout(const Duration(seconds: 6));

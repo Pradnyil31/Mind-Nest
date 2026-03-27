@@ -369,27 +369,7 @@ class _BreathingExerciseScreenState extends ConsumerState<BreathingExerciseScree
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
-                  // Mute button top right
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: StatefulBuilder(
-                      builder: (ctx, setLS) => IconButton(
-                        icon: Icon(
-                          _voice.isEnabled
-                              ? Icons.volume_up_rounded
-                              : Icons.volume_off_rounded,
-                          color: Colors.white38,
-                          size: 22,
-                        ),
-                        onPressed: () async {
-                          await _voice.setEnabled(!_voice.isEnabled);
-                          setLS(() {});
-                          setState(() {});
-                        },
-                      ),
-                    ),
-                  ),
+                  
             
             // Central Content
             if (_isSettingUp)

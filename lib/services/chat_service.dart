@@ -1,12 +1,11 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../core/logger.dart';
 
 class ChatService {
   // Local model key only (free-tier friendly configuration).
-  static const String _apiKey = String.fromEnvironment(
-    'GEMINI_API_KEY',
-    defaultValue: '***REMOVED***',
-  );
+  static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
+  
   static const int _maxInputLength = 500;
 
   // Local fallback models.
@@ -102,7 +101,8 @@ If someone mentions self-harm or suicide, respond with compassion and provide cr
 
       _chat ??= _model!.startChat(history: []);
       final response = await _chat!.sendMessage(Content.text(userMessage));
-      return response.text ?? 'Sorry, I did not quite catch that. Can you try again?';
+      return response.text ??
+          'Sorry, I did not quite catch that. Can you try again?';
     } catch (e, stackTrace) {
       appLogger.e(
         'Local chat failed with ${_fallbackModels[_currentModelIndex]}',

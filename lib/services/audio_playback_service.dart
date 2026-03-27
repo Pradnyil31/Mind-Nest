@@ -280,21 +280,9 @@ class AudioPlaybackService {
     // For now, using the existing audio files as placeholders
     // In production, each sound would have its own dedicated audio file
     const soundAssets = {
-      'rain': 'assets/audio/track_1.mp3',
-      'ocean': 'assets/audio/track_2.mp3',
+      'violin': 'assets/audio/track_1.mp3',
+      'piano': 'assets/audio/track_2.mp3',
       'forest': 'assets/audio/track_3.mp3',
-      'thunderstorm': 'assets/audio/track_1.mp3',
-      'birds': 'assets/audio/track_2.mp3',
-      'crickets': 'assets/audio/track_3.mp3',
-      'cafe': 'assets/audio/track_1.mp3',
-      'library': 'assets/audio/track_2.mp3',
-      'train': 'assets/audio/track_3.mp3',
-      'white-noise': 'assets/audio/track_1.mp3',
-      'brown-noise': 'assets/audio/track_2.mp3',
-      'pink-noise': 'assets/audio/track_3.mp3',
-      'fireplace': 'assets/audio/track_1.mp3',
-      'singing-bowls': 'assets/audio/track_2.mp3',
-      'piano': 'assets/audio/track_3.mp3',
     };
 
     return soundAssets[soundId] ?? 'assets/audio/track_1.mp3';
@@ -303,21 +291,9 @@ class AudioPlaybackService {
   /// Get display name for sound ID
   String _getSoundNameFromId(String soundId) {
     const soundNames = {
-      'rain': 'Rain',
-      'ocean': 'Ocean Waves',
-      'forest': 'Forest',
-      'thunderstorm': 'Thunderstorm',
-      'birds': 'Morning Birds',
-      'crickets': 'Night Crickets',
-      'cafe': 'Coffee Shop',
-      'library': 'Library',
-      'train': 'Train Journey',
-      'white-noise': 'White Noise',
-      'brown-noise': 'Brown Noise',
-      'pink-noise': 'Pink Noise',
-      'fireplace': 'Fireplace',
-      'singing-bowls': 'Singing Bowls',
-      'piano': 'Soft Piano',
+      'violin': 'Violin',
+      'piano': 'Piano',
+      'forest': 'Deep Forest',
     };
 
     return soundNames[soundId] ?? soundId;

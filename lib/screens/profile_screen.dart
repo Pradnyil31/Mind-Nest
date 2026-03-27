@@ -21,13 +21,10 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  bool _voiceEnabled = true;
-
   @override
   void initState() {
     super.initState();
-    VoiceService.getSavedPreference().then((v) => setState(() => _voiceEnabled = v));
-  }
+    }
 
   @override
   Widget build(BuildContext context) {
@@ -173,19 +170,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         onTap: () {},
                       ),
-                       _buildActionTile(
-                         icon: Icons.record_voice_over_rounded,
-                         title: 'Voice Assistant',
-                         trailing: Switch(
-                           value: _voiceEnabled,
-                           onChanged: (val) async {
-                             await ref.read(voiceServiceProvider).setEnabled(val);
-                             setState(() => _voiceEnabled = val);
-                           },
-                           activeThumbColor: AppColors.primaryDark,
-                         ),
-                         onTap: () {},
-                       ),
+                       
                       _buildActionTile(
                         icon: Icons.privacy_tip_outlined,
                         title: 'Privacy Policy',

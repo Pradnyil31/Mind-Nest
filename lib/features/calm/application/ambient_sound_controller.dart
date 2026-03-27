@@ -171,59 +171,7 @@ class AmbientSoundController extends StateNotifier<AmbientSoundState> {
 
   // Get recommended sounds for a specific motive
   List<AmbientSound> getRecommendedSounds(String motive) {
-    final allSounds = AmbientSound.defaults;
-
-    switch (motive.toLowerCase()) {
-      case 'sleep':
-        return allSounds
-            .where(
-              (s) =>
-                  s.category == SoundCategory.nature ||
-                  s.category == SoundCategory.noise ||
-                  s.id == 'piano' ||
-                  s.id == 'fireplace',
-            )
-            .toList();
-
-      case 'focus':
-        return allSounds
-            .where(
-              (s) =>
-                  s.category == SoundCategory.noise ||
-                  s.id == 'library' ||
-                  s.id == 'cafe' ||
-                  s.id == 'white-noise' ||
-                  s.id == 'brown-noise',
-            )
-            .toList();
-
-      case 'anxiety':
-      case 'stress':
-        return allSounds
-            .where(
-              (s) =>
-                  s.id == 'rain' ||
-                  s.id == 'ocean' ||
-                  s.id == 'fireplace' ||
-                  s.id == 'brown-noise' ||
-                  s.id == 'singing-bowls',
-            )
-            .toList();
-
-      case 'habit building':
-        return allSounds
-            .where(
-              (s) =>
-                  s.category == SoundCategory.traditional ||
-                  s.id == 'library' ||
-                  s.id == 'cafe',
-            )
-            .toList();
-
-      default:
-        // Return a balanced mix for unknown motives
-        return allSounds.take(8).toList();
-    }
+    return AmbientSound.defaults;
   }
 }
 

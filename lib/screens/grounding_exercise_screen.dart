@@ -192,25 +192,7 @@ class _GroundingExerciseScreenState extends ConsumerState<GroundingExerciseScree
                                 letterSpacing: 1.2,
                               ),
                             ),
-                            if (!isComplete)
-                              StatefulBuilder(
-                                builder: (ctx, setLS) => IconButton(
-                                  icon: Icon(
-                                    _voice.isEnabled
-                                        ? Icons.volume_up_rounded
-                                        : Icons.volume_off_rounded,
-                                    color: Colors.white38,
-                                    size: 20,
-                                  ),
-                                  onPressed: () async {
-                                    await _voice.setEnabled(!_voice.isEnabled);
-                                    setLS(() {});
-                                    setState(() {});
-                                  },
-                                ),
-                              )
-                            else
-                              const SizedBox(width: 48),
+                            const SizedBox(width: 48),
                           ],
                         ),
                       ),
