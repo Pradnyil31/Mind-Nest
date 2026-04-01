@@ -59,18 +59,16 @@ class _HomeScreenState extends State<HomeScreen> {
       clipBehavior: Clip.none,
       children: [
         Container(color: _getBackgroundColor()),
-        Positioned(
-          top: -100,
-          left: 0,
-          right: 0,
-          bottom: 0,
+        Positioned.fill(
           child: SafeAssetImage(
             _getBackgroundImage(),
             fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
+            alignment: Alignment.center,
           ),
         ),
-        Positioned.fill(child: Container(color: Colors.white.withValues(alpha: 0.1))),
+        Positioned.fill(
+          child: Container(color: Colors.white.withValues(alpha: 0.1)),
+        ),
         // ignore: deprecated_member_use
         ShowCaseWidget(
           enableAutoScroll: true,
@@ -89,7 +87,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Positioned(
                     left: 0,
                     right: 0,
-                    bottom: kBottomNavigationBarHeight + MediaQuery.of(context).padding.bottom,
+                    bottom:
+                        kBottomNavigationBarHeight +
+                        MediaQuery.of(context).padding.bottom,
                     child: const MiniAudioPlayer(primaryColor: AppColors.info),
                   ),
                 ],
@@ -97,7 +97,8 @@ class _HomeScreenState extends State<HomeScreen> {
               bottomNavigationBar: Showcase(
                 key: TourKeys.navBarKey,
                 title: 'Navigation',
-                description: 'Switch between Home, Calm, Chat, and Profile anytime from here!',
+                description:
+                    'Switch between Home, Calm, Chat, and Profile anytime from here!',
                 targetBorderRadius: BorderRadius.circular(24),
                 tooltipBackgroundColor: const Color(0xFF1C1C2E),
                 textColor: Colors.white,
@@ -123,7 +124,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
                     child: BottomNavigationBar(
                       currentIndex: _currentIndex,
                       onTap: (index) {
@@ -133,10 +136,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       backgroundColor: AppColors.backgroundLight,
                       selectedItemColor: AppColors.primaryDark,
                       unselectedItemColor: AppColors.navBarUnselected,
-                      selectedLabelStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
+                      selectedLabelStyle: Theme.of(context).textTheme.labelSmall
+                          ?.copyWith(fontWeight: FontWeight.bold, fontSize: 12),
                       unselectedLabelStyle: Theme.of(
                         context,
                       ).textTheme.labelSmall?.copyWith(fontSize: 12),

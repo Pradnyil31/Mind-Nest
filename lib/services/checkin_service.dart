@@ -8,11 +8,16 @@ class CheckInService {
   final FirebaseFirestore _firestore;
   final FirestoreService _firestoreService;
 
-  CheckInService({FirebaseFirestore? firestore, FirestoreService? firestoreService})
-      : _firestore = firestore ?? FirebaseFirestore.instance,
-        _firestoreService = firestoreService ?? FirestoreService(firestore: firestore ?? FirebaseFirestore.instance);
+  CheckInService({
+    FirebaseFirestore? firestore,
+    FirestoreService? firestoreService,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _firestoreService =
+           firestoreService ??
+           FirestoreService(firestore: firestore ?? FirebaseFirestore.instance);
 
-  CollectionReference get _checkInsCollection => _firestore.collection('daily_checkins');
+  CollectionReference get _checkInsCollection =>
+      _firestore.collection('daily_checkins');
   CollectionReference get _usersCollection => _firestore.collection('users');
 
   Future<List<String>> submitCheckIn(DailyCheckIn checkIn) async {
@@ -28,15 +33,17 @@ class CheckInService {
         activeGoalsChecked: checkIn.activeGoalsChecked,
         notes: checkIn.notes,
       );
-      
+
       await docRef.set(checkInWithId.toMap());
 
       // Log completion for badge system — only fires on actual check-in submission
-      await _firestoreService.logActivityCompletion(checkIn.userId, 'daily_checkin');
-      
+      await _firestoreService.logActivityCompletion(
+        checkIn.userId,
+        'daily_checkin',
+      );
+
       // Trigger adaptive routine logic and return changes
       return await _applyAdaptiveRoutine(checkIn);
-      
     } catch (e) {
       throw Exception('Failed to submit check-in: $e');
     }
@@ -46,12 +53,12 @@ class CheckInService {
     List<String> addedActivities = [];
     try {
       List<String> adaptations = [];
-      
+
       // 1. Low Energy -> Power Nap
       if (checkIn.energyLevel < 4) {
         adaptations.add('Power Nap');
       }
-      
+
       // 2. High Energy -> Deep Work
       if (checkIn.energyLevel > 8) {
         adaptations.add('Deep Work');
@@ -75,24 +82,40 @@ class CheckInService {
           if (data.containsKey('routineActivities')) {
             currentRoutine = List<String>.from(data['routineActivities']);
           } else {
-             currentRoutine = ['Morning Sunlight', 'Delay Caffeine', 'Dim Lights'];
+            currentRoutine = [
+              'Morning Sunlight',
+              'Delay Caffeine',
+              'Dim Lights',
+            ];
           }
 
           bool changed = false;
           Map<String, dynamic> tempSchedule = {};
           if (data.containsKey('temporarySchedule')) {
-            tempSchedule = Map<String, dynamic>.from(data['temporarySchedule']);
+            // Ensure all values are converted to Strings (handles Timestamp types from Firestore)
+            final rawTemp = Map<String, dynamic>.from(
+              data['temporarySchedule'],
+            );
+            tempSchedule = rawTemp.map(
+              (key, value) => MapEntry(key, value?.toString() ?? '08:00 AM'),
+            );
           }
           Map<String, dynamic> routineSchedule = {};
           if (data.containsKey('routineSchedule')) {
-            routineSchedule = Map<String, dynamic>.from(data['routineSchedule']);
+            // Ensure all values are converted to Strings (handles Timestamp types from Firestore)
+            final rawRoutine = Map<String, dynamic>.from(
+              data['routineSchedule'],
+            );
+            routineSchedule = rawRoutine.map(
+              (key, value) => MapEntry(key, value?.toString() ?? '08:00 AM'),
+            );
           }
 
           for (var activity in adaptations) {
             if (!currentRoutine.contains(activity)) {
               currentRoutine.add(activity);
               addedActivities.add(activity);
-              
+
               // Assign a default broad time slot so HomeRoutineSection knows where to place it
               final period = RoutineConfig.getTimePeriod(activity);
               String timeSlot = '08:00 AM';
@@ -101,7 +124,7 @@ class CheckInService {
               } else if (period == 'Evening') {
                 timeSlot = '08:00 PM';
               }
-              
+
               tempSchedule[activity] = timeSlot;
               routineSchedule[activity] = timeSlot;
               changed = true;

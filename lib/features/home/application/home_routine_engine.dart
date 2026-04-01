@@ -31,11 +31,14 @@ class HomeRoutineEngine {
     afternoonPool.shuffle(rng);
     eveningPool.shuffle(rng);
 
+    // Equal distribution: divide activities equally across three periods
     final base = count ~/ 3;
     final rem = count % 3;
-    final mCount = base + (rem > 0 ? 1 : 0);
-    final aCount = base + (rem > 1 ? 1 : 0);
-    final eCount = base;
+
+    // Distribute remainder evenly: first period gets +1, then second, then third
+    final mCount = base + (rem >= 1 ? 1 : 0);
+    final aCount = base + (rem >= 2 ? 1 : 0);
+    final eCount = base + (rem >= 3 ? 1 : 0);
 
     final result = <String>{};
 
@@ -52,7 +55,8 @@ class HomeRoutineEngine {
     pickFrom(eveningPool, eCount);
 
     if (result.length < count) {
-      final all = [...morningPool, ...afternoonPool, ...eveningPool]..shuffle(rng);
+      final all = [...morningPool, ...afternoonPool, ...eveningPool]
+        ..shuffle(rng);
       for (final a in all) {
         if (result.length >= count) break;
         result.add(a);
@@ -75,10 +79,20 @@ class HomeRoutineEngine {
 
     int morningOffset = 0;
     int afternoonOffset = 0;
+    int eveningOffset = 0;
     int afternoonStart = 12 * 60;
     int eveningStart = 17 * 60;
     if (wakeMin > afternoonStart) afternoonStart = wakeMin + 60;
     if (wakeMin > eveningStart) eveningStart = wakeMin + 180;
+
+    // Calculate available time and spacing for even distribution
+    int totalAvailableMinutes = bedMin - wakeMin;
+    int activityCount = activities.length;
+    int baseSpacing = activityCount > 0
+        ? totalAvailableMinutes ~/ activityCount
+        : 60;
+    if (baseSpacing < 30) baseSpacing = 30; // Minimum 30 min spacing
+    if (baseSpacing > 120) baseSpacing = 120; // Maximum 2 hour spacing
 
     for (final activity in activities) {
       final lower = activity.toLowerCase();
@@ -88,7 +102,8 @@ class HomeRoutineEngine {
         timeString = minToTime(wakeMin + 15);
       } else if (lower.contains('caffeine') && lower.contains('delay')) {
         timeString = minToTime(wakeMin + 90);
-      } else if (lower.contains('caffeine') && (lower.contains('cut') || lower.contains('off'))) {
+      } else if (lower.contains('caffeine') &&
+          (lower.contains('cut') || lower.contains('off'))) {
         if (bedMin - wakeMin >= 12 * 60) {
           timeString = minToTime(wakeMin + 90);
         } else {
@@ -102,12 +117,14 @@ class HomeRoutineEngine {
         final period = RoutineConfig.getTimePeriod(activity);
         if (period == 'Morning') {
           timeString = minToTime(wakeMin + 15 + morningOffset);
-          morningOffset += 30;
+          morningOffset += baseSpacing;
         } else if (period == 'Afternoon') {
           timeString = minToTime(afternoonStart + afternoonOffset);
-          afternoonOffset += 60;
+          afternoonOffset += baseSpacing;
         } else {
-          timeString = minToTime(eveningStart + 60);
+          // Evening - distribute with proper spacing
+          timeString = minToTime(eveningStart + eveningOffset);
+          eveningOffset += baseSpacing;
         }
       }
 
@@ -131,6 +148,106 @@ class HomeRoutineEngine {
     final m = t.minute.toString().padLeft(2, '0');
     final period = t.period == DayPeriod.am ? 'AM' : 'PM';
     return '$h:$m $period';
+  }
+
+  static List<String> generateDailyFromBase(
+    List<String> baseRoutine,
+    List<String> pool,
+    int targetCount,
+  ) {
+    final rng = Random(_seedFromNow());
+
+    // Calculate exact distribution across periods
+    final basePerPeriod = targetCount ~/ 3;
+    final remainder = targetCount % 3;
+
+    // Distribute remainder: first 'remainder' periods get +1
+    final targetMorning = basePerPeriod + (remainder > 0 ? 1 : 0);
+    final targetAfternoon = basePerPeriod + (remainder > 1 ? 1 : 0);
+    final targetEvening = basePerPeriod;
+
+    // Group pool by time period
+    final morningPool = pool
+        .where((a) => RoutineConfig.getTimePeriod(a) == 'Morning')
+        .toList();
+    final afternoonPool = pool
+        .where((a) => RoutineConfig.getTimePeriod(a) == 'Afternoon')
+        .toList();
+    final eveningPool = pool
+        .where((a) => RoutineConfig.getTimePeriod(a) == 'Evening')
+        .toList();
+
+    morningPool.shuffle(rng);
+    afternoonPool.shuffle(rng);
+    eveningPool.shuffle(rng);
+
+    final result = <String>[];
+    final added = <String>{};
+
+    // Add base routine activities first, respecting period targets
+    for (final activity in baseRoutine) {
+      if (activity.trim().isEmpty || added.contains(activity)) continue;
+
+      final period = RoutineConfig.getTimePeriod(activity);
+      int currentInPeriod = result
+          .where((a) => RoutineConfig.getTimePeriod(a) == period)
+          .length;
+
+      // Only add if we haven't hit the target for this period
+      int targetForPeriod = period == 'Morning'
+          ? targetMorning
+          : period == 'Afternoon'
+          ? targetAfternoon
+          : targetEvening;
+
+      if (currentInPeriod < targetForPeriod) {
+        result.add(activity);
+        added.add(activity);
+      }
+    }
+
+    // Fill each period to exact target from pool
+    void fillPeriod(List<String> periodPool, int target) {
+      int current = result
+          .where(
+            (a) =>
+                periodPool.isEmpty ||
+                RoutineConfig.getTimePeriod(a) ==
+                    (periodPool == morningPool
+                        ? 'Morning'
+                        : periodPool == afternoonPool
+                        ? 'Afternoon'
+                        : 'Evening'),
+          )
+          .length;
+
+      for (final activity in periodPool) {
+        if (result.length >= targetCount) break;
+        if (current >= target) break;
+        if (added.add(activity)) {
+          result.add(activity);
+          current++;
+        }
+      }
+    }
+
+    fillPeriod(morningPool, targetMorning);
+    fillPeriod(afternoonPool, targetAfternoon);
+    fillPeriod(eveningPool, targetEvening);
+
+    // If still under target, fill remaining from all pools
+    if (result.length < targetCount) {
+      final allRemaining = [...morningPool, ...afternoonPool, ...eveningPool]
+        ..shuffle(rng);
+      for (final activity in allRemaining) {
+        if (result.length >= targetCount) break;
+        if (added.add(activity)) {
+          result.add(activity);
+        }
+      }
+    }
+
+    return result;
   }
 
   static int _seedFromNow() {
