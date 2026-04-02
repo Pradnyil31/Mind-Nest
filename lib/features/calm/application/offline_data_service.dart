@@ -18,9 +18,9 @@ class OfflineDataService {
     FirestoreService? firestoreService,
     CalmProgressService? progressService,
     MoodTrackingService? moodService,
-  })  : _providedFirestoreService = firestoreService,
-        _providedProgressService = progressService,
-        _providedMoodService = moodService;
+  }) : _providedFirestoreService = firestoreService,
+       _providedProgressService = progressService,
+       _providedMoodService = moodService;
 
   late final FirestoreService _firestoreService =
       _providedFirestoreService ?? FirestoreService();

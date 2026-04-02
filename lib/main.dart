@@ -16,6 +16,7 @@ import 'screens/onboarding_flow_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
+import 'features/calm/application/offline_data_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +51,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       await _initializeFirebase().timeout(const Duration(seconds: 15));
       await _initializeNotifications().timeout(const Duration(seconds: 8));
       await _configureFirestore().timeout(const Duration(seconds: 6));
+      await _initializeOfflineService().timeout(const Duration(seconds: 5));
       await _configureSystemUi();
 
       if (!mounted) return;
@@ -105,6 +107,17 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
     }
   }
 
+  Future<void> _initializeOfflineService() async {
+    try {
+      final offlineService = OfflineDataService();
+      await offlineService.initialize();
+      debugPrint('Offline service initialized successfully');
+    } catch (e) {
+      debugPrint('Offline service initialization failed: $e');
+      // Don't block app startup on offline service failure
+    }
+  }
+
   Future<void> _configureSystemUi() async {
     try {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -127,10 +140,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: _BrandedBootScreen(
-        error: _error,
-        onRetry: _initialize,
-      ),
+      home: _BrandedBootScreen(error: _error, onRetry: _initialize),
     );
   }
 }
@@ -139,10 +149,7 @@ class _BrandedBootScreen extends StatelessWidget {
   final String? error;
   final Future<void> Function() onRetry;
 
-  const _BrandedBootScreen({
-    required this.error,
-    required this.onRetry,
-  });
+  const _BrandedBootScreen({required this.error, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +232,11 @@ class _BrandedBootScreen extends StatelessWidget {
                       ),
                     ),
                   ] else ...[
-                    const Icon(Icons.error_outline, color: Colors.red, size: 36),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 36,
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       'Startup failed',
@@ -329,7 +340,11 @@ class AuthWrapper extends ConsumerWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red,
+                      ),
                       const SizedBox(height: 16),
                       const Text('Error loading profile'),
                       const SizedBox(height: 8),
