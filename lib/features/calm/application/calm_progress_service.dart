@@ -3,7 +3,8 @@ import '../../../core/logger.dart';
 import '../../../services/firestore_service.dart';
 import '../../../config/motive_config.dart';
 import 'mood_tracking_service.dart';
-import 'offline_data_service.dart';
+// ROLLBACK P1: offline_data_service import disabled
+// import 'offline_data_service.dart';
 
 class CalmProgressService {
   final FirebaseFirestore? _providedFirestore;
@@ -122,7 +123,8 @@ class CalmProgressService {
   }
 
   /// Log completion of a calm technique
-  /// Set bypassOfflineCheck to true when called from sync to avoid recursion
+  /// ROLLBACK P1: bypassOfflineCheck param kept for signature compatibility
+  /// but offline queue behavior is fully disabled. Always goes direct to Firestore.
   Future<void> logTechniqueCompletion({
     required String userId,
     required String techniqueId,
@@ -130,31 +132,15 @@ class CalmProgressService {
     required int durationMinutes,
     int? preMoodRating,
     int? postMoodRating,
-    bool bypassOfflineCheck = false,
+    bool bypassOfflineCheck = false, // ROLLBACK P1: param kept, offline logic disabled
   }) async {
-    // Check if offline first (unless bypassed for sync)
-    if (!bypassOfflineCheck) {
-      final offlineService = OfflineDataService();
-      if (offlineService.isOffline) {
-        try {
-          await offlineService.storeTechniqueCompletionOffline(
-            userId: userId,
-            techniqueId: techniqueId,
-            techniqueName: techniqueName,
-            durationMinutes: durationMinutes,
-            preMoodRating: preMoodRating,
-            postMoodRating: postMoodRating,
-          );
-          appLogger.i('Technique completion queued offline: $techniqueName');
-          return; // Success - queued for later sync
-        } catch (e) {
-          appLogger.e('Failed to queue technique offline: $e');
-          rethrow;
-        }
-      }
-    }
+    // ROLLBACK P1: Offline check block disabled — always go online.
+    // if (!bypassOfflineCheck) {
+    //   final offlineService = OfflineDataService();
+    //   if (offlineService.isOffline) { ... queue offline ... return; }
+    // }
 
-    // Online or bypassed - try Firestore
+    // Online path — direct Firestore save (restored original behavior)
     try {
       final sessionData = {
         'userId': userId,
@@ -182,29 +168,10 @@ class CalmProgressService {
         stackTrace: stackTrace,
       );
 
-      // Try to queue offline on error (unless bypassed)
-      if (!bypassOfflineCheck) {
-        try {
-          final offlineService = OfflineDataService();
-          await offlineService.storeTechniqueCompletionOffline(
-            userId: userId,
-            techniqueId: techniqueId,
-            techniqueName: techniqueName,
-            durationMinutes: durationMinutes,
-            preMoodRating: preMoodRating,
-            postMoodRating: postMoodRating,
-          );
-          appLogger.i(
-            'Technique completion queued after error: $techniqueName',
-          );
-          return; // Success - queued for later sync, don't rethrow
-        } catch (offlineError) {
-          appLogger.e('Failed to queue offline after error: $offlineError');
-          rethrow; // Both failed, rethrow original error
-        }
-      } else {
-        rethrow; // Bypass mode, just rethrow
-      }
+      // ROLLBACK P1: Offline fallback-on-error block disabled.
+      // if (!bypassOfflineCheck) { ... queue offline on error ... }
+
+      rethrow;
     }
   }
 

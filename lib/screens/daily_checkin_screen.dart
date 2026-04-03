@@ -92,7 +92,21 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
         );
         
         final safeActivities = addedActivities ?? <String>[];
-        
+
+        // If sleep quality is poor (≤5 out of 10), log estimated sleep duration
+        // so the home screen can show the Sleep Recovery screen today.
+        if (_sleepQuality <= 5) {
+          final estimatedMinutes = _estimateSleepMinutes(_sleepQuality);
+          await ref.read(firestoreServiceProvider).logSleepData(
+            user.uid,
+            DateTime.now(),
+            {
+              'durationMinutes': estimatedMinutes,
+              'qualityScore': _sleepQuality * 10,
+            },
+          );
+        }
+
         if (mounted) {
            await showDialog(
              context: context,
@@ -150,6 +164,19 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Maps sleep quality (1–10) to an estimated sleep duration in minutes.
+  /// Quality ≤ 5 maps to under 6 hours (360 min) to trigger sleep recovery.
+  int _estimateSleepMinutes(int quality) {
+    switch (quality) {
+      case 1: return 180; // ~3 hours
+      case 2: return 210; // ~3.5 hours
+      case 3: return 240; // ~4 hours
+      case 4: return 270; // ~4.5 hours
+      case 5: return 300; // ~5 hours
+      default: return 390; // ≥6.5 hours — won't trigger recovery screen
     }
   }
 

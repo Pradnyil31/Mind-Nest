@@ -6,7 +6,7 @@ class SleepRecoveryScreen extends StatefulWidget {
   final String displayName;
 
   const SleepRecoveryScreen({
-    super.key, 
+    super.key,
     required this.sleepData,
     required this.displayName,
   });
@@ -16,16 +16,19 @@ class SleepRecoveryScreen extends StatefulWidget {
 }
 
 class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
-  // Mock data/State for interactive elements
-  double _energyLevel = 3.0;
-  String _selectedMood = 'Okay';
-  final Map<String, bool> _routineCompletion = {
-    'sunlight': false,
-    'hydration': false,
-    'lunch': false,
-    'stress_relief': false,
-    'wind_down': false,
+  // Recovery checklist state
+  final Map<String, bool> _checklist = {
+    'Drink 500ml water': false,
+    'Get 15 min of sunlight': false,
+    'Eat a balanced lunch': false,
+    '20-min power nap': false,
+    'Light evening stretch': false,
+    'No screens 90 min before bed': false,
   };
+
+  // Quick check-in state
+  double _energyLevel = 3;
+  String _selectedMood = '';
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +38,15 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
     final minutes = durationMinutes % 60;
     final quality = widget.sleepData['qualityScore'] as int? ?? 50;
 
+    // Dynamic sleep debt: target 8 hours (480 minutes)
+    const targetMinutes = 480;
+    final debtMinutes = (targetMinutes - durationMinutes).clamp(0, targetMinutes);
+    final debtHours = debtMinutes ~/ 60;
+    final debtMins = debtMinutes % 60;
+    final debtLabel = debtMinutes == 0
+        ? 'On Target 🎯'
+        : '-${debtHours}h ${debtMins}m';
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -43,41 +55,79 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
             end: Alignment.bottomCenter,
             colors: [
               Color(0xFFE0EAFC), // Light morning blue
-              Color(0xFFCFDEF3), // Soft purple/blue transition
-              Color(0xFFF5F7FA), // White/cloudy
+              Color(0xFFFDFCF4), // Warm white
             ],
-            stops: [0.0, 0.4, 1.0],
           ),
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(),
-                const SizedBox(height: 24),
-                _buildSleepSummaryCard(hours, minutes, quality),
-                const SizedBox(height: 24),
-                _buildImpactPrediction(),
-                const SizedBox(height: 32),
-                Text(
-                  'Full-Day Recovery Routine',
-                  style: GoogleFonts.lato(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF2D3436),
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.bedtime_rounded,
+                          color: Color(0xFF6C63FF), size: 28),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Sleep Recovery',
+                        style: GoogleFonts.lato(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF2D2D2D),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
+
+                // Sleep summary card
+                _buildSleepSummaryCard(
+                  hours: hours,
+                  minutes: minutes,
+                  quality: quality,
+                  debtLabel: debtLabel,
+                  debtMinutes: debtMinutes,
+                ),
+
+                const SizedBox(height: 24),
+
+                // How today may feel
+                _buildSectionHeader('How Today May Feel'),
+                const SizedBox(height: 12),
+                _buildImpactRow(),
+
+                const SizedBox(height: 24),
+
+                // Recovery plan
+                _buildSectionHeader('Your Recovery Plan'),
+                const SizedBox(height: 12),
                 _buildRecoveryTimeline(),
-                const SizedBox(height: 32),
+
+                const SizedBox(height: 24),
+
+                // Smart reminders
+                _buildSectionHeader('Smart Reminders'),
+                const SizedBox(height: 12),
                 _buildSmartReminders(),
-                const SizedBox(height: 32),
+
+                const SizedBox(height: 24),
+
+                // Quick check-in
+                _buildSectionHeader('Quick Energy Check-in'),
+                const SizedBox(height: 12),
                 _buildQuickCheckIn(),
-                const SizedBox(height: 40),
-                _buildProgressSection(),
-                const SizedBox(height: 40),
+
+                const SizedBox(height: 24),
+
+                // Recovery progress
+                _buildSectionHeader('Recovery Progress'),
+                const SizedBox(height: 12),
+                _buildRecoveryProgress(),
               ],
             ),
           ),
@@ -86,43 +136,240 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Good Morning, ${widget.displayName}',
-          style: GoogleFonts.lato(
-            fontSize: 26,
-            fontWeight: FontWeight.w900,
-            color: const Color(0xFF2D3436),
-          ),
+  Widget _buildSleepSummaryCard({
+    required int hours,
+    required int minutes,
+    required int quality,
+    required String debtLabel,
+    required int debtMinutes,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF7986CB), Color(0xFF5C6BC0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Let\'s help you recover today.',
-          style: GoogleFonts.lato(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFF636E72),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7986CB).withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Status row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  debtMinutes == 0 ? 'Well Rested ✨' : 'Recovering 🌙',
+                  style: GoogleFonts.lato(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              // Sleep debt chip
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: debtMinutes == 0
+                      ? Colors.green.withValues(alpha: 0.3)
+                      : const Color(0xFFFF7675).withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  debtLabel,
+                  style: GoogleFonts.lato(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          Row(
+            children: [
+              // Hours slept
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${hours}h ${minutes}m',
+                      style: GoogleFonts.lato(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'slept last night',
+                      style: GoogleFonts.lato(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Quality ring
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 72,
+                    height: 72,
+                    child: CircularProgressIndicator(
+                      value: quality / 100,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 6,
+                    ),
+                  ),
+                  Text(
+                    '$quality',
+                    style: GoogleFonts.lato(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          Text(
+            debtMinutes == 0
+                ? 'Great sleep! Keep this routine going. 🌟'
+                : 'Your body is in recovery mode. Follow today\'s plan to feel your best.',
+            style: GoogleFonts.lato(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.85),
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImpactRow() {
+    return Row(
+      children: [
+        _buildImpactItem(Icons.battery_2_bar_rounded, 'Energy', 'Low',
+            const Color(0xFFFF7675)),
+        const SizedBox(width: 12),
+        _buildImpactItem(Icons.center_focus_weak_rounded, 'Focus', 'Reduced',
+            const Color(0xFFFDAC5A)),
+        const SizedBox(width: 12),
+        _buildImpactItem(Icons.sentiment_dissatisfied, 'Mood', 'Unstable',
+            const Color(0xFFA29BFE)),
+      ],
+    );
+  }
+
+  Widget _buildImpactItem(
+      IconData icon, String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: GoogleFonts.lato(
+                fontSize: 11,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: GoogleFonts.lato(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecoveryTimeline() {
+    return Column(
+      children: [
+        _buildTimeBlock(
+          emoji: '🌅',
+          label: 'Morning',
+          items: ['Drink 500ml water', 'Get 15 min of sunlight'],
+        ),
+        const SizedBox(height: 12),
+        _buildTimeBlock(
+          emoji: '🍽️',
+          label: 'Midday',
+          items: ['Eat a balanced lunch', '20-min power nap'],
+        ),
+        const SizedBox(height: 12),
+        _buildTimeBlock(
+          emoji: '🌙',
+          label: 'Evening',
+          items: ['Light evening stretch', 'No screens 90 min before bed'],
         ),
       ],
     );
   }
 
-  Widget _buildSleepSummaryCard(int hours, int minutes, int quality) {
+  Widget _buildTimeBlock({
+    required String emoji,
+    required String label,
+    required List<String> items,
+  }) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF6C5CE7).withValues(alpha: 0.9), // Soft Indigo
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6C5CE7).withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -130,153 +377,62 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Last Night',
-                    style: GoogleFonts.lato(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        '${hours}h ${minutes}m',
-                        style: GoogleFonts.lato(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Mock sleep debt calculation
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '-2h 35m', // Static mock for now
-                          style: GoogleFonts.lato(
-                             color: const Color(0xFFFF7675), // Soft Red
-                             fontSize: 12,
-                             fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              // Quality Ring
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 60,
-                    height: 60,
-                    child: CircularProgressIndicator(
-                      value: quality / 100,
-                      backgroundColor: Colors.white24,
-                      color: quality > 70 ? const Color(0xFF55EFC4) : const Color(0xFFFFEAA7),
-                      strokeWidth: 6,
-                    ),
-                  ),
-                  Text(
-                    '$quality',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.lato(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              Text(emoji, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: GoogleFonts.lato(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF2D2D2D),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          // Status Tag
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFDAB9), // Peach
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-               mainAxisSize: MainAxisSize.min,
-               children: [
-                 const Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFFD35400)),
-                 const SizedBox(width: 6),
-                 Text(
-                   'Recovering',
-                   style: GoogleFonts.lato(
-                     color: const Color(0xFFD35400),
-                     fontSize: 12,
-                     fontWeight: FontWeight.bold,
-                   ),
-                 ),
-               ],
-            ),
-          ),
-          const SizedBox(height: 16),
-           Divider(color: Colors.white.withValues(alpha: 0.2)),
-           const SizedBox(height: 12),
-           Text(
-             'One short night doesn\'t define you. Focus on gentle movement and hydration today.',
-             style: GoogleFonts.lato(
-               color: Colors.white.withValues(alpha: 0.9),
-               fontSize: 14,
-               fontStyle: FontStyle.italic,
-             ),
-           ),
+          const SizedBox(height: 12),
+          ...items.map((item) => _buildChecklistItem(item)),
         ],
       ),
     );
   }
 
-  Widget _buildImpactPrediction() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-           children: [
-             Text(
-               'How today may feel',
-               style: GoogleFonts.lato(
-                 fontSize: 16,
-                 fontWeight: FontWeight.bold,
-                 color: const Color(0xFF2D3436),
-               ),
-             ),
-             const SizedBox(width: 8),
-             const Icon(Icons.info_outline, size: 16, color: Colors.grey),
-           ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildChecklistItem(String item) {
+    final isChecked = _checklist[item] ?? false;
+    return GestureDetector(
+      onTap: () => setState(() => _checklist[item] = !isChecked),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
           children: [
-             _buildImpactItem(Icons.bolt, 'Energy', 'Low', const Color(0xFFFF9F43)),
-             _buildImpactItem(Icons.psychology, 'Focus', 'Reduced', const Color(0xFFFF7675)),
-             _buildImpactItem(Icons.sentiment_dissatisfied, 'Mood', 'Unstable', const Color(0xFFA29BFE)),
+            Icon(
+              isChecked
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked,
+              color: isChecked ? const Color(0xFF6C63FF) : Colors.grey.shade400,
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              item,
+              style: GoogleFonts.lato(
+                fontSize: 14,
+                color: isChecked
+                    ? Colors.grey.shade400
+                    : const Color(0xFF2D2D2D),
+                decoration:
+                    isChecked ? TextDecoration.lineThrough : null,
+              ),
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildImpactItem(IconData icon, String label, String value, Color color) {
+  Widget _buildSmartReminders() {
     return Container(
-      width: 100,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -290,230 +446,171 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: GoogleFonts.lato(color: Colors.grey, fontSize: 12),
-          ),
-           Text(
-            value,
-            style: GoogleFonts.lato(color: const Color(0xFF2D3436), fontSize: 14, fontWeight: FontWeight.bold),
-          ),
+          _buildReminderRow(
+              icon: Icons.coffee_rounded,
+              color: const Color(0xFFF39C12),
+              label: 'Caffeine cutoff',
+              time: '2:00 PM'),
+          const Divider(height: 20),
+          _buildReminderRow(
+              icon: Icons.nights_stay_rounded,
+              color: const Color(0xFF6C63FF),
+              label: 'Wind-down starts',
+              time: '9:15 PM'),
         ],
       ),
     );
   }
 
-  Widget _buildRecoveryTimeline() {
-    return Column(
+  Widget _buildReminderRow({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String time,
+  }) {
+    return Row(
       children: [
-        _buildTimelineItem(
-          'Morning', 
-          'Wake -> 12 PM', 
-          Icons.wb_sunny_rounded, 
-          const Color(0xFFFDBB2D),
-          [
-            _buildActionItem('sunlight', '15 min Sunlight', 'Boosts cortisol naturally'),
-            _buildActionItem('hydration', 'Drink 500ml Water', 'Rehydrate brain'),
-          ]
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: color, size: 20),
         ),
-        const SizedBox(height: 16),
-         _buildTimelineItem(
-          'Midday', 
-          '12 PM -> 4 PM', 
-          Icons.restaurant, 
-          const Color(0xFF22C1C3),
-          [
-            _buildActionItem('lunch', 'Balanced Lunch', 'Avoid heavy carbs'),
-             // Power nap is optional, simpler to just list it or have a special button
-            _buildActionItem('nap', 'Power Nap (20m)', 'Set an alarm!'),
-          ]
+        const SizedBox(width: 14),
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.lato(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF2D2D2D),
+            ),
+          ),
         ),
-        const SizedBox(height: 16),
-        _buildTimelineItem(
-          'Evening', 
-          '4 PM -> Bedtime', 
-          Icons.nights_stay, 
-          const Color(0xFF6C5CE7),
-          [
-            _buildActionItem('stress_relief', 'Light Stretch', 'Release tension'),
-            _buildActionItem('wind_down', 'No Screens', '90 min before bed'),
-          ]
+        Text(
+          time,
+          style: GoogleFonts.lato(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildTimelineItem(String timeOfDay, String timeRange, IconData icon, Color color, List<Widget> children) {
+  Widget _buildQuickCheckIn() {
+    final moods = ['Low', 'Okay', 'Good'];
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border(left: BorderSide(color: color, width: 4)),
         boxShadow: [
-           BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'Current Energy',
+            style: GoogleFonts.lato(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF2D2D2D),
+            ),
+          ),
           Row(
             children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 8),
-              Text(timeOfDay, style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF2D3436))),
-              const Spacer(),
-              Text(timeRange, style: GoogleFonts.lato(fontSize: 12, color: Colors.grey)),
+              const Text('😴', style: TextStyle(fontSize: 18)),
+              Expanded(
+                child: Slider(
+                  value: _energyLevel,
+                  min: 1,
+                  max: 5,
+                  divisions: 4,
+                  activeColor: const Color(0xFF6C63FF),
+                  inactiveColor: Colors.grey.shade200,
+                  onChanged: (val) => setState(() => _energyLevel = val),
+                ),
+              ),
+              const Text('⚡', style: TextStyle(fontSize: 18)),
             ],
           ),
           const SizedBox(height: 12),
-          ...children,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionItem(String id, String title, String subtitle) {
-    final isDone = _routineCompletion[id] ?? false;
-    
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _routineCompletion[id] = !isDone;
-          });
-        },
-        child: Row(
-          children: [
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: isDone ? const Color(0xFF55EFC4) : Colors.transparent,
-                shape: BoxShape.circle,
-                border: Border.all(color: isDone ? Colors.transparent : Colors.grey.shade300),
-              ),
-              child: isDone ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+          Text(
+            'Current Mood',
+            style: GoogleFonts.lato(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF2D2D2D),
             ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.lato(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    decoration: isDone ? TextDecoration.lineThrough : null,
-                    color: isDone ? Colors.grey : const Color(0xFF2D3436),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: moods.map((mood) {
+              final isSelected = _selectedMood == mood;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedMood = mood),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFF6C63FF)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      mood,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.lato(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color:
+                            isSelected ? Colors.white : Colors.grey.shade600,
+                      ),
+                    ),
                   ),
                 ),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.lato(fontSize: 11, color: Colors.grey),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSmartReminders() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Smart Reminders',
-           style: GoogleFonts.lato(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF2D3436),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildReminderCard('Last caffeine window ends at 2:00 PM', Icons.coffee_rounded),
-        const SizedBox(height: 8),
-        _buildReminderCard('Start wind-down at 9:15 PM', Icons.bedtime_rounded),
-      ],
-    );
-  }
-
-  Widget _buildReminderCard(String text, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFDFE6E9).withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: const Color(0xFF636E72)),
-          const SizedBox(width: 12),
-          Expanded(child: Text(text, style: GoogleFonts.lato(color: const Color(0xFF2D3436), fontWeight: FontWeight.w500))),
-          const Icon(Icons.alarm_on, size: 20, color: Color(0xFF6C5CE7)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickCheckIn() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-           BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Quick Check-in', style: GoogleFonts.lato(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          Text('How is your energy?', style: GoogleFonts.lato(color: Colors.grey)),
-          Slider(
-            value: _energyLevel,
-            min: 1,
-            max: 5,
-            divisions: 4,
-            activeColor: const Color(0xFF6C5CE7),
-            label: _energyLevel.round().toString(),
-            onChanged: (val) {
-              setState(() {
-                _energyLevel = val;
-              });
-            },
-          ),
-          const SizedBox(height: 8),
-          Text('Mood right now?', style: GoogleFonts.lato(color: Colors.grey)),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _moodOption('😞', 'Low'),
-              _moodOption('😐', 'Okay'),
-              _moodOption('🙂', 'Good'),
-            ],
+              );
+            }).toList(),
           ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Check-in logged!')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Check-in logged! Keep going 💪'),
+                    backgroundColor: Color(0xFF6C63FF),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2D3436),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: const Color(0xFF6C63FF),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
               ),
-              child: const Text('Log Check-in', style: TextStyle(color: Colors.white)),
+              child: Text(
+                'Log Check-in',
+                style: GoogleFonts.lato(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
         ],
@@ -521,53 +618,87 @@ class _SleepRecoveryScreenState extends State<SleepRecoveryScreen> {
     );
   }
 
-  Widget _moodOption(String emoji, String label) {
-    final isSelected = _selectedMood == label;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedMood = label;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6C5CE7).withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? const Color(0xFF6C5CE7) : Colors.grey.shade300),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 24)),
-            Text(label, style: GoogleFonts.lato(fontSize: 12, color: isSelected ? const Color(0xFF6C5CE7) : Colors.grey)),
-          ],
-        ),
+  Widget _buildRecoveryProgress() {
+    final completed = _checklist.values.where((v) => v).length;
+    final total = _checklist.length;
+    final progress = total > 0 ? completed / total : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '$completed / $total tasks done',
+                style: GoogleFonts.lato(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF2D2D2D),
+                ),
+              ),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: GoogleFonts.lato(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF6C63FF),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey.shade200,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Color(0xFF6C63FF)),
+              minHeight: 10,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            progress == 0
+                ? 'Start checking off your recovery tasks above 💪'
+                : progress < 0.5
+                    ? 'Good start! Keep going to feel better faster.'
+                    : progress < 1.0
+                        ? 'Almost there! Great recovery effort today.'
+                        : 'Perfect recovery day! Sleep well tonight. 🌙',
+            style: GoogleFonts.lato(
+              fontSize: 13,
+              color: Colors.grey.shade600,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildProgressSection() {
-    return Column(
-      children: [
-        Text(
-          'Recovery Progress',
-          style: GoogleFonts.lato(color: Colors.grey, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        LinearProgressIndicator(
-          value: 0.4,
-          backgroundColor: Colors.grey.shade200,
-          color: const Color(0xFF00B894),
-          minHeight: 8,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Consistency matters more than duration.',
-          style: GoogleFonts.lato(color: const Color(0xFF2D3436), fontStyle: FontStyle.italic, fontSize: 13),
-        ),
-      ],
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.lato(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: const Color(0xFF2D2D2D),
+      ),
     );
   }
 }
-

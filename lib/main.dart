@@ -16,7 +16,8 @@ import 'screens/onboarding_flow_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
-import 'features/calm/application/offline_data_service.dart';
+// ROLLBACK P1: offline import disabled
+// import 'features/calm/application/offline_data_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +52,8 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       await _initializeFirebase().timeout(const Duration(seconds: 15));
       await _initializeNotifications().timeout(const Duration(seconds: 8));
       await _configureFirestore().timeout(const Duration(seconds: 6));
-      await _initializeOfflineService().timeout(const Duration(seconds: 5));
+      // ROLLBACK P1: offline service init disabled
+      // await _initializeOfflineService().timeout(const Duration(seconds: 5));
       await _configureSystemUi();
 
       if (!mounted) return;
@@ -107,16 +109,17 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
     }
   }
 
-  Future<void> _initializeOfflineService() async {
-    try {
-      final offlineService = OfflineDataService();
-      await offlineService.initialize();
-      debugPrint('Offline service initialized successfully');
-    } catch (e) {
-      debugPrint('Offline service initialization failed: $e');
-      // Don't block app startup on offline service failure
-    }
-  }
+  // ROLLBACK P1: _initializeOfflineService disabled
+  // Future<void> _initializeOfflineService() async {
+  //   try {
+  //     final offlineService = OfflineDataService();
+  //     await offlineService.initialize();
+  //     debugPrint('Offline service initialized successfully');
+  //   } catch (e) {
+  //     debugPrint('Offline service initialization failed: $e');
+  //     // Don't block app startup on offline service failure
+  //   }
+  // }
 
   Future<void> _configureSystemUi() async {
     try {
