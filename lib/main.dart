@@ -16,8 +16,6 @@ import 'screens/onboarding_flow_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
-// ROLLBACK P1: offline import disabled
-// import 'features/calm/application/offline_data_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -109,17 +107,6 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
     }
   }
 
-  // ROLLBACK P1: _initializeOfflineService disabled
-  // Future<void> _initializeOfflineService() async {
-  //   try {
-  //     final offlineService = OfflineDataService();
-  //     await offlineService.initialize();
-  //     debugPrint('Offline service initialized successfully');
-  //   } catch (e) {
-  //     debugPrint('Offline service initialization failed: $e');
-  //     // Don't block app startup on offline service failure
-  //   }
-  // }
 
   Future<void> _configureSystemUi() async {
     try {

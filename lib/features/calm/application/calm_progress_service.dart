@@ -3,8 +3,6 @@ import '../../../core/logger.dart';
 import '../../../services/firestore_service.dart';
 import '../../../config/motive_config.dart';
 import 'mood_tracking_service.dart';
-// ROLLBACK P1: offline_data_service import disabled
-// import 'offline_data_service.dart';
 
 class CalmProgressService {
   final FirebaseFirestore? _providedFirestore;
@@ -123,8 +121,6 @@ class CalmProgressService {
   }
 
   /// Log completion of a calm technique
-  /// ROLLBACK P1: bypassOfflineCheck param kept for signature compatibility
-  /// but offline queue behavior is fully disabled. Always goes direct to Firestore.
   Future<void> logTechniqueCompletion({
     required String userId,
     required String techniqueId,
@@ -132,15 +128,8 @@ class CalmProgressService {
     required int durationMinutes,
     int? preMoodRating,
     int? postMoodRating,
-    bool bypassOfflineCheck = false, // ROLLBACK P1: param kept, offline logic disabled
   }) async {
-    // ROLLBACK P1: Offline check block disabled — always go online.
-    // if (!bypassOfflineCheck) {
-    //   final offlineService = OfflineDataService();
-    //   if (offlineService.isOffline) { ... queue offline ... return; }
-    // }
-
-    // Online path — direct Firestore save (restored original behavior)
+    // Online path — direct Firestore save
     try {
       final sessionData = {
         'userId': userId,
@@ -167,9 +156,6 @@ class CalmProgressService {
         error: e,
         stackTrace: stackTrace,
       );
-
-      // ROLLBACK P1: Offline fallback-on-error block disabled.
-      // if (!bypassOfflineCheck) { ... queue offline on error ... }
 
       rethrow;
     }

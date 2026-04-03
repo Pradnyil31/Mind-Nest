@@ -13,7 +13,6 @@ import '../features/calm/application/ecosystem_integration_service.dart';
 import '../features/calm/application/calm_progress_service.dart';
 import '../features/calm/application/mood_tracking_service.dart';
 import '../features/calm/application/sound_preset_service.dart';
-import '../features/calm/application/offline_data_service.dart';
 import '../features/calm/application/complete_integration_workflow.dart';
 import 'user_provider.dart';
 import 'journal_provider.dart';
@@ -92,13 +91,6 @@ final soundPresetServiceProvider = Provider<SoundPresetService>((ref) {
   return SoundPresetService(firestoreService: ref.read(firestoreServiceProvider));
 });
 
-final offlineDataServiceProvider = Provider<OfflineDataService>((ref) {
-  return OfflineDataService(
-    firestoreService: ref.read(firestoreServiceProvider),
-    progressService: ref.read(calmProgressServiceProvider),
-    moodService: ref.read(moodTrackingServiceProvider),
-  );
-});
 
 final completeIntegrationWorkflowProvider = Provider<CompleteIntegrationWorkflow>((ref) {
   return CompleteIntegrationWorkflow(
