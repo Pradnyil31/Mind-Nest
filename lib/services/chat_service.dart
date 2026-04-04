@@ -387,8 +387,9 @@ If someone mentions self-harm or suicide, respond with compassion and provide cr
     return '''I am really concerned about you, and you are not alone.
 
 Please reach out for help right now:
-- National Suicide Prevention Lifeline: 988 (US)
-- Crisis Text Line: Text HOME to 741741
+- Tele MANAS (Govt Mental Health Helpline): 14416
+- Kiran (24/7 Helpline): 1800-599-0019
+- Vandrevala Foundation: +91 9999 666 555
 - International support: findahelpline.com
 
 These services are available to help you immediately. Your safety matters.''';

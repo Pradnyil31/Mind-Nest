@@ -1,0 +1,55 @@
+graph TD
+    %% Styling
+    classDef ui fill:#E0F7FA,stroke:#00BCD4,stroke-width:2px,color:#000;
+    classDef state fill:#F5C9D6,stroke:#E91E63,stroke-width:2px,color:#000;
+    classDef service fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px,color:#000;
+    classDef data fill:#E8EAF6,stroke:#3F51B5,stroke-width:2px,color:#000;
+    classDef external fill:#FFF,stroke:#000,stroke-width:2px,color:#000,stroke-dasharray: 5 5;
+
+    subgraph Presentation_Layer ["Presentation Layer - Flutter UI"]
+        direction TB
+        Global["Global Screens\n(lib/screens/)"]:::ui
+        Features["Feature Dashboards\n(lib/features/*/presentation)"]:::ui
+        Widgets["Reusable UI Widgets\n(Glass-morphism, Charts)"]:::ui
+        
+        Global --- Features
+        Features --- Widgets
+    end
+
+    subgraph State_Management ["State Management - Riverpod"]
+        direction TB
+        AuthProv["Auth Providers\n(User Session)"]:::state
+        MotiveProv["Motive & Mood Providers\n(Emotional Context)"]:::state
+        UIProv["View Controllers\n(UI State sync)"]:::state
+    end
+
+    subgraph Service_Layer ["Service & Application Layer"]
+        direction TB
+        ChatSvc["Chat Service\n• Maps User Context\n• Crisis Detection Check"]:::service
+        RoutEng["Routine Engine\n• Algorithmic Spacing\n• Calculates Time offsets"]:::service
+        BadgeSvc["Badge & Progress\n• Evaluates completion counts\n• Awards unlockables"]:::service
+        MedSvc["Meditation & Audio\n• Streaming playback\n• Audio state"]:::service
+    end
+
+    subgraph Data_Layer ["Data & Storage Layer - Firebase"]
+        direction TB
+        FStore[("Cloud Firestore\n(NoSQL logic & Realtime Streams)")]:::data
+        FAuth["Firebase Auth\n(Identity Management)"]:::data
+    end
+
+    subgraph External_APIs ["External APIs / LLM"]
+        Gemini{{"Google Gemini 1.5 API\n(Personalization & Inference)"}}:::external
+    end
+
+    %% Wiring the layers together visually
+    Presentation_Layer -->|Listens & Dispatches| State_Management
+    State_Management -->|Calls| Service_Layer
+    State_Management -->|Validates session| FAuth
+    
+    Service_Layer <-->|Read / Write| FStore
+    ChatSvc <-->|Sends Prompt & Context| Gemini
+    
+    %% Specific Data Interactions
+    ChatSvc ..->|Reads mood, sleep, routine| FStore
+    BadgeSvc ..->|Writes new achievements| FStore
+    RoutEng ..->|Updates status boolean maps| FStore
