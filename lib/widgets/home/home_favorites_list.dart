@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:showcaseview/showcaseview.dart';
+import '../../config/tour_keys.dart';
 import '../../screens/focus_screen.dart';
 import '../../screens/breathing_screen.dart';
 import '../../screens/meditation_library_screen.dart';
@@ -24,8 +26,9 @@ class HomeFavoritesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Widget content;
     if (activities.isEmpty) {
-      return SizedBox(
+      content = SizedBox(
         height: 130,
         child: ListView(
           scrollDirection: Axis.horizontal,
@@ -53,9 +56,8 @@ class HomeFavoritesList extends StatelessWidget {
           ],
         ),
       );
-    }
-
-    return SizedBox(
+    } else {
+      content = SizedBox(
       height: 130,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
@@ -67,6 +69,27 @@ class HomeFavoritesList extends StatelessWidget {
           return _buildActivityItem(context, activity);
         },
       ),
+    );
+    }
+
+    return Showcase(
+      key: TourKeys.quickToolsKey,
+      title: 'Quick tools',
+      description: 'Instant access to your favorite and most used tools.',
+      targetBorderRadius: BorderRadius.circular(16),
+      tooltipBackgroundColor: const Color(0xFF1C1C2E),
+      textColor: Colors.white,
+      titleTextStyle: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+      ),
+      descTextStyle: const TextStyle(
+        fontSize: 13,
+        color: Color(0xFFCBCBDB),
+        height: 1.5,
+      ),
+      child: content,
     );
   }
 

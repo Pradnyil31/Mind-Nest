@@ -4,7 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:showcaseview/showcaseview.dart';
 
+import '../../../config/tour_keys.dart';
 import '../../../config/motive_config.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/personalization_service.dart';
@@ -332,9 +335,29 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
         }
       } else {
         if (mounted) {
-          Future.delayed(const Duration(seconds: 1), () {
-            if (mounted) _showDailyMotivePrompt(context, goals, primaryMotive);
-          });
+          final prefs = await SharedPreferences.getInstance();
+          final hasSeenTour = prefs.getBool('hasSeenHomeTour') ?? false;
+
+          if (!hasSeenTour) {
+            await prefs.setBool('hasSeenHomeTour', true);
+            if (mounted) {
+              TourKeys.onTourFinished = () {
+                if (mounted) {
+                  _showDailyMotivePrompt(context, goals, primaryMotive);
+                }
+              };
+              // Give it a tiny delay for everything to render correctly
+              Future.delayed(const Duration(milliseconds: 500), () {
+                if (mounted) {
+                  ShowCaseWidget.of(context).startShowCase(TourKeys.featureTourKeys);
+                }
+              });
+            }
+          } else {
+            Future.delayed(const Duration(seconds: 1), () {
+              if (mounted) _showDailyMotivePrompt(context, goals, primaryMotive);
+            });
+          }
         }
       }
     }

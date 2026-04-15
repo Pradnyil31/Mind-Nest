@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:showcaseview/showcaseview.dart';
+import '../../config/tour_keys.dart';
 import '../../config/routine_config.dart';
 
 class HomeRoutineSection extends StatelessWidget {
@@ -87,17 +89,34 @@ class HomeRoutineSection extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Daily Routine',
-                style: GoogleFonts.lato(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
+          child: Showcase(
+            key: TourKeys.routineSectionKey,
+            title: 'Daily routine',
+            description: 'Manage and track your schedule seamlessly.',
+            targetBorderRadius: BorderRadius.circular(12),
+            tooltipBackgroundColor: const Color(0xFF1C1C2E),
+            textColor: Colors.white,
+            titleTextStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+            descTextStyle: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFFCBCBDB),
+              height: 1.5,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Daily Routine',
+                  style: GoogleFonts.lato(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
                 ),
-              ),
               if (activities.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -119,6 +138,7 @@ class HomeRoutineSection extends StatelessWidget {
                   ),
                 ),
             ],
+          ),
           ),
         ),
         const SizedBox(height: 16),

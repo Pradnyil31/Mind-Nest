@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:showcaseview/showcaseview.dart';
+import '../../config/tour_keys.dart';
 
 class HomeAICoachCard extends StatelessWidget {
   final VoidCallback onTap;
@@ -11,9 +13,26 @@ class HomeAICoachCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
+    return Showcase(
+      key: TourKeys.aiCoachKey,
+      title: 'Talk to your AI coach',
+      description: 'Get personalized insights and chat with your companion.',
+      targetBorderRadius: BorderRadius.circular(24),
+      tooltipBackgroundColor: const Color(0xFF1C1C2E),
+      textColor: Colors.white,
+      titleTextStyle: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+      ),
+      descTextStyle: const TextStyle(
+        fontSize: 13,
+        color: Color(0xFFCBCBDB),
+        height: 1.5,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
         color: const Color(0xFFF0F7FF),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFD7E8FF)),
@@ -78,6 +97,7 @@ class HomeAICoachCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

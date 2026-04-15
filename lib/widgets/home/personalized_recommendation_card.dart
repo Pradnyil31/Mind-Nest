@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:showcaseview/showcaseview.dart';
+import '../../config/tour_keys.dart';
 import '../../services/personalization_service.dart';
 
 class PersonalizedRecommendationCard extends StatelessWidget {
@@ -18,9 +20,26 @@ class PersonalizedRecommendationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
+    return Showcase(
+      key: TourKeys.recommendationKey,
+      title: 'Your personal recommendation',
+      description: 'Curated suggestions tailored to your mood and progress.',
+      targetBorderRadius: BorderRadius.circular(24),
+      tooltipBackgroundColor: const Color(0xFF1C1C2E),
+      textColor: Colors.white,
+      titleTextStyle: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+      ),
+      descTextStyle: const TextStyle(
+        fontSize: 13,
+        color: Color(0xFFCBCBDB),
+        height: 1.5,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
         color: const Color(0xFFF5F2FF),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFE4D9FF)),
@@ -105,6 +124,7 @@ class PersonalizedRecommendationCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:showcaseview/showcaseview.dart';
+import '../../config/tour_keys.dart';
 import '../../theme/app_colors.dart';
 import '../../screens/manage_routine_screen.dart';
 
@@ -45,92 +47,110 @@ class HomeFocusCard extends StatelessWidget {
     final String resolvedTitle = title ?? 'Start ${_getTimePeriod()} routine';
     final String resolvedSubtitle = subtitle ?? 'Focus: $todaysFocus';
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-            context, MaterialPageRoute(builder: (_) => const ManageRoutineScreen()));
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFDF8F0),
-          borderRadius: BorderRadius.circular(32),
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFEAA7),
-                    shape: BoxShape.circle,
+    return Showcase(
+      key: TourKeys.focusCardKey,
+      title: 'Continue your morning routine',
+      description: 'Quickly jump back into what you were doing or focus on your next task.',
+      targetBorderRadius: BorderRadius.circular(32),
+      tooltipBackgroundColor: const Color(0xFF1C1C2E),
+      textColor: Colors.white,
+      titleTextStyle: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+      ),
+      descTextStyle: const TextStyle(
+        fontSize: 13,
+        color: Color(0xFFCBCBDB),
+        height: 1.5,
+      ),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const ManageRoutineScreen()));
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFDF8F0),
+            borderRadius: BorderRadius.circular(32),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFEAA7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.eco_rounded,
+                        color: Color(0xFFFF7675), size: 28),
                   ),
-                  child: const Icon(Icons.eco_rounded,
-                      color: Color(0xFFFF7675), size: 28),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        resolvedTitle,
-                        style: GoogleFonts.lato(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF2D3436),
-                        ),
-                      ),
-                      ...[
-                        const SizedBox(height: 6),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          resolvedSubtitle,
+                          resolvedTitle,
                           style: GoogleFonts.lato(
-                            fontSize: 13,
-                            color: const Color(0xFF5E5E5E),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF2D3436),
                           ),
                         ),
+                        ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            resolvedSubtitle,
+                            style: GoogleFonts.lato(
+                              fontSize: 13,
+                              color: const Color(0xFF5E5E5E),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded,
+                      color: Color(0xFFFDBB2D), size: 20),
+                ],
+              ),
+              if (hint != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    hint!,
+                    style: GoogleFonts.lato(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios_rounded,
-                    color: Color(0xFFFDBB2D), size: 20),
               ],
-            ),
-            if (hint != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  hint!,
-                  style: GoogleFonts.lato(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: _WeeklyTracker(
+                      activeDaysThisWeek: activeDaysThisWeek,
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: _WeeklyTracker(
-                    activeDaysThisWeek: activeDaysThisWeek,
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );

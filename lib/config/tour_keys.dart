@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 class TourKeys {
-  static final GlobalKey insightsKey = GlobalKey();
-  static final GlobalKey taskCardKey = GlobalKey();
-  static final GlobalKey manageRoutineKey = GlobalKey();
-  static final GlobalKey favoritesKey = GlobalKey();
+  static final GlobalKey headerKey = GlobalKey();
+  static final GlobalKey focusCardKey = GlobalKey();
+  static final GlobalKey recommendationKey = GlobalKey();
+  static final GlobalKey routineSectionKey = GlobalKey();
+  static final GlobalKey aiCoachKey = GlobalKey();
+  static final GlobalKey quickToolsKey = GlobalKey();
   static final GlobalKey badgesKey = GlobalKey();
   static final GlobalKey navBarKey = GlobalKey();
 
@@ -12,11 +14,13 @@ class TourKeys {
   static VoidCallback? onTourFinished;
 
   static List<GlobalKey> get featureTourKeys => [
+        headerKey,
+        focusCardKey,
+        recommendationKey,
+        routineSectionKey,
+        aiCoachKey,
+        quickToolsKey,
         badgesKey,
-        favoritesKey,
-        taskCardKey,
-        manageRoutineKey,
-        insightsKey,
         navBarKey,
       ];
 }
