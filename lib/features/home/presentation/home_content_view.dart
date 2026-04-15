@@ -20,7 +20,6 @@ import '../../../widgets/home/home_header.dart';
 import '../../../widgets/home/home_routine_section.dart';
 import '../../../widgets/home/personalized_recommendation_card.dart';
 import '../../../widgets/home/home_ai_coach_card.dart';
-import '../../../widgets/compact_progress_insights.dart';
 import '../../../screens/daily_checkin_screen.dart';
 import '../../../screens/breathing_screen.dart';
 import '../../../screens/grounding_exercise_screen.dart';
@@ -336,10 +335,11 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
       } else {
         if (mounted) {
           final prefs = await SharedPreferences.getInstance();
-          final hasSeenTour = prefs.getBool('hasSeenHomeTour') ?? false;
+          final String tourKey = 'hasSeenHomeTour_${user.email ?? user.uid}';
+          final hasSeenTour = prefs.getBool(tourKey) ?? false;
 
           if (!hasSeenTour) {
-            await prefs.setBool('hasSeenHomeTour', true);
+            await prefs.setBool(tourKey, true);
             if (mounted) {
               TourKeys.onTourFinished = () {
                 if (mounted) {
@@ -631,7 +631,7 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
       }
     }
     if (isNight) return Colors.white;
-    if (currentDouble >= 20.0) return Colors.white;
+    if (currentDouble >= 17.0) return Colors.white;
     return AppColors.textPrimary;
   }
 
@@ -881,8 +881,6 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
                     textColor: textColor,
                     streak: homeState.streak,
                   ),
-                  const SizedBox(height: 16),
-                  CompactProgressInsights(userId: user.uid),
                   const SizedBox(height: 16),
                   HomeAICoachCard(
                     onTap: () => Navigator.push(

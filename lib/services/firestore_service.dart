@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../config/routine_config.dart';
 import '../models/user_model.dart';
 import 'badge_service.dart';
 import '../models/badge.dart';
@@ -145,6 +146,69 @@ class FirestoreService {
       'motive': motive,
       'timestamp': FieldValue.serverTimestamp(),
     });
+
+    // Automatically add the selected motive to the daily routine
+    try {
+      final doc = await _usersCollection.doc(uid).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        List<String> currentRoutine = [];
+        if (data.containsKey('routineActivities')) {
+          currentRoutine = List<String>.from(data['routineActivities']);
+        } else {
+          currentRoutine = ['Morning Sunlight', 'Delay Caffeine', 'Dim Lights'];
+        }
+
+        Map<String, dynamic> routineSchedule = {};
+        if (data.containsKey('routineSchedule')) {
+          final rawRoutine = Map<String, dynamic>.from(data['routineSchedule']);
+          routineSchedule = rawRoutine.map((key, value) => MapEntry(key, value?.toString() ?? '08:00 AM'));
+        }
+
+        Map<String, dynamic> tempSchedule = {};
+        if (data.containsKey('temporarySchedule')) {
+          final rawTemp = Map<String, dynamic>.from(data['temporarySchedule']);
+          tempSchedule = rawTemp.map((key, value) => MapEntry(key, value?.toString() ?? '08:00 AM'));
+        }
+
+        bool changed = false;
+
+        // Ensure user's base routine is fully synced to schedule first (prevents accidental overwrites)
+        for (var activity in currentRoutine) {
+          if (!routineSchedule.containsKey(activity)) {
+            final period = RoutineConfig.getTimePeriod(activity);
+            String timeSlot = '08:00 AM';
+            if (period == 'Afternoon') timeSlot = '02:00 PM';
+            if (period == 'Evening') timeSlot = '08:00 PM';
+            routineSchedule[activity] = timeSlot;
+            tempSchedule[activity] = timeSlot;
+            changed = true;
+          }
+        }
+
+        // Now inject the new motive safely and assign it to a reliable, perfect time
+        if (!currentRoutine.contains(motive)) {
+          currentRoutine.add(motive);
+          final period = RoutineConfig.getTimePeriod(motive);
+          String timeSlot = '08:00 AM';
+          if (period == 'Afternoon') timeSlot = '02:00 PM';
+          if (period == 'Evening') timeSlot = '08:00 PM';
+          routineSchedule[motive] = timeSlot;
+          tempSchedule[motive] = timeSlot;
+          changed = true;
+        }
+
+        if (changed) {
+          await _usersCollection.doc(uid).update({
+            'routineActivities': currentRoutine,
+            'routineSchedule': routineSchedule,
+            'temporarySchedule': tempSchedule,
+          });
+        }
+      }
+    } catch (e, stackTrace) {
+      appLogger.e('Error syncing motive to routine', error: e, stackTrace: stackTrace);
+    }
   }
 
   // Get Daily Motive

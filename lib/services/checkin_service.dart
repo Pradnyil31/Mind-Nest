@@ -111,6 +111,25 @@ class CheckInService {
             );
           }
 
+          // FIX: Sync current activities to schedule before appending adaptations.
+          // If the user's schedule is empty (e.g. they never opened Manage Routine), 
+          // we must populate it. Otherwise, saving only the new adaptation will cause 
+          // the Home Screen to read the updated schedule and drop all original activities!
+          for (var activity in currentRoutine) {
+            if (!routineSchedule.containsKey(activity)) {
+              final period = RoutineConfig.getTimePeriod(activity);
+              String timeSlot = '08:00 AM';
+              if (period == 'Afternoon') {
+                timeSlot = '02:00 PM';
+              } else if (period == 'Evening') {
+                timeSlot = '08:00 PM';
+              }
+              routineSchedule[activity] = timeSlot;
+              tempSchedule[activity] = timeSlot;
+              changed = true;
+            }
+          }
+
           for (var activity in adaptations) {
             if (!currentRoutine.contains(activity)) {
               currentRoutine.add(activity);

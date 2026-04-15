@@ -83,29 +83,29 @@ class HomeRoutineSection extends StatelessWidget {
     bool isAfternoonUnlocked = currentDouble >= 12.0 && currentDouble < 17.0;
     bool isEveningUnlocked = currentDouble >= 17.0;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min, 
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Showcase(
-            key: TourKeys.routineSectionKey,
-            title: 'Daily routine',
-            description: 'Manage and track your schedule seamlessly.',
-            targetBorderRadius: BorderRadius.circular(12),
-            tooltipBackgroundColor: const Color(0xFF1C1C2E),
-            textColor: Colors.white,
-            titleTextStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-            descTextStyle: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFFCBCBDB),
-              height: 1.5,
-            ),
+    return Showcase(
+      key: TourKeys.routineSectionKey,
+      title: 'Daily routine',
+      description: 'Manage and track your schedule seamlessly.',
+      targetBorderRadius: BorderRadius.circular(12),
+      tooltipBackgroundColor: const Color(0xFF1C1C2E),
+      textColor: Colors.white,
+      titleTextStyle: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+      ),
+      descTextStyle: const TextStyle(
+        fontSize: 13,
+        color: Color(0xFFCBCBDB),
+        height: 1.5,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min, 
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -138,7 +138,6 @@ class HomeRoutineSection extends StatelessWidget {
                   ),
                 ),
             ],
-          ),
           ),
         ),
         const SizedBox(height: 16),
@@ -204,15 +203,19 @@ class HomeRoutineSection extends StatelessWidget {
             ),
           ),
       ],
+    ),
     );
   }
 
   Widget _buildRoutineSection(BuildContext context, String title, IconData icon, Color color, List<String> items, bool isUnlocked) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        initiallyExpanded: isUnlocked,
+        tilePadding: EdgeInsets.zero,
+        iconColor: color,
+        collapsedIconColor: !isUnlocked ? Colors.grey : color,
+        title: Row(
           children: [
             Icon(icon, color: !isUnlocked ? Colors.grey : color, size: 20),
             const SizedBox(width: 8),
@@ -226,8 +229,9 @@ class HomeRoutineSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        ...items.map((item) => _RoutineItemCard(
+        children: items.map((item) => Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: _RoutineItemCard(
           title: item,
           subtitle: '',
           textColor: textColor,
@@ -239,7 +243,6 @@ class HomeRoutineSection extends StatelessWidget {
 
           onToggle: (val) {
              if (val) {
-                // Confirm dialog
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -262,15 +265,11 @@ class HomeRoutineSection extends StatelessWidget {
                   )
               );
              } else {
-               // Assuming uncheck is allowed or handled by parent, but original logic prevented it via confirm?
-               // Original logic: "Prevent unchecking" if (!completed) return; inside onToggle.
-               // Here val IS the new state (true if checking, false if unchecking).
-               // So if val is false, we try to uncheck.
                onToggleActivity(item, false);
              }
           },
-        )),
-      ],
+        ))).toList(),
+      ),
     );
   }
 

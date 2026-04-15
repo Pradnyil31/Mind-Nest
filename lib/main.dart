@@ -138,8 +138,9 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 class _BrandedBootScreen extends StatelessWidget {
   final String? error;
   final Future<void> Function() onRetry;
+  final String? message;
 
-  const _BrandedBootScreen({required this.error, required this.onRetry});
+  const _BrandedBootScreen({required this.error, required this.onRetry, this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +216,7 @@ class _BrandedBootScreen extends StatelessWidget {
                     const CircularProgressIndicator(),
                     const SizedBox(height: 12),
                     Text(
-                      'Starting app...',
+                      message ?? 'Starting app...',
                       style: GoogleFonts.lato(
                         fontSize: 13,
                         color: const Color(0xFF64748B),
@@ -285,6 +286,8 @@ class MindNestApp extends StatelessWidget {
 class AuthWrapper extends ConsumerWidget {
   const AuthWrapper({super.key});
 
+  static Future<void> _dummyRetry() async {}
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
@@ -309,15 +312,10 @@ class AuthWrapper extends ConsumerWidget {
             return const OnboardingFlowScreen();
           },
           loading: () => const Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading profile...'),
-                ],
-              ),
+            body: _BrandedBootScreen(
+              error: null,
+              onRetry: AuthWrapper._dummyRetry,
+              message: 'Preparing your space...',
             ),
           ),
           error: (error, stack) {
@@ -368,15 +366,10 @@ class AuthWrapper extends ConsumerWidget {
         );
       },
       loading: () => const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Initializing...'),
-            ],
-          ),
+        body: _BrandedBootScreen(
+          error: null,
+          onRetry: AuthWrapper._dummyRetry,
+          message: 'Authenticating securely...',
         ),
       ),
       error: (error, stack) {

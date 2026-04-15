@@ -27,26 +27,8 @@ class HomeHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
-          child: Showcase(
-            key: TourKeys.headerKey,
-            title: 'Review your Day',
-            description: 'Check your greeting and get an overview of your current time.',
-            targetBorderRadius: BorderRadius.circular(16),
-            targetPadding: const EdgeInsets.all(8),
-            tooltipBackgroundColor: const Color(0xFF1C1C2E),
-            textColor: Colors.white,
-            titleTextStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-            descTextStyle: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFFCBCBDB),
-              height: 1.5,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   greeting,
@@ -78,7 +60,6 @@ class HomeHeader extends StatelessWidget {
               ],
             ),
           ),
-        ),
         // Badges Icon
         Showcase(
           key: TourKeys.badgesKey,
