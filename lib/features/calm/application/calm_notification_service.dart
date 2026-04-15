@@ -136,7 +136,9 @@ class CalmNotificationService {
   Future<void> cancelAllReminders(String userId) async {
     try {
       // Cancel all notification types
-      await _notificationService.cancelAll();
+      await _notificationService.cancel(_baseReminderId + 1);
+      await _notificationService.cancel(_baseReminderId + 2);
+      await _notificationService.cancel(_baseReminderId + 3);
       _logger.i('Cancelled all calm reminders for user: $userId');
     } catch (e) {
       _logger.e('Failed to cancel reminders: $e');

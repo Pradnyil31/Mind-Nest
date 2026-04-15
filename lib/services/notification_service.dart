@@ -85,6 +85,12 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.cancelAll();
   }
 
+  Future<void> cancel(int id) async {
+    if (kIsWeb) return;
+    if (!_isInitialized) await init();
+    await flutterLocalNotificationsPlugin.cancel(id: id);
+  }
+
   Future<void> scheduleDailyNotification({
     required int id,
     required String title,
