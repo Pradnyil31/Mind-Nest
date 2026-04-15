@@ -2,6 +2,8 @@
 /// Defines personalized content for each user motive
 library;
 
+import 'routine_config.dart';
+
 class MotiveProfile {
   final String name;
   final String displayName;
@@ -245,46 +247,134 @@ class MotiveConfig {
     ),
   };
 
-  /// Generate centralized routine based on motive and commitment
+  /// Generate centralized routine based on motive and commitment.
+  /// Activities are distributed EQUALLY across Morning, Afternoon, and Evening
+  /// using a round-robin algorithm to ensure the user has something to do
+  /// throughout the entire day — not just in the morning.
   static List<String> generateRoutine({
     required String? motive,
     required String? commitment,
     List<String> supportAreas = const [],
   }) {
     // 1. Determine activity limit based on commitment
-    int limit = 5; // Default (10 mins)
+    int limit = 6; // Default (10 mins) — bumped to 6 so each period gets 2
     if (commitment != null) {
       if (commitment.startsWith('5')) {
-        limit = 3;
-      } else if (commitment.startsWith('10')) limit = 5;
-      else if (commitment.startsWith('15')) limit = 7;
-      else if (commitment.startsWith('30')) limit = 9;
+        limit = 3;   // 1 per period
+      } else if (commitment.startsWith('10')) {
+        limit = 6;   // 2 per period
+      } else if (commitment.startsWith('15')) {
+        limit = 9;   // 3 per period
+      } else if (commitment.startsWith('30')) {
+        limit = 12;  // 4 per period
+      }
     }
 
-    // 2. Get activities
-    final baseActivities = getRoutineActivities(motive);
+    // 2. Build the full candidate pool: support activities first (personalises),
+    //    then all base activities to fill remaining slots.
     final supportActivities = getActivitiesForSupportAreas(motive, supportAreas);
+    final baseActivities = getRoutineActivities(motive);
 
-    // 3. Combine with priority: Base (Core) -> Support -> Base (Fill)
-    final combined = <String>{};
-    
-    // Always add top 2 base activities first (Core habits)
-    combined.addAll(baseActivities.take(2));
-    
-    // Then add support activities (Personalized needs)
-    combined.addAll(supportActivities);
-    
-    // Then fill rest with remaining base activities
-    combined.addAll(baseActivities.skip(2));
+    final candidatePool = <String>{};
+    candidatePool.addAll(supportActivities);
+    candidatePool.addAll(baseActivities);
 
-    // 4. Return limited list
-    return combined.take(limit).toList();
+    // Also pull from the full activity pool for a wider spread
+    candidatePool.addAll(getFullActivityPool(motive));
+
+    // 3. Bucket all candidates by time period
+    final buckets = <String, List<String>>{
+      'Morning': [],
+      'Afternoon': [],
+      'Evening': [],
+    };
+
+    for (final activity in candidatePool) {
+      final period = RoutineConfig.getTimePeriod(activity);
+      buckets[period]!.add(activity);
+    }
+
+    // 4. Round-robin pick from each period so the result is balanced.
+    //    Order: Morning → Afternoon → Evening → Morning → ...
+    final periods = ['Morning', 'Afternoon', 'Evening'];
+    final result = <String>[];
+    final indices = {for (var p in periods) p: 0};
+
+    while (result.length < limit) {
+      bool addedAny = false;
+      for (final period in periods) {
+        if (result.length >= limit) break;
+        final bucket = buckets[period]!;
+        final idx = indices[period]!;
+        if (idx < bucket.length) {
+          result.add(bucket[idx]);
+          indices[period] = idx + 1;
+          addedAny = true;
+        }
+      }
+      // Safety: if all buckets are exhausted before reaching limit, stop.
+      if (!addedAny) break;
+    }
+
+    return result;
   }
 
   /// Get profile for a given motive
   static MotiveProfile? getProfile(String? motive) {
     if (motive == null) return null;
     return profiles[motive];
+  }
+
+  /// Rebalances an EXISTING flat routine list so that no period is completely
+  /// empty. Use this when a user's saved `routineActivities` has all activities
+  /// piled into one period (e.g. all Morning).
+  ///
+  /// [customActivities] — optional list of user-created custom activity names.
+  ///   Pass these so their period assignment (stored in Firestore routineSchedule)
+  ///   is counted correctly. Custom activities are already in [currentActivities];
+  ///   this parameter allows the caller to signal which ones have custom periods.
+  ///
+  /// Strategy:
+  ///   1. Bucket the current list by period (RoutineConfig for known, user choice
+  ///      via [userChosenPeriods] for custom activities).
+  ///   2. For any period that has 0 activities, pick the best candidate from
+  ///      the motive's full pool that belongs to that period.
+  ///   3. Return the patched list — callers save it back to Firestore.
+  static List<String> rebalanceForExistingUser({
+    required List<String> currentActivities,
+    required String? motive,
+    Map<String, String> userChosenPeriods = const {},
+  }) {
+    final result = List<String>.from(currentActivities);
+
+    // Bucket by period — prefer user's saved period override for any activity
+    final counts = {'Morning': 0, 'Afternoon': 0, 'Evening': 0};
+    for (final activity in result) {
+      final p = userChosenPeriods[activity] ?? RoutineConfig.getTimePeriod(activity);
+      counts[p] = (counts[p] ?? 0) + 1;
+    }
+
+    // Identify empty periods
+    final emptyPeriods = counts.entries
+        .where((e) => e.value == 0)
+        .map((e) => e.key)
+        .toList();
+
+    if (emptyPeriods.isEmpty) return result; // Already balanced
+
+    // Pull from the full pool to fill gaps
+    final pool = getFullActivityPool(motive);
+    for (final period in emptyPeriods) {
+      final candidate = pool.firstWhere(
+        (a) => RoutineConfig.getTimePeriod(a) == period && !result.contains(a),
+        orElse: () => '',
+      );
+      if (candidate.isNotEmpty) {
+        result.add(candidate);
+      }
+    }
+
+    return result;
   }
 
   /// Get routine activities for a motive

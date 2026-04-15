@@ -135,17 +135,19 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
       final motive = data['primaryMotive'] as String?;
       final commitment = data['dailyCommitment'] as String? ?? '10 minutes';
 
-      int taskCount = 5;
+      int taskCount = 6;
       if (commitment.startsWith('5')) {
         taskCount = 3;
       } else if (commitment.startsWith('10')) {
-        taskCount = 5;
-      } else if (commitment.startsWith('15')) {
         taskCount = 6;
+      } else if (commitment.startsWith('15')) {
+        taskCount = 9;
       } else if (commitment.startsWith('30')) {
-        taskCount = 8;
+        taskCount = 12;
       }
 
+      // Every new day = completely fresh. The app generates the full set of
+      // activities from the motive pool — nothing is carried over from yesterday.
       final pool = MotiveConfig.getFullActivityPool(motive);
       final newDaily = HomeRoutineEngine.generateBalancedRoutine(pool, taskCount);
       final newSchedule = HomeRoutineEngine.calculateDynamicSchedule(
@@ -160,31 +162,6 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
         'temporarySchedule': {},
         'lastGeneratedDate': now.toIso8601String(),
       });
-    } else {
-      if (data.containsKey('routineSchedule')) {
-        final schedule = Map<String, String>.from(data['routineSchedule']);
-        bool needsFix = false;
-        int bedMin = _bedTime.hour * 60 + _bedTime.minute;
-        int wakeMin = _wakeTime.hour * 60 + _wakeTime.minute;
-        if (bedMin < wakeMin) bedMin += 24 * 60;
-
-        schedule.forEach((activity, time) {
-          if (activity.toLowerCase().contains('caffeine') &&
-              (activity.toLowerCase().contains('cut') ||
-                  activity.toLowerCase().contains('off'))) {
-            final correctTime = HomeRoutineEngine.minToTime(bedMin - 10 * 60);
-            if (time != correctTime) {
-              schedule[activity] = correctTime;
-              needsFix = true;
-            }
-          }
-        });
-        if (needsFix) {
-          await ref.read(firestoreServiceProvider).updateUser(uid, {
-            'routineSchedule': schedule,
-          });
-        }
-      }
     }
   }
 

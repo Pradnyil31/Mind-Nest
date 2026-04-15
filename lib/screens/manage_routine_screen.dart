@@ -253,13 +253,26 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
           }
         }
 
-        // 3. Recalculate Schedule dynamically to ensure times are correct
+        // 3. Build the final schedule:
+        //    The user sees and selects period labels (Morning / Afternoon / Evening).
+        //    We translate each label into a precise clock time using getOptimalTimeSlot,
+        //    passing the user's chosen period as `periodOverride` so that if the user
+        //    moved an activity to a different period, the clock time reflects that choice.
         final newActivitiesList = _activitySchedule.keys.toList();
-        final newSchedule = _calculateDynamicSchedule(
-          newActivitiesList,
-          _wakeTime,
-          _bedTime,
-        );
+        final Map<String, String> newSchedule = {};
+        for (final activity in newActivitiesList) {
+          // _activitySchedule holds the user-selected period label, e.g. 'Evening'.
+          // Pass it as an override so the optimal time is anchored to that period.
+          final userPeriod = _activitySchedule[activity]; // 'Morning'/'Afternoon'/'Evening'
+          newSchedule[activity] = RoutineConfig.getOptimalTimeSlot(
+            activity,
+            wakeHour   : _wakeTime.hour,
+            wakeMinute : _wakeTime.minute,
+            bedHour    : _bedTime.hour,
+            bedMinute  : _bedTime.minute,
+            periodOverride: userPeriod,
+          );
+        }
 
         // 4. Save new format
         final now = DateTime.now();
@@ -1501,84 +1514,25 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
     }
   }
 
-  // --- Dynamic Scheduling Helpers (Duplicated from HomeScreen for now) ---
+  // --- Dynamic Scheduling Helpers ---
   Map<String, String> _calculateDynamicSchedule(
     List<String> activities,
     TimeOfDay wakeTime,
     TimeOfDay bedTime,
   ) {
     final schedule = <String, String>{};
-
-    // Convert to minutes for easier calculation
-    int wakeMin = wakeTime.hour * 60 + wakeTime.minute;
-    int bedMin = bedTime.hour * 60 + bedTime.minute;
-    if (bedMin < wakeMin) bedMin += 24 * 60; // Handle past midnight
-
-    int morningOffset = 0;
-    int afternoonOffset = 0;
-
-    // Afternoon starts at 12:00 PM or 5 hours after wake, whichever is later
-    int afternoonStart = 12 * 60;
-    if (afternoonStart < wakeMin + 4 * 60) afternoonStart = wakeMin + 4 * 60;
-
-    // Evening starts at 6:00 PM
-    int eveningStart = 18 * 60;
-
     for (var activity in activities) {
-      String timeString = "";
-      final lower = activity.toLowerCase();
-
-      // 1. Fixed / Special Rules
-      if (lower.contains('morning sun') || lower.contains('wake')) {
-        timeString = _formatTimeOfDay(wakeTime);
-      } else if (lower.contains('caffeine') &&
-          (lower.contains('cut') || lower.contains('delay'))) {
-        // Delay Caffeine = Wake + 90 mins
-        if (lower.contains('delay')) {
-          timeString = _minToTime(wakeMin + 90);
-        }
-        // Caffeine Cutoff = 10 hours before bed
-        else {
-          timeString = _minToTime(bedMin - 10 * 60);
-        }
-      } else if (lower.contains('sleep') || lower.contains('bed time')) {
-        timeString = _formatTimeOfDay(bedTime);
-      } else if (lower.contains('wind down')) {
-        timeString = _minToTime(bedMin - 60);
-      }
-      // 2. Period Based Distribution
-      else {
-        final period = RoutineConfig.getTimePeriod(activity);
-        if (period == 'Morning') {
-          timeString = _minToTime(wakeMin + 15 + morningOffset);
-          morningOffset += 30; // Spaced 30 mins
-        } else if (period == 'Afternoon') {
-          timeString = _minToTime(afternoonStart + afternoonOffset);
-          afternoonOffset += 60; // Spaced 60 mins
-        } else {
-          // Evening - work backwards from bed? or forwards from 6pm?
-          // Let's go forwards from 6pm
-          timeString = _minToTime(eveningStart + (afternoonOffset > 0 ? 0 : 0));
-          // Actually just stack them at 8pm?
-          timeString = _minToTime(eveningStart + 60); // 7 PM default
-        }
-      }
-
-      schedule[activity] = timeString;
+      schedule[activity] = RoutineConfig.getOptimalTimeSlot(
+        activity,
+        wakeHour   : wakeTime.hour,
+        wakeMinute : wakeTime.minute,
+        bedHour    : bedTime.hour,
+        bedMinute  : bedTime.minute,
+      );
     }
-
     return schedule;
   }
 
-  String _minToTime(int totalMinutes) {
-    // Normalize to 24h
-    totalMinutes = totalMinutes % (24 * 60);
-    final h = totalMinutes ~/ 60;
-    final m = totalMinutes % 60;
-    final period = h >= 12 ? 'PM' : 'AM';
-    final h12 = h > 12 ? h - 12 : (h == 0 ? 12 : h);
-    return "$h12:${m.toString().padLeft(2, '0')} $period";
-  }
 
   String _formatTimeOfDay(TimeOfDay t) {
     final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;

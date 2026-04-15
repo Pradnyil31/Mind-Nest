@@ -145,6 +145,259 @@ class RoutineConfig {
     return 'Morning';
   }
 
+  // ── Optimal Time Slots ──────────────────────────────────────────────────
+  //
+  // Each entry is: { activity → minutes offset from period anchor }
+  //   Morning  anchor = wakeTime
+  //   Afternoon anchor = 12:00 PM  (or wake + 5 h, whichever is later)
+  //   Evening  anchor = bedTime - 120 min  (the 2-hour wind-down window)
+  //
+  // Science-backed defaults (overridable per-activity):
+  //   • Sunlight & hydration → immediately after wake (+0-15 min)
+  //   • Light movement/yoga → +30 min after wake
+  //   • Meditation/affirmation → +45 min after wake (cortisol has peaked)
+  //   • Deep work → +90-120 min after wake (peak alertness)
+  //   • Caffeine delay → +90 min after wake (cortisol drop)
+  //   • Lunch → +60 min into afternoon window
+  //   • Exercise/walk → +90 min into afternoon (energy trough rebound)
+  //   • Power nap → +120 min into afternoon
+  //   • Deep Work (PM) → +30 min into afternoon
+  //   • Evening wind-down → anchor (bed - 120 min)
+  //   • Journaling/reflection → anchor + 30 min
+  //   • Sleep prep → anchor + 60 min
+  //   • Meditation before sleep → anchor + 75 min
+  //
+  static const Map<String, int> _morningOffsets = {
+    // Hydration & light — do first
+    'Drink 500ml Water'         : 0,
+    'Drink water'               : 0,
+    'Open curtains'             : 0,
+    'Morning Sunlight'          : 5,
+    'Morning sunlight exposure' : 5,
+
+    // Make bed / tidy up
+    'Make Bed'                  : 15,
+    'Clear my workspace'        : 20,
+
+    // Movement
+    'Stretch'                   : 25,
+    '5-min micro-exercise'      : 25,
+    'Gentle movement'           : 30,
+    'Yoga'                      : 30,
+    'Physical activity'         : 35,
+    'Exercise'                  : 35,
+    'Movement reminder'         : 40,
+
+    // Breakfast
+    'Healthy Breakfast'         : 40,
+    'Healthy eating'            : 40,
+
+    // Mindfulness / planning — cortisol subsides ~45-60 min after wake
+    'Morning mindfulness'       : 50,
+    'Meditation'                : 55,
+    'Morning check-in'          : 50,
+    'Body appreciation meditation': 55,
+    'Present moment meditation' : 55,
+    'Morning intention setting' : 60,
+    'Positive affirmations'     : 60,
+    'Visualizing the day'       : 65,
+    'Start the day slowly'      : 65,
+    'Smile more'                : 10,
+    'Morning routine'           : 15,
+
+    // Planning
+    'Task prioritization'       : 70,
+    'Review goals'              : 70,
+    'Stick to the plan'         : 70,
+    'Small steps today'         : 75,
+    'Wake routine checklist'    : 5,
+    'Screen-free morning hour'  : 0,
+    'Daily anchor habit'        : 30,
+
+    // Caffeine — delay 90 min to avoid cortisol clash
+    'Delay Caffeine'            : 90,
+  };
+
+  static const Map<String, int> _afternoonOffsets = {
+    // Lunch first
+    'Healthy Lunch'             : 60,  // Noon + 1 h = 1 PM
+    'Mindful eating moment'     : 60,
+    'Eat a healthy snack'       : 150, // ~3 PM
+
+    // Focus & deep work — early afternoon peak (post-lunch glucose)
+    'Deep Work'                 : 30,  // ~12:30 PM
+    'Deep work block'           : 30,
+    'Single-task focus session' : 30,
+    'Focus sessions (Pomodoro)' : 45,
+    'Phone-free focus block'    : 45,
+    'Single-tasking today'      : 45,
+    'Single-task commitment'    : 45,
+    'Energy management'         : 15,
+    'Energy mapping'            : 15,
+
+    // Breaks / movement
+    'Movement break'            : 90,  // ~1:30 PM
+    'Physical movement'         : 90,
+    'Deep breathing breaks'     : 90,
+    'Midday breathing break'    : 90,
+    'Walk'                      : 120, // ~2 PM
+    'Walk in nature'            : 120,
+    'Nature time'               : 120,
+
+    // Power nap — post-lunch trough 1-3 PM
+    'Power Nap'                 : 90,  // ~1:30 PM
+
+    // Mental state checks
+    'Mindfulness'               : 60,
+    'Check-in'                  : 60,
+    'Stress check-in'           : 60,
+    'Anxiety check-in'          : 60,
+    'Consistency check-in'      : 60,
+    'Values check-in'           : 60,
+    'Mindful breathing'         : 90,
+    'Mindful breaks'            : 90,
+    'Grounding exercises'       : 90,
+    'Pre-social grounding exercise': 90,
+    'Emergency calm toolkit'    : 60,
+    '4-7-8 breathing'           : 90,
+    'Self-compassion practice'  : 90,
+    'Self-care moment'          : 120,
+
+    // Social & digital
+    'Connect with a friend'     : 150, // ~3 PM
+    'Social connection'         : 150,
+    'Speak up today'            : 60,
+    'Digital detox periods'     : 180, // ~4 PM quiet time
+
+    // Caffeine cutoff
+    'Cut Caffeine'              : 120, // 2 PM
+    'Caffeine cutoff (2pm)'     : 120,
+  };
+
+  static const Map<String, int> _eveningOffsets = {
+    // Offset from (bedTime - 120 min)  →  0 = 2 h before bed
+
+    // Light & screen controls — start of wind-down
+    'Dim Lights'                        : 0,
+    'No Screens'                        : 0,
+    'Evening digital sunset'            : 0,
+    'Digital detox'                     : 0,
+    'Digital detox time'                : 0,
+    'Digital detox hour'                : 0,
+    'Limit screens 1hr before bed'      : 60,  // 1 h before bed
+
+    // Relaxation — early wind-down
+    'Herbal Tea'                        : 10,
+    'Herbal tea ritual'                 : 10,
+    'Relax'                             : 20,
+    'Listen to music'                   : 20,
+    'White noise session'               : 100, // right before sleep
+    'Read Fiction'                      : 30,
+    'Read a calming book'               : 30,
+    'Relaxing breathing'                : 45,
+    'Creative activity'                 : 30,
+
+    // Reflection & journaling
+    'Gratitude journaling'              : 30,
+    'Journaling'                        : 30,
+    'Evening reflection'                : 35,
+    'Reflection journaling'             : 35,
+    'Worry journaling'                  : 35,
+    'Brain dump journaling'             : 35,
+    'Achievement journaling'            : 40,
+    'What I can control journaling'     : 40,
+    'Find one joy'                      : 40,
+    'Celebrate small wins'              : 40,
+    'Write it down'                     : 35,
+    'Let go of what-ifs'                : 40,
+    'Daily habit tracking'              : 30,
+    'Consistency check-in'             : 30,
+    'Progress review'                   : 30,
+    'Celebration moments'               : 40,
+
+    // Planning next day
+    'Plan tomorrow'                     : 50,
+    'Prepare for tomorrow'              : 50,
+    'Evening review'                    : 50,
+
+    // Sleep preparation
+    'Evening wind-down ritual'          : 60,
+    'Evening routine'                   : 60,
+    'Sleep preparation'                 : 75,
+    'Consistent sleep schedule'         : 0,
+    'Consistent bedtime reminder'       : 0,
+    'Early Bedtime'                     : 0,
+    'Sleep by 10 PM'                    : 0,
+    'No screens after 9 PM'             : 60,
+    'Bedroom environment check'         : 60,
+
+    // Body relaxation
+    'Progressive muscle relaxation'     : 80,
+    'Body scan'                         : 90,
+    'Scan body'                         : 90,
+    'Body scan meditation'              : 90,
+
+    // Sleep meditation — very close to bed
+    'Sleep meditation'                  : 100,
+    'Empathy meditation'                : 85,
+    'Safe space meditation'             : 85,
+    'Clarity meditation'                : 85,
+    'Focus on the present'              : 85,
+    'Concentration meditation'          : 85,
+  };
+
+  /// Returns the best clock-time string (e.g. "7:30 AM") for an activity.
+  ///
+  /// [wakeHour] / [wakeMinute] — user's wake-up time (24h)
+  /// [bedHour]  / [bedMinute]  — user's bed time (24h)
+  /// [periodOverride] — if provided, forces the given period ('Morning',
+  ///   'Afternoon', or 'Evening') instead of looking it up from RoutineConfig.
+  ///   Use this when the user has moved an activity to a different period.
+  ///
+  /// Falls back to sensible period defaults if the activity is not in the map.
+  static String getOptimalTimeSlot(
+    String activity, {
+    int wakeHour = 7,
+    int wakeMinute = 0,
+    int bedHour = 22,
+    int bedMinute = 0,
+    String? periodOverride,
+  }) {
+    final wakeMin = wakeHour * 60 + wakeMinute;
+    final bedTotalMin = bedHour * 60 + bedMinute;
+    // Afternoon anchor: 12:00 PM or wake+5h, whichever is later
+    final afternoonAnchor = (12 * 60) < (wakeMin + 5 * 60)
+        ? wakeMin + 5 * 60
+        : 12 * 60;
+    // Evening anchor: bed - 120 min
+    final eveningAnchor = bedTotalMin - 120;
+
+    // Use the caller-supplied period override if given; otherwise look it up.
+    final period = periodOverride ?? getTimePeriod(activity);
+
+    int totalMinutes;
+    if (period == 'Morning') {
+      final offset = _morningOffsets[activity] ?? 30;
+      totalMinutes = wakeMin + offset;
+    } else if (period == 'Afternoon') {
+      final offset = _afternoonOffsets[activity] ?? 60;
+      totalMinutes = afternoonAnchor + offset;
+    } else {
+      // Evening
+      final offset = _eveningOffsets[activity] ?? 30;
+      totalMinutes = eveningAnchor + offset;
+    }
+
+    // Clamp to 24 h
+    totalMinutes = totalMinutes % (24 * 60);
+
+    final h = totalMinutes ~/ 60;
+    final m = totalMinutes % 60;
+    final period12 = h >= 12 ? 'PM' : 'AM';
+    final h12 = h > 12 ? h - 12 : (h == 0 ? 12 : h);
+    return '$h12:${m.toString().padLeft(2, '0')} $period12';
+  }
+
   /// Task descriptions: what each activity means and how to do it.
   static const Map<String, Map<String, String>> taskDescriptions = {
     // Morning

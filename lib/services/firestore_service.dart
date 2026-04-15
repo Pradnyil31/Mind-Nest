@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../config/motive_config.dart';
 import '../config/routine_config.dart';
 import '../models/user_model.dart';
 import 'badge_service.dart';
@@ -147,11 +148,23 @@ class FirestoreService {
       'timestamp': FieldValue.serverTimestamp(),
     });
 
-    // Automatically add the selected motive to the daily routine
+    // Automatically add the selected daily-motive activity to the routine
     try {
       final doc = await _usersCollection.doc(uid).get();
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
+        final userPrimaryMotive = data['primaryMotive'] as String?;
+
+        // Read wake / bed times for personalised scheduling
+        int wakeH = 7, wakeM = 0, bedH = 22, bedM = 0;
+        if (data.containsKey('routine')) {
+          final r = data['routine'] as Map<String, dynamic>?;
+          if (r != null) {
+            _parseTimeStr(r['wakeUpTime']?.toString(), (h, m) { wakeH = h; wakeM = m; });
+            _parseTimeStr(r['bedTime']?.toString(),    (h, m) { bedH  = h; bedM  = m; });
+          }
+        }
+
         List<String> currentRoutine = [];
         if (data.containsKey('routineActivities')) {
           currentRoutine = List<String>.from(data['routineActivities']);
@@ -159,40 +172,53 @@ class FirestoreService {
           currentRoutine = ['Morning Sunlight', 'Delay Caffeine', 'Dim Lights'];
         }
 
+        // Build a period map from saved routineSchedule times so that custom
+        // activities (which RoutineConfig doesn't know) get their correct period
+        // counted during the rebalance check.
         Map<String, dynamic> routineSchedule = {};
         if (data.containsKey('routineSchedule')) {
           final rawRoutine = Map<String, dynamic>.from(data['routineSchedule']);
-          routineSchedule = rawRoutine.map((key, value) => MapEntry(key, value?.toString() ?? '08:00 AM'));
+          routineSchedule = rawRoutine.map((k, v) => MapEntry(k, v?.toString() ?? '8:00 AM'));
         }
+        final Map<String, String> userChosenPeriods = {};
+        routineSchedule.forEach((activity, timeStr) {
+          userChosenPeriods[activity] = _periodFromTimeStr(timeStr.toString(), wakeH, bedH);
+        });
+
+        // ── REBALANCE EXISTING ROUTINE ──────────────────────────────────────
+        currentRoutine = MotiveConfig.rebalanceForExistingUser(
+          currentActivities: currentRoutine,
+          motive: userPrimaryMotive,
+          userChosenPeriods: userChosenPeriods,
+        );
+        // ────────────────────────────────────────────────────────────────────
 
         Map<String, dynamic> tempSchedule = {};
         if (data.containsKey('temporarySchedule')) {
           final rawTemp = Map<String, dynamic>.from(data['temporarySchedule']);
-          tempSchedule = rawTemp.map((key, value) => MapEntry(key, value?.toString() ?? '08:00 AM'));
+          tempSchedule = rawTemp.map((k, v) => MapEntry(k, v?.toString() ?? '8:00 AM'));
         }
 
         bool changed = false;
 
-        // Ensure user's base routine is fully synced to schedule first (prevents accidental overwrites)
+        // Ensure every activity (inc. rebalanced ones) has an OPTIMAL time slot
         for (var activity in currentRoutine) {
           if (!routineSchedule.containsKey(activity)) {
-            final period = RoutineConfig.getTimePeriod(activity);
-            String timeSlot = '08:00 AM';
-            if (period == 'Afternoon') timeSlot = '02:00 PM';
-            if (period == 'Evening') timeSlot = '08:00 PM';
+            final timeSlot = RoutineConfig.getOptimalTimeSlot(
+              activity, wakeHour: wakeH, wakeMinute: wakeM, bedHour: bedH, bedMinute: bedM,
+            );
             routineSchedule[activity] = timeSlot;
             tempSchedule[activity] = timeSlot;
             changed = true;
           }
         }
 
-        // Now inject the new motive safely and assign it to a reliable, perfect time
+        // Inject the selected daily-motive activity at its OPTIMAL time
         if (!currentRoutine.contains(motive)) {
           currentRoutine.add(motive);
-          final period = RoutineConfig.getTimePeriod(motive);
-          String timeSlot = '08:00 AM';
-          if (period == 'Afternoon') timeSlot = '02:00 PM';
-          if (period == 'Evening') timeSlot = '08:00 PM';
+          final timeSlot = RoutineConfig.getOptimalTimeSlot(
+            motive, wakeHour: wakeH, wakeMinute: wakeM, bedHour: bedH, bedMinute: bedM,
+          );
           routineSchedule[motive] = timeSlot;
           tempSchedule[motive] = timeSlot;
           changed = true;
@@ -210,6 +236,40 @@ class FirestoreService {
       appLogger.e('Error syncing motive to routine', error: e, stackTrace: stackTrace);
     }
   }
+
+  /// Parses a time string like "7:30 AM" or "10:00 PM" into (hour24, minute).
+  /// Silent no-op on parse failure.
+  void _parseTimeStr(String? timeStr, void Function(int h, int m) onParsed) {
+    if (timeStr == null || timeStr.isEmpty) return;
+    try {
+      final parts = timeStr.trim().split(RegExp(r'[:\s]+'));
+      if (parts.length < 2) return;
+      int h = int.parse(parts[0]);
+      final m = int.parse(parts[1]);
+      final isPM = timeStr.toUpperCase().contains('PM');
+      if (isPM && h != 12) h += 12;
+      if (!isPM && h == 12) h = 0;
+      onParsed(h, m);
+    } catch (_) {}
+  }
+
+  /// Converts a saved clock-time string (e.g. "1:30 PM") back to a period label
+  /// ('Morning' / 'Afternoon' / 'Evening') using the user's wake & bed hours.
+  /// Used to infer the period for custom activities whose names RoutineConfig
+  /// doesn't recognise.
+  String _periodFromTimeStr(String timeStr, int wakeHour, int bedHour) {
+    int hour24 = -1;
+    _parseTimeStr(timeStr, (h, m) => hour24 = h);
+    if (hour24 < 0) return 'Morning';
+    // Afternoon anchor: noon or wake+5h, whichever is later
+    final afternoonStart = (wakeHour + 5) > 12 ? wakeHour + 5 : 12;
+    // Evening anchor: bed - 2h
+    final eveningStart = bedHour - 2;
+    if (hour24 >= eveningStart) return 'Evening';
+    if (hour24 >= afternoonStart) return 'Afternoon';
+    return 'Morning';
+  }
+
 
   // Get Daily Motive
   Future<String?> getDailyMotive(String uid) async {

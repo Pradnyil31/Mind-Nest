@@ -82,68 +82,51 @@ class CheckInService {
           if (data.containsKey('routineActivities')) {
             currentRoutine = List<String>.from(data['routineActivities']);
           } else {
-            currentRoutine = [
-              'Morning Sunlight',
-              'Delay Caffeine',
-              'Dim Lights',
-            ];
+            currentRoutine = ['Morning Sunlight', 'Delay Caffeine', 'Dim Lights'];
+          }
+
+          // Extract user's wake/bed times for optimal scheduling
+          int wakeH = 7, wakeM = 0, bedH = 22, bedM = 0;
+          if (data.containsKey('routine')) {
+            final r = data['routine'] as Map<String, dynamic>?;
+            if (r != null) {
+              _parseTimeStr(r['wakeUpTime']?.toString(), (h, m) { wakeH = h; wakeM = m; });
+              _parseTimeStr(r['bedTime']?.toString(),   (h, m) { bedH  = h; bedM  = m; });
+            }
           }
 
           bool changed = false;
           Map<String, dynamic> tempSchedule = {};
           if (data.containsKey('temporarySchedule')) {
-            // Ensure all values are converted to Strings (handles Timestamp types from Firestore)
-            final rawTemp = Map<String, dynamic>.from(
-              data['temporarySchedule'],
-            );
-            tempSchedule = rawTemp.map(
-              (key, value) => MapEntry(key, value?.toString() ?? '08:00 AM'),
-            );
+            final rawTemp = Map<String, dynamic>.from(data['temporarySchedule']);
+            tempSchedule = rawTemp.map((k, v) => MapEntry(k, v?.toString() ?? '8:00 AM'));
           }
           Map<String, dynamic> routineSchedule = {};
           if (data.containsKey('routineSchedule')) {
-            // Ensure all values are converted to Strings (handles Timestamp types from Firestore)
-            final rawRoutine = Map<String, dynamic>.from(
-              data['routineSchedule'],
-            );
-            routineSchedule = rawRoutine.map(
-              (key, value) => MapEntry(key, value?.toString() ?? '08:00 AM'),
-            );
+            final rawRoutine = Map<String, dynamic>.from(data['routineSchedule']);
+            routineSchedule = rawRoutine.map((k, v) => MapEntry(k, v?.toString() ?? '8:00 AM'));
           }
 
-          // FIX: Sync current activities to schedule before appending adaptations.
-          // If the user's schedule is empty (e.g. they never opened Manage Routine), 
-          // we must populate it. Otherwise, saving only the new adaptation will cause 
-          // the Home Screen to read the updated schedule and drop all original activities!
+          // Sync existing activities to schedule with OPTIMAL times
           for (var activity in currentRoutine) {
             if (!routineSchedule.containsKey(activity)) {
-              final period = RoutineConfig.getTimePeriod(activity);
-              String timeSlot = '08:00 AM';
-              if (period == 'Afternoon') {
-                timeSlot = '02:00 PM';
-              } else if (period == 'Evening') {
-                timeSlot = '08:00 PM';
-              }
+              final timeSlot = RoutineConfig.getOptimalTimeSlot(
+                activity, wakeHour: wakeH, wakeMinute: wakeM, bedHour: bedH, bedMinute: bedM,
+              );
               routineSchedule[activity] = timeSlot;
               tempSchedule[activity] = timeSlot;
               changed = true;
             }
           }
 
+          // Inject AI-suggested adaptations at their OPTIMAL time
           for (var activity in adaptations) {
             if (!currentRoutine.contains(activity)) {
               currentRoutine.add(activity);
               addedActivities.add(activity);
-
-              // Assign a default broad time slot so HomeRoutineSection knows where to place it
-              final period = RoutineConfig.getTimePeriod(activity);
-              String timeSlot = '08:00 AM';
-              if (period == 'Afternoon') {
-                timeSlot = '02:00 PM';
-              } else if (period == 'Evening') {
-                timeSlot = '08:00 PM';
-              }
-
+              final timeSlot = RoutineConfig.getOptimalTimeSlot(
+                activity, wakeHour: wakeH, wakeMinute: wakeM, bedHour: bedH, bedMinute: bedM,
+              );
               tempSchedule[activity] = timeSlot;
               routineSchedule[activity] = timeSlot;
               changed = true;
@@ -198,5 +181,21 @@ class CheckInService {
       return query.docs.first.data() as Map<String, dynamic>;
     }
     return null;
+  }
+
+  /// Parses a time string like "7:30 AM" or "10:00 PM" and calls [onParsed]
+  /// with the resulting (hour24, minute) pair. Silent no-op on parse failure.
+  void _parseTimeStr(String? timeStr, void Function(int h, int m) onParsed) {
+    if (timeStr == null || timeStr.isEmpty) return;
+    try {
+      final parts = timeStr.trim().split(RegExp(r'[:\s]+'));
+      if (parts.length < 2) return;
+      int h = int.parse(parts[0]);
+      final m = int.parse(parts[1]);
+      final isPM = timeStr.toUpperCase().contains('PM');
+      if (isPM && h != 12) h += 12;
+      if (!isPM && h == 12) h = 0;
+      onParsed(h, m);
+    } catch (_) {}
   }
 }

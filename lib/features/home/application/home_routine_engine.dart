@@ -72,65 +72,17 @@ class HomeRoutineEngine {
     TimeOfDay bedTime,
   ) {
     final schedule = <String, String>{};
-
-    int wakeMin = wakeTime.hour * 60 + wakeTime.minute;
-    int bedMin = bedTime.hour * 60 + bedTime.minute;
-    if (bedMin < wakeMin) bedMin += 24 * 60;
-
-    int morningOffset = 0;
-    int afternoonOffset = 0;
-    int eveningOffset = 0;
-    int afternoonStart = 12 * 60;
-    int eveningStart = 17 * 60;
-    if (wakeMin > afternoonStart) afternoonStart = wakeMin + 60;
-    if (wakeMin > eveningStart) eveningStart = wakeMin + 180;
-
-    // Calculate available time and spacing for even distribution
-    int totalAvailableMinutes = bedMin - wakeMin;
-    int activityCount = activities.length;
-    int baseSpacing = activityCount > 0
-        ? totalAvailableMinutes ~/ activityCount
-        : 60;
-    if (baseSpacing < 30) baseSpacing = 30; // Minimum 30 min spacing
-    if (baseSpacing > 120) baseSpacing = 120; // Maximum 2 hour spacing
-
     for (final activity in activities) {
-      final lower = activity.toLowerCase();
-      String timeString;
-
-      if (lower.contains('sunlight')) {
-        timeString = minToTime(wakeMin + 15);
-      } else if (lower.contains('caffeine') && lower.contains('delay')) {
-        timeString = minToTime(wakeMin + 90);
-      } else if (lower.contains('caffeine') &&
-          (lower.contains('cut') || lower.contains('off'))) {
-        if (bedMin - wakeMin >= 12 * 60) {
-          timeString = minToTime(wakeMin + 90);
-        } else {
-          timeString = minToTime(bedMin - 10 * 60);
-        }
-      } else if (lower.contains('sleep') || lower.contains('bed time')) {
-        timeString = _formatTimeOfDay(bedTime);
-      } else if (lower.contains('wind down')) {
-        timeString = minToTime(bedMin - 60);
-      } else {
-        final period = RoutineConfig.getTimePeriod(activity);
-        if (period == 'Morning') {
-          timeString = minToTime(wakeMin + 15 + morningOffset);
-          morningOffset += baseSpacing;
-        } else if (period == 'Afternoon') {
-          timeString = minToTime(afternoonStart + afternoonOffset);
-          afternoonOffset += baseSpacing;
-        } else {
-          // Evening - distribute with proper spacing
-          timeString = minToTime(eveningStart + eveningOffset);
-          eveningOffset += baseSpacing;
-        }
-      }
-
-      schedule[activity] = timeString;
+      // Period is derived from RoutineConfig so the daily-generated list
+      // always respects the canonical period for each activity.
+      schedule[activity] = RoutineConfig.getOptimalTimeSlot(
+        activity,
+        wakeHour   : wakeTime.hour,
+        wakeMinute : wakeTime.minute,
+        bedHour    : bedTime.hour,
+        bedMinute  : bedTime.minute,
+      );
     }
-
     return schedule;
   }
 
