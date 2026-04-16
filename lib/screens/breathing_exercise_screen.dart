@@ -33,7 +33,7 @@ class _BreathingExerciseScreenState extends ConsumerState<BreathingExerciseScree
   int _totalElapsedSeconds = 0;
   bool _isSettingUp = true;
 
-  bool _sessionLogged = false;
+
 
   // Voice
   late final VoiceService _voice;
@@ -99,7 +99,6 @@ class _BreathingExerciseScreenState extends ConsumerState<BreathingExerciseScree
                            (_currentStepIndex == 2 && widget.technique.pattern[3] == 0);
 
     if (isRoundComplete && _totalElapsedSeconds >= (_targetDurationMinutes ?? 0) * 60 && _targetDurationMinutes != null) {
-      _sessionLogged = true;
       _timer?.cancel();
       setState(() => _isActive = false);
       _logCompletionAndShowDialog();
@@ -159,7 +158,6 @@ class _BreathingExerciseScreenState extends ConsumerState<BreathingExerciseScree
               Navigator.pop(ctx);
               // Reset to setup
               setState(() {
-                _sessionLogged = false;
                 _isSettingUp = true;
                 _totalElapsedSeconds = 0;
               });

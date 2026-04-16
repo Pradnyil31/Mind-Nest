@@ -7,7 +7,6 @@ import '../core/logger.dart';
 
 class ProgressInsightsService {
   final RoutineTrackingService _routineService;
-  final FirestoreService _firestoreService;
   final FirebaseFirestore _firestore;
 
   ProgressInsightsService({
@@ -15,8 +14,7 @@ class ProgressInsightsService {
     FirestoreService? firestoreService,
     FirebaseFirestore? firestore,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _routineService = routineService ?? RoutineTrackingService(firestore: firestore ?? FirebaseFirestore.instance),
-        _firestoreService = firestoreService ?? FirestoreService(firestore: firestore ?? FirebaseFirestore.instance);
+        _routineService = routineService ?? RoutineTrackingService(firestore: firestore ?? FirebaseFirestore.instance);
 
   /// Get trend direction based on recent activity
   Future<String> getTrendDirection(String userId) async {
@@ -30,7 +28,7 @@ class ProgressInsightsService {
       // Calculate average activities per day
       final totalActivities = weekCompletions.fold<int>(
         0,
-        (sum, completion) => sum + completion.completedActivities.length,
+        (acc, completion) => acc + completion.completedActivities.length,
       );
       
       final avgPerDay = totalActivities / 7;
@@ -58,7 +56,7 @@ class ProgressInsightsService {
       final weekCompletions = await _routineService.getWeekCompletions(userId);
       final totalActivities = weekCompletions.fold<int>(
         0,
-        (sum, completion) => sum + completion.completedActivities.length,
+        (acc, completion) => acc + completion.completedActivities.length,
       );
       
       if (totalActivities > 0) {
@@ -353,37 +351,5 @@ class ProgressInsightsService {
     }
   }
 
-  Future<int> _getCompletionsForDate(String userId, DateTime date) async {
-    final startOfDay = DateTime(date.year, date.month, date.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-    
-    final snapshot = await _firestore
-        .collection('routine_completions')
-        .where('userId', isEqualTo: userId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('date', isLessThan: Timestamp.fromDate(endOfDay))
-        .get();
-    
-    // Count total completed activities across all documents for this day
-    int totalCompletions = 0;
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
-      final activities = List<String>.from(data['completedActivities'] ?? []);
-      totalCompletions += activities.length;
-    }
-    
-    return totalCompletions;
-  }
-
-  Future<int> _getTotalActivitiesForDate(String userId, DateTime date) async {
-    final userDoc = await _firestore.collection('users').doc(userId).get();
-    
-    if (userDoc.exists) {
-      final data = userDoc.data() as Map<String, dynamic>;
-      final routineActivities = List<String>.from(data['routineActivities'] ?? []);
-      return routineActivities.isNotEmpty ? routineActivities.length : 5;
-    }
-    
-    return 5;
-  }
 }
+

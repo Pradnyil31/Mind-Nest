@@ -220,9 +220,6 @@ void main() {
         final mediumTechniques = techniques
             .where((t) => t.durationMinutes > 2 && t.durationMinutes <= 5)
             .toList();
-        final longerTechniques = techniques
-            .where((t) => t.durationMinutes > 5)
-            .toList();
 
         // Assert
         expect(

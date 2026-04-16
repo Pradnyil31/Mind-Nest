@@ -1,5 +1,4 @@
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Shared voice assistant service for all guided exercises.
 class VoiceService {
@@ -14,7 +13,6 @@ class VoiceService {
   // ── init ───────────────────────────────────────────────────────────────────
   Future<void> init() async {
     if (_initialized) return;
-    final prefs = await SharedPreferences.getInstance();
     await _tts.setVolume(1.0);
     await _tts.setSpeechRate(0.45);
     await _tts.setPitch(1.0);

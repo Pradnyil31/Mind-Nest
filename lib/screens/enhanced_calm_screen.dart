@@ -5,7 +5,6 @@ import '../config/motive_config.dart';
 import '../models/calm_technique.dart';
 import '../providers/app_providers.dart';
 import '../widgets/calm/interactive_soundscape_widget.dart';
-import '../widgets/calm/mini_audio_player.dart';
 import '../widgets/calm/quick_access_panel.dart';
 import '../widgets/calm/navigation_integration_widget.dart';
 import '../features/calm/application/motive_detection_service.dart';

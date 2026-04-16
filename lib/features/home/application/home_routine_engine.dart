@@ -95,12 +95,7 @@ class HomeRoutineEngine {
     return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
   }
 
-  static String _formatTimeOfDay(TimeOfDay t) {
-    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-    final m = t.minute.toString().padLeft(2, '0');
-    final period = t.period == DayPeriod.am ? 'AM' : 'PM';
-    return '$h:$m $period';
-  }
+
 
   static List<String> generateDailyFromBase(
     List<String> baseRoutine,

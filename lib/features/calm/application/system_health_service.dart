@@ -306,7 +306,7 @@ class SystemHealthService {
       final issues = <String>[];
       HealthStatus status = HealthStatus.healthy;
 
-      if (result == ConnectivityResult.none) {
+      if (result.contains(ConnectivityResult.none)) {
         status = HealthStatus.warning;
         issues.add('No network connectivity');
       }
@@ -316,7 +316,7 @@ class SystemHealthService {
         issues: issues,
         metrics: {
           'connectivity': result.toString(),
-          'isOnline': result != ConnectivityResult.none,
+          'isOnline': !result.contains(ConnectivityResult.none),
         },
       );
     } catch (e) {

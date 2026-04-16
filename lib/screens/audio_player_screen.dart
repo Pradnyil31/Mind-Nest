@@ -19,65 +19,303 @@ class AudioPlayerScreen extends ConsumerStatefulWidget {
   ConsumerState<AudioPlayerScreen> createState() => _AudioPlayerScreenState();
 }
 
-class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
+class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
+    with SingleTickerProviderStateMixin {
   late String _selectedSoundId;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
     _selectedSoundId = widget.sound.id;
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handlePlayPause(
+    EnhancedAudioController controller,
+    bool isPlaying,
+    AmbientSound sound,
+  ) async {
+    if (isPlaying) {
+      await controller.pauseCurrentSound();
+    } else {
+      await controller.playSound(sound, openPlayer: false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final soundState = ref.watch(enhancedAudioControllerProvider);
-    final soundController = ref.read(enhancedAudioControllerProvider.notifier);
+    final soundController =
+        ref.read(enhancedAudioControllerProvider.notifier);
 
     final selectedSound = AmbientSound.defaults.firstWhere(
-      (sound) => sound.id == _selectedSoundId,
+      (s) => s.id == _selectedSoundId,
       orElse: () => widget.sound,
     );
+
     final isPlaying = soundState.activeSounds.contains(_selectedSoundId);
 
+    // Drive the pulse animation
+    if (isPlaying) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+    } else {
+      if (_pulseController.isAnimating) {
+        _pulseController.stop();
+        _pulseController.value = 0;
+      }
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Sound Player',
-          style: GoogleFonts.lato(
-            color: const Color(0xFF1F2937),
-            fontWeight: FontWeight.w700,
+      backgroundColor: const Color(0xFF0F172A),
+      body: Column(
+        children: [
+          // ── Hero (intrinsic height, no overflow) ──────────────────
+          _buildHero(
+              selectedSound, isPlaying, soundController, soundState),
+          // ── Body fills the rest exactly ───────────────────────────
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildVolumeCard(soundState, soundController),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Available Sounds',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F172A),
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  ),
+                  // ListView fills remaining height — no gap at bottom
+                  Expanded(
+                    child: _buildSoundList(
+                      soundState: soundState,
+                      soundController: soundController,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // ── Hero ──────────────────────────────────────────────────────────────
+  // Uses IntrinsicHeight so it can't overflow regardless of status bar
+  Widget _buildHero(
+    AmbientSound sound,
+    bool isPlaying,
+    EnhancedAudioController controller,
+    EnhancedAudioState soundState,
+  ) {
+    // Determine button state - only Play or Pause, no Resume label
+    final String buttonLabel = isPlaying ? 'Pause' : 'Play';
+    final IconData buttonIcon =
+        isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            widget.primaryColor.withValues(alpha: 0.85),
+            const Color(0xFF0F172A),
+          ],
         ),
       ),
-      body: SafeArea(
+      child: SafeArea(
+        bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.only(bottom: 44),
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              _buildCurrentSoundCard(selectedSound, isPlaying),
-              const SizedBox(height: 16),
-              _buildPlaybackSection(soundController, isPlaying, selectedSound),
-              const SizedBox(height: 16),
-              _buildVolumeSection(soundState, soundController),
-              const SizedBox(height: 20),
-              Text(
-                'Available Sounds',
-                style: GoogleFonts.lato(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF111827),
+              // Decorative circles (purely visual, clipped by parent)
+              Positioned(
+                top: -20,
+                right: -30,
+                child: Opacity(
+                  opacity: 0.08,
+                  child: Container(
+                    width: 180,
+                    height: 180,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.primaryColor,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: _buildSoundList(
-                  soundState: soundState,
-                  soundController: soundController,
+              Positioned(
+                bottom: -10,
+                left: -40,
+                child: Opacity(
+                  opacity: 0.06,
+                  child: Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.primaryColor,
+                    ),
+                  ),
                 ),
+              ),
+              // Content column
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Back button row
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 8, 16, 0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios_new,
+                              color: Colors.white70, size: 20),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Sound Player',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 17,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 48),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Pulsing emoji
+                  AnimatedBuilder(
+                    animation: _pulseAnimation,
+                    builder: (context, child) => Transform.scale(
+                      scale: isPlaying ? _pulseAnimation.value : 1.0,
+                      child: child,
+                    ),
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          width: 1.5,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(sound.emoji,
+                          style: const TextStyle(fontSize: 36)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    sound.name,
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    sound.description,
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Play / Pause pill button
+                  GestureDetector(
+                    onTap: () =>
+                        _handlePlayPause(controller, isPlaying, sound),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isPlaying
+                            ? Colors.white.withValues(alpha: 0.18)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(40),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.4),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            buttonIcon,
+                            color: isPlaying
+                                ? Colors.white
+                                : widget.primaryColor,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            buttonLabel,
+                            style: GoogleFonts.inter(
+                              color: isPlaying
+                                  ? Colors.white
+                                  : widget.primaryColor,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -86,135 +324,41 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
     );
   }
 
-  Widget _buildCurrentSoundCard(AmbientSound sound, bool isPlaying) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: widget.primaryColor.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        children: [
-          Text(sound.emoji, style: const TextStyle(fontSize: 40)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  sound.name,
-                  style: GoogleFonts.lato(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF111827),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  sound.description,
-                  style: GoogleFonts.lato(
-                    fontSize: 14,
-                    color: const Color(0xFF6B7280),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: isPlaying
-                  ? const Color(0xFFDCFCE7)
-                  : const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              isPlaying ? 'Playing' : 'Paused',
-              style: GoogleFonts.lato(
-                color: isPlaying
-                    ? const Color(0xFF166534)
-                    : const Color(0xFF4B5563),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlaybackSection(
-    EnhancedAudioController controller,
-    bool isPlaying,
-    AmbientSound selectedSound,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => controller.toggleSound(selectedSound, openPlayer: false),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: widget.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-              label: Text(
-                isPlaying ? 'Pause' : 'Play',
-                style: GoogleFonts.lato(fontWeight: FontWeight.w700),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          OutlinedButton(
-            onPressed: controller.stopAllSounds,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF374151),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              side: BorderSide(color: widget.primaryColor.withValues(alpha: 0.4)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text('Stop', style: GoogleFonts.lato(fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVolumeSection(
+  // ── Volume Card ───────────────────────────────────────────────────────
+  Widget _buildVolumeCard(
     EnhancedAudioState soundState,
     EnhancedAudioController controller,
   ) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(Icons.volume_down, color: widget.primaryColor),
+          Icon(Icons.volume_down_rounded,
+              color: widget.primaryColor, size: 20),
+          const SizedBox(width: 4),
           Expanded(
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 activeTrackColor: widget.primaryColor,
-                inactiveTrackColor: widget.primaryColor.withValues(alpha: 0.2),
+                inactiveTrackColor:
+                    widget.primaryColor.withValues(alpha: 0.15),
                 thumbColor: widget.primaryColor,
-                overlayColor: widget.primaryColor.withValues(alpha: 0.2),
+                overlayColor:
+                    widget.primaryColor.withValues(alpha: 0.12),
+                trackHeight: 3,
+                thumbShape:
+                    const RoundSliderThumbShape(enabledThumbRadius: 7),
               ),
               child: Slider(
                 value: soundState.masterVolume,
@@ -222,13 +366,19 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
               ),
             ),
           ),
-          Icon(Icons.volume_up, color: widget.primaryColor),
+          Icon(Icons.volume_up_rounded,
+              color: widget.primaryColor, size: 20),
           const SizedBox(width: 8),
-          Text(
-            '${(soundState.masterVolume * 100).round()}%',
-            style: GoogleFonts.lato(
-              color: const Color(0xFF4B5563),
-              fontWeight: FontWeight.w700,
+          SizedBox(
+            width: 38,
+            child: Text(
+              '${(soundState.masterVolume * 100).round()}%',
+              textAlign: TextAlign.end,
+              style: GoogleFonts.inter(
+                color: const Color(0xFF64748B),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -236,11 +386,13 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
     );
   }
 
+  // ── Sound List ────────────────────────────────────────────────────────
   Widget _buildSoundList({
     required EnhancedAudioState soundState,
     required EnhancedAudioController soundController,
   }) {
     return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       itemCount: AmbientSound.defaults.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
@@ -248,61 +400,93 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
         final isSelected = sound.id == _selectedSoundId;
         final isActive = soundState.activeSounds.contains(sound.id);
 
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () async {
-              setState(() {
-                _selectedSoundId = sound.id;
-              });
-
-              if (soundState.isPlaying && !isActive) {
-                await soundController.toggleSound(sound, openPlayer: false);
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
+        return GestureDetector(
+          onTap: () async {
+            setState(() {
+              _selectedSoundId = sound.id;
+            });
+            if (!isActive) {
+              await soundController.playSound(sound, openPlayer: false);
+            }
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? widget.primaryColor.withValues(alpha: 0.08)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
                 color: isSelected
-                    ? widget.primaryColor.withValues(alpha: 0.12)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected
-                      ? widget.primaryColor.withValues(alpha: 0.8)
-                      : const Color(0xFFE5E7EB),
-                ),
+                    ? widget.primaryColor.withValues(alpha: 0.6)
+                    : const Color(0xFFE2E8F0),
+                width: isSelected ? 1.5 : 1,
               ),
-              child: Row(
-                children: [
-                  Text(sound.emoji, style: const TextStyle(fontSize: 26)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          sound.name,
-                          style: GoogleFonts.lato(
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF111827),
-                          ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? widget.primaryColor.withValues(alpha: 0.12)
+                        : const Color(0xFFF1F5F9),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(sound.emoji,
+                      style: const TextStyle(fontSize: 22)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        sound.name,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: const Color(0xFF0F172A),
                         ),
-                        Text(
-                          sound.description,
-                          style: GoogleFonts.lato(
-                            color: const Color(0xFF6B7280),
-                            fontSize: 12,
-                          ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        sound.description,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF94A3B8),
+                          fontSize: 12,
                         ),
-                      ],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                if (isActive)
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: widget.primaryColor.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.graphic_eq_rounded,
+                      color: widget.primaryColor,
+                      size: 16,
                     ),
                   ),
-                  if (isActive)
-                    Icon(Icons.graphic_eq, color: widget.primaryColor),
-                ],
-              ),
+              ],
             ),
           ),
         );

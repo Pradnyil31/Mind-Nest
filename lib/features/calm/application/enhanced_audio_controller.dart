@@ -12,6 +12,7 @@ class EnhancedAudioState {
   final Map<String, double> individualVolumes;
   final int? timerMinutes;
   final bool isPlaying;
+  final bool isPaused;
   final AmbientSound? currentlyPlayingSound;
   final bool isPlayerScreenOpen;
 
@@ -21,6 +22,7 @@ class EnhancedAudioState {
     this.individualVolumes = const {},
     this.timerMinutes,
     this.isPlaying = false,
+    this.isPaused = false,
     this.currentlyPlayingSound,
     this.isPlayerScreenOpen = false,
   });
@@ -31,6 +33,7 @@ class EnhancedAudioState {
     Map<String, double>? individualVolumes,
     int? timerMinutes,
     bool? isPlaying,
+    bool? isPaused,
     AmbientSound? currentlyPlayingSound,
     bool clearCurrentlyPlayingSound = false,
     bool? isPlayerScreenOpen,
@@ -41,6 +44,7 @@ class EnhancedAudioState {
       individualVolumes: individualVolumes ?? this.individualVolumes,
       timerMinutes: timerMinutes ?? this.timerMinutes,
       isPlaying: isPlaying ?? this.isPlaying,
+      isPaused: isPaused ?? this.isPaused,
       currentlyPlayingSound: clearCurrentlyPlayingSound
           ? null
           : (currentlyPlayingSound ?? this.currentlyPlayingSound),
@@ -74,7 +78,7 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
     try {
       // ALWAYS stop other sounds first - only one sound at a time
       if (state.activeSounds.isNotEmpty) {
-        await stopAllSounds();
+        await _audioService.stopAllSounds();
       }
 
       // Start the new sound
@@ -85,6 +89,7 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
       state = state.copyWith(
         activeSounds: newActiveSounds,
         isPlaying: true,
+        isPaused: false,
         currentlyPlayingSound: sound,
       );
     } catch (e, stackTrace) {
@@ -102,18 +107,12 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
 
     try {
       if (state.activeSounds.contains(sound.id)) {
-        // If this sound is currently playing, stop it
-        await _audioService.stopSound(sound.id);
-
-        state = state.copyWith(
-          activeSounds: const <String>{},
-          isPlaying: false,
-          clearCurrentlyPlayingSound: true,
-        );
+        // If this sound is currently playing, pause it
+        await pauseCurrentSound();
       } else {
         // If this sound is not playing, stop all others and play this one
         if (state.activeSounds.isNotEmpty) {
-          await stopAllSounds();
+          await _audioService.stopAllSounds();
         }
 
         // Start the new sound
@@ -123,6 +122,7 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
         state = state.copyWith(
           activeSounds: newActiveSounds,
           isPlaying: true,
+          isPaused: false,
           currentlyPlayingSound: sound,
         );
       }
@@ -213,11 +213,46 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
     }
   }
 
-  // Stop all sounds
+  // Pause — stops audio but keeps currentlyPlayingSound so mini bar stays visible
+  Future<void> pauseCurrentSound() async {
+    if (state.currentlyPlayingSound == null || state.activeSounds.isEmpty) {
+      return;
+    }
+    state = state.copyWith(
+      activeSounds: const {},
+      isPlaying: false,
+      isPaused: true,
+    );
+    try {
+      await _audioService.stopAllSounds();
+    } catch (e, stackTrace) {
+      appLogger.e('Failed to pause sound', error: e, stackTrace: stackTrace);
+    }
+  }
+
+  // Resume the paused sound
+  Future<void> resumeCurrentSound() async {
+    if (state.currentlyPlayingSound == null) return;
+    final sound = state.currentlyPlayingSound!;
+    final volume = state.individualVolumes[sound.id] ?? 1.0;
+    state = state.copyWith(
+      activeSounds: <String>{sound.id},
+      isPlaying: true,
+      isPaused: false,
+    );
+    try {
+      await _audioService.playSound(sound.id, volume);
+    } catch (e, stackTrace) {
+      appLogger.e('Failed to resume sound', error: e, stackTrace: stackTrace);
+    }
+  }
+
+  // Stop completely — clears everything including the mini bar
   Future<void> stopAllSounds() async {
     state = state.copyWith(
       activeSounds: const {},
       isPlaying: false,
+      isPaused: false,
       clearCurrentlyPlayingSound: true,
     );
     try {

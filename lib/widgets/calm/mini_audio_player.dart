@@ -56,24 +56,26 @@ class _MiniAudioPlayerState extends ConsumerState<MiniAudioPlayer>
     final audioState = ref.watch(enhancedAudioControllerProvider);
     final audioController = ref.read(enhancedAudioControllerProvider.notifier);
 
-    // Show/hide mini player based on playback state
-    if (audioState.isPlaying && !audioState.isPlayerScreenOpen) {
-      if (!_slideController.isCompleted) {
-        _slideController.forward();
-      }
-      if (!_pulseController.isAnimating) {
-        _pulseController.repeat(reverse: true);
+    // Mini bar is visible whenever there's a sound loaded (playing OR paused)
+    final bool hasSound = audioState.currentlyPlayingSound != null;
+    final bool showBar = hasSound && !audioState.isPlayerScreenOpen;
+
+    if (showBar) {
+      if (!_slideController.isCompleted) _slideController.forward();
+      if (audioState.isPlaying) {
+        if (!_pulseController.isAnimating) _pulseController.repeat(reverse: true);
+      } else {
+        _pulseController.stop();
+        _pulseController.value = 0;
       }
     } else {
-      if (_slideController.isCompleted) {
-        _slideController.reverse();
-      }
+      if (_slideController.isCompleted) _slideController.reverse();
       _pulseController.stop();
     }
 
-    if (audioState.currentlyPlayingSound == null) {
-      return const SizedBox.shrink();
-    }
+    if (!hasSound) return const SizedBox.shrink();
+
+    final sound = audioState.currentlyPlayingSound!;
 
     return SlideTransition(
       position: _slideAnimation,
@@ -94,10 +96,7 @@ class _MiniAudioPlayerState extends ConsumerState<MiniAudioPlayer>
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: () => audioController.openAudioPlayer(
-              context,
-              audioState.currentlyPlayingSound!,
-            ),
+            onTap: () => audioController.openAudioPlayer(context, sound),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -107,7 +106,7 @@ class _MiniAudioPlayerState extends ConsumerState<MiniAudioPlayer>
                     animation: _pulseAnimation,
                     builder: (context, child) {
                       return Transform.scale(
-                        scale: _pulseAnimation.value,
+                        scale: audioState.isPlaying ? _pulseAnimation.value : 1.0,
                         child: Container(
                           width: 50,
                           height: 50,
@@ -117,7 +116,7 @@ class _MiniAudioPlayerState extends ConsumerState<MiniAudioPlayer>
                           ),
                           child: Center(
                             child: Text(
-                              audioState.currentlyPlayingSound!.emoji,
+                              sound.emoji,
                               style: const TextStyle(fontSize: 24),
                             ),
                           ),
@@ -134,7 +133,7 @@ class _MiniAudioPlayerState extends ConsumerState<MiniAudioPlayer>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          audioState.currentlyPlayingSound!.name,
+                          sound.name,
                           style: GoogleFonts.lato(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -147,13 +146,15 @@ class _MiniAudioPlayerState extends ConsumerState<MiniAudioPlayer>
                         Row(
                           children: [
                             Icon(
-                              Icons.volume_up,
+                              audioState.isPlaying
+                                  ? Icons.volume_up
+                                  : Icons.pause_circle_outline,
                               size: 14,
                               color: widget.primaryColor,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Now Playing',
+                              audioState.isPlaying ? 'Now Playing' : 'Paused',
                               style: GoogleFonts.lato(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,
@@ -165,12 +166,16 @@ class _MiniAudioPlayerState extends ConsumerState<MiniAudioPlayer>
                     ),
                   ),
 
-                  // Play/pause button
+                  // Play / Pause button — stops tap from bubbling to InkWell
                   GestureDetector(
-                    onTap: () => audioController.toggleSound(
-                      audioState.currentlyPlayingSound!,
-                      openPlayer: false,
-                    ),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      if (audioState.isPlaying) {
+                        audioController.pauseCurrentSound();
+                      } else {
+                        audioController.resumeCurrentSound();
+                      }
+                    },
                     child: Container(
                       width: 40,
                       height: 40,
@@ -188,8 +193,9 @@ class _MiniAudioPlayerState extends ConsumerState<MiniAudioPlayer>
 
                   const SizedBox(width: 8),
 
-                  // Close button
+                  // Close button — fully stops and hides bar
                   GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => audioController.stopAllSounds(),
                     child: Container(
                       width: 40,

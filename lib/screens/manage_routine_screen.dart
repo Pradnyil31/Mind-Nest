@@ -389,7 +389,6 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
     String targetPeriod =
         _activitySchedule[activity] ?? _suggestTimePeriod(activity);
 
-    final now = DateTime.now();
     bool isLocked = false;
 
     // Personalized Locking Logic
@@ -1269,7 +1268,6 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
         _activitySchedule[activity] ?? _suggestTimePeriod(activity);
 
     // Check lock state
-    final now = DateTime.now();
     bool isLocked = false;
     final nowTime = TimeOfDay.now();
     final double currentDouble = nowTime.hour + nowTime.minute / 60.0;
@@ -1514,30 +1512,5 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
     }
   }
 
-  // --- Dynamic Scheduling Helpers ---
-  Map<String, String> _calculateDynamicSchedule(
-    List<String> activities,
-    TimeOfDay wakeTime,
-    TimeOfDay bedTime,
-  ) {
-    final schedule = <String, String>{};
-    for (var activity in activities) {
-      schedule[activity] = RoutineConfig.getOptimalTimeSlot(
-        activity,
-        wakeHour   : wakeTime.hour,
-        wakeMinute : wakeTime.minute,
-        bedHour    : bedTime.hour,
-        bedMinute  : bedTime.minute,
-      );
-    }
-    return schedule;
-  }
-
-
-  String _formatTimeOfDay(TimeOfDay t) {
-    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-    final m = t.minute.toString().padLeft(2, '0');
-    final period = t.period == DayPeriod.am ? 'AM' : 'PM';
-    return "$h:$m $period";
-  }
 }
+

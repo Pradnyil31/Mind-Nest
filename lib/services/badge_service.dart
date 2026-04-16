@@ -21,7 +21,6 @@ class BadgeService {
   final FirebaseFirestore _firestore;
   late final FirestoreService _firestoreService;
   late final RoutineTrackingService _routineService;
-  late final MeditationAnalyticsService _meditationAnalytics;
 
   BadgeService({
     FirebaseFirestore? firestore,
@@ -31,7 +30,6 @@ class BadgeService {
   }) : _firestore = firestore ?? FirebaseFirestore.instance {
     _firestoreService = firestoreService ?? FirestoreService(firestore: _firestore);
     _routineService = routineService ?? RoutineTrackingService(firestore: _firestore);
-    _meditationAnalytics = meditationAnalytics ?? MeditationAnalyticsService(firestore: _firestore);
   }
 
   /// Gets the IDs of all badges the user has already earned

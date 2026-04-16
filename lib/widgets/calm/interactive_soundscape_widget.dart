@@ -172,11 +172,14 @@ class _InteractiveSoundscapeWidgetState
     EnhancedAudioController controller,
   ) {
     return GestureDetector(
-      onTap: () {
-        // Open full-screen player when sound is tapped
-        controller.openAudioPlayer(context, sound);
-        // Also toggle the sound playback
-        controller.toggleSound(sound, openPlayer: false);
+      onTap: () async {
+        // Play first so activeSounds is populated BEFORE the screen opens.
+        // This ensures the player screen shows "Pause" (not "Play") on its
+        // very first build, and one tap pauses correctly.
+        await controller.playSound(sound, openPlayer: false);
+        if (mounted) {
+          controller.openAudioPlayer(context, sound);
+        }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),

@@ -2,6 +2,7 @@
 /// This demonstrates how to use the comprehensive user statistics dashboard
 library;
 
+import 'package:flutter/foundation.dart';
 import 'calm_progress_service.dart';
 
 class CalmProgressUsageExample {
@@ -25,11 +26,11 @@ class CalmProgressUsageExample {
       final currentStreak = stats['currentStreak'] as int;
       final averageMoodImprovement = stats['averageMoodImprovement'] as double;
 
-      print('📊 Basic Statistics:');
-      print('  Total Sessions: $totalSessions');
-      print('  Total Minutes: $totalMinutes');
-      print('  Current Streak: $currentStreak days');
-      print(
+      debugPrint('📊 Basic Statistics:');
+      debugPrint('  Total Sessions: $totalSessions');
+      debugPrint('  Total Minutes: $totalMinutes');
+      debugPrint('  Current Streak: $currentStreak days');
+      debugPrint(
         '  Average Mood Improvement: ${averageMoodImprovement.toStringAsFixed(1)} points',
       );
 
@@ -41,42 +42,42 @@ class CalmProgressUsageExample {
       final recommendedTechniques =
           motiveInsights['recommendedTechniques'] as List<String>;
 
-      print('\n🌙 Motive-Specific Insights:');
-      print('  Welcome: $welcomeMessage');
-      print('  Motivation: $motivationalMessage');
-      print('  Recommended Techniques: ${recommendedTechniques.join(', ')}');
+      debugPrint('\n🌙 Motive-Specific Insights:');
+      debugPrint('  Welcome: $welcomeMessage');
+      debugPrint('  Motivation: $motivationalMessage');
+      debugPrint('  Recommended Techniques: ${recommendedTechniques.join(', ')}');
 
       // Access streak message with motive-appropriate messaging (Requirement 20.2)
       final streakMessage = stats['streakMessage'] as String;
-      print('  Streak Message: $streakMessage');
+      debugPrint('  Streak Message: $streakMessage');
 
       // Access usage patterns analysis
       final usagePatterns = stats['usagePatterns'] as Map<String, dynamic>;
       final preferredTimes = usagePatterns['preferredTimes'] as List<String>;
       final motiveAlignment = usagePatterns['motiveAlignment'] as double;
 
-      print('\n📈 Usage Patterns:');
-      print('  Preferred Times: ${preferredTimes.join(', ')}');
-      print('  Motive Alignment: ${motiveAlignment.toStringAsFixed(1)}%');
+      debugPrint('\n📈 Usage Patterns:');
+      debugPrint('  Preferred Times: ${preferredTimes.join(', ')}');
+      debugPrint('  Motive Alignment: ${motiveAlignment.toStringAsFixed(1)}%');
 
       // Access weekly statistics (Requirement 6.2)
       final weeklyStats = stats['weeklyStats'] as List<Map<String, dynamic>>;
-      print('\n📅 Weekly Statistics:');
+      debugPrint('\n📅 Weekly Statistics:');
       for (final week in weeklyStats.take(2)) {
         final weekLabel = week['weekLabel'] as String;
         final sessionCount = week['sessionCount'] as int;
         final totalMinutes = week['totalMinutes'] as int;
-        print('  $weekLabel: $sessionCount sessions, $totalMinutes minutes');
+        debugPrint('  $weekLabel: $sessionCount sessions, $totalMinutes minutes');
       }
 
       // Access monthly statistics (Requirement 6.2)
       final monthlyStats = stats['monthlyStats'] as List<Map<String, dynamic>>;
-      print('\n📆 Monthly Statistics:');
+      debugPrint('\n📆 Monthly Statistics:');
       for (final month in monthlyStats.take(2)) {
         final monthLabel = month['monthLabel'] as String;
         final sessionCount = month['sessionCount'] as int;
         final avgImprovement = month['averageMoodImprovement'] as double;
-        print(
+        debugPrint(
           '  $monthLabel: $sessionCount sessions, ${avgImprovement.toStringAsFixed(1)} avg improvement',
         );
       }
@@ -85,16 +86,16 @@ class CalmProgressUsageExample {
       final achievements =
           motiveInsights['achievements'] as List<Map<String, dynamic>>;
       if (achievements.isNotEmpty) {
-        print('\n🏆 Recent Achievements:');
+        debugPrint('\n🏆 Recent Achievements:');
         for (final achievement in achievements) {
           final title = achievement['title'] as String;
           final description = achievement['description'] as String;
           final icon = achievement['icon'] as String;
-          print('  $icon $title: $description');
+          debugPrint('  $icon $title: $description');
         }
       }
     } catch (e) {
-      print('Error getting user stats: $e');
+      debugPrint('Error getting user stats: $e');
     }
   }
 
@@ -103,7 +104,7 @@ class CalmProgressUsageExample {
     const userId = 'example_user_123';
     final motives = ['Sleep', 'Stress', 'Anxiety', 'Focus', 'Habit Building'];
 
-    print('\n🎯 Motive-Specific Insights Comparison:');
+    debugPrint('\n🎯 Motive-Specific Insights Comparison:');
 
     for (final motive in motives) {
       try {
@@ -117,11 +118,11 @@ class CalmProgressUsageExample {
             insights['recommendedTechniques'] as List<String>;
         final motiveEmoji = insights['motiveEmoji'] as String;
 
-        print('\n$motiveEmoji $motive:');
-        print('  Welcome: $welcomeMessage');
-        print('  Top Techniques: ${recommendedTechniques.take(3).join(', ')}');
+        debugPrint('\n$motiveEmoji $motive:');
+        debugPrint('  Welcome: $welcomeMessage');
+        debugPrint('  Top Techniques: ${recommendedTechniques.take(3).join(', ')}');
       } catch (e) {
-        print('  Error for $motive: $e');
+        debugPrint('  Error for $motive: $e');
       }
     }
   }
@@ -131,7 +132,7 @@ class CalmProgressUsageExample {
     const userId = 'example_user_123';
     final motives = ['Sleep', 'Stress', 'Anxiety', 'Focus', 'Habit Building'];
 
-    print('\n🔥 Streak Messaging Examples:');
+    debugPrint('\n🔥 Streak Messaging Examples:');
 
     for (final motive in motives) {
       try {
@@ -143,9 +144,9 @@ class CalmProgressUsageExample {
         final streakMessage = stats['streakMessage'] as String;
         final currentStreak = stats['currentStreak'] as int;
 
-        print('  $motive ($currentStreak days): $streakMessage');
+        debugPrint('  $motive ($currentStreak days): $streakMessage');
       } catch (e) {
-        print('  Error for $motive: $e');
+        debugPrint('  Error for $motive: $e');
       }
     }
   }
@@ -163,53 +164,53 @@ class CalmProgressUsageExample {
 
       final usagePatterns = stats['usagePatterns'] as Map<String, dynamic>;
 
-      print('\n📊 Technique Usage Pattern Analysis:');
+      debugPrint('\n📊 Technique Usage Pattern Analysis:');
 
       // Preferred times analysis
       final preferredTimes = usagePatterns['preferredTimes'] as List<String>;
-      print('  Preferred Times: ${preferredTimes.join(' > ')}');
+      debugPrint('  Preferred Times: ${preferredTimes.join(' > ')}');
 
       // Technique distribution
       final techniqueDistribution =
           usagePatterns['techniqueDistribution'] as List<Map<String, dynamic>>;
-      print('  Top Techniques by Usage:');
+      debugPrint('  Top Techniques by Usage:');
       for (final technique in techniqueDistribution.take(3)) {
         final name = technique['technique'] as String;
         final percentage = technique['percentage'] as int;
         final sessionCount = technique['sessionCount'] as int;
-        print('    $name: $sessionCount sessions ($percentage%)');
+        debugPrint('    $name: $sessionCount sessions ($percentage%)');
       }
 
       // Effectiveness ranking
       final effectivenessRanking =
           usagePatterns['effectivenessRanking'] as List<Map<String, dynamic>>;
-      print('  Most Effective Techniques:');
+      debugPrint('  Most Effective Techniques:');
       for (final technique in effectivenessRanking.take(3)) {
         final name = technique['technique'] as String;
         final avgImprovement = technique['averageImprovement'] as double;
         final sessionCount = technique['sessionCount'] as int;
-        print(
+        debugPrint(
           '    $name: ${avgImprovement.toStringAsFixed(1)} avg improvement ($sessionCount sessions)',
         );
       }
 
       // Motive alignment score
       final motiveAlignment = usagePatterns['motiveAlignment'] as double;
-      print('  Motive Alignment Score: ${motiveAlignment.toStringAsFixed(1)}%');
+      debugPrint('  Motive Alignment Score: ${motiveAlignment.toStringAsFixed(1)}%');
 
       if (motiveAlignment > 70) {
-        print('    ✅ Great alignment with your $userMotive goals!');
+        debugPrint('    ✅ Great alignment with your $userMotive goals!');
       } else if (motiveAlignment > 40) {
-        print(
+        debugPrint(
           '    ⚠️  Moderate alignment - consider trying more $userMotive-focused techniques',
         );
       } else {
-        print(
+        debugPrint(
           '    ❌ Low alignment - explore techniques prioritized for $userMotive',
         );
       }
     } catch (e) {
-      print('Error analyzing usage patterns: $e');
+      debugPrint('Error analyzing usage patterns: $e');
     }
   }
 }

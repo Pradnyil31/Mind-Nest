@@ -90,7 +90,9 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
   Future<void> _initializeNotifications() async {
     try {
-      await NotificationService().init();
+      final notificationService = NotificationService();
+      await notificationService.init();
+      await notificationService.requestPermissions();
     } catch (e) {
       debugPrint('Notification initialization failed: $e');
     }
@@ -178,12 +180,18 @@ class _BrandedBootScreen extends StatelessWidget {
                     child: Image.asset(
                       AppBranding.logoAssetPath,
                       fit: BoxFit.contain,
+                      cacheWidth: 300,
+                      cacheHeight: 300,
                       errorBuilder: (_, __, ___) => Image.asset(
                         AppBranding.logoAssetPathAlt,
                         fit: BoxFit.contain,
+                        cacheWidth: 300,
+                        cacheHeight: 300,
                         errorBuilder: (_, __, ___) => Image.asset(
                           AppBranding.logoAssetPathFallback,
                           fit: BoxFit.contain,
+                          cacheWidth: 300,
+                          cacheHeight: 300,
                           errorBuilder: (_, __, ___) => const Icon(
                             Icons.spa_rounded,
                             size: 66,

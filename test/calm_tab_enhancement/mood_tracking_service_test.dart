@@ -1,3 +1,4 @@
+// ignore_for_file: subtype_of_sealed_class
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,11 +11,11 @@ class TestMoodTrackingService extends MoodTrackingService {
 
   TestMoodTrackingService(this.testFirestore);
 
-  @override
+  // ignore: unused_element
   CollectionReference get _moodSessionsCollection =>
       testFirestore.collection('mood_sessions');
 
-  @override
+  // ignore: unused_element
   FirebaseFirestore get _firestore => testFirestore;
 }
 

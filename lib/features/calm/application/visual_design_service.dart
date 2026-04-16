@@ -295,7 +295,7 @@ class VisualDesignService {
     return Text(
       text,
       style: accessibleStyle,
-      textScaleFactor: scaleFactor ?? 1.0,
+      textScaler: TextScaler.linear(scaleFactor ?? 1.0),
     );
   }
 
@@ -360,9 +360,9 @@ class VisualDesignService {
 
   /// Calculate color luminance for contrast checking
   static double _getLuminance(Color color) {
-    final r = color.red / 255.0;
-    final g = color.green / 255.0;
-    final b = color.blue / 255.0;
+    final r = (color.r * 255.0).round().clamp(0, 255) / 255.0;
+    final g = (color.g * 255.0).round().clamp(0, 255) / 255.0;
+    final b = (color.b * 255.0).round().clamp(0, 255) / 255.0;
 
     final rLinear = r <= 0.03928 ? r / 12.92 : pow((r + 0.055) / 1.055, 2.4);
     final gLinear = g <= 0.03928 ? g / 12.92 : pow((g + 0.055) / 1.055, 2.4);

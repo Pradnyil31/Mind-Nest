@@ -294,7 +294,9 @@ void main() {
         // Test screen reader compatibility
         final semantics = tester.getSemantics(find.byType(EnhancedCalmScreen));
         expect(
+          // ignore: deprecated_member_use
           semantics.hasFlag(SemanticsFlag.isButton) ||
+              // ignore: deprecated_member_use
               semantics.hasFlag(SemanticsFlag.isHeader),
           isTrue,
         );

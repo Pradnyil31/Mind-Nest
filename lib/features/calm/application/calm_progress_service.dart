@@ -649,7 +649,7 @@ class CalmProgressService {
             'sessionCount': improvements.length,
             'totalImprovement': improvements.fold<int>(
               0,
-              (sum, val) => sum + val,
+              (acc, val) => acc + val,
             ),
             'effectivenessScore':
                 averageImprovement * improvements.length, // Weight by usage
@@ -1119,9 +1119,9 @@ class CalmProgressService {
       }
 
       // Calculate confidence: more sessions = higher confidence
-      sessionCounts.forEach((technique, count) {
+      sessionCounts.forEach((technique, cnt) {
         // Confidence ranges from 0.1 (1 session) to 1.0 (10+ sessions)
-        confidenceLevels[technique] = (count / 10.0).clamp(0.1, 1.0);
+        confidenceLevels[technique] = (cnt / 10.0).clamp(0.1, 1.0);
       });
 
       // Cross-motive effectiveness comparison

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/logger.dart';
-import '../services/voice_service.dart';
 import '../providers/app_providers.dart';
 import '../config/motive_config.dart';
 import '../config/notification_content.dart';

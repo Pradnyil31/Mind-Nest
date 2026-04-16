@@ -338,7 +338,6 @@ class EcosystemIntegrationService {
   ) async {
     try {
       final userMotive = await _getUserMotive(userId);
-      final motiveProfile = MotiveConfig.getProfile(userMotive);
 
       final entry = JournalEntry(
         id: '', // Will be set by the service
@@ -986,20 +985,6 @@ class EcosystemIntegrationService {
     }, SetOptions(merge: true));
   }
 
-  Future<Map<String, dynamic>> _getCalmStats(String userId) async {
-    final progressDoc = await _db
-        .collection('users')
-        .doc(userId)
-        .collection('calm_progress')
-        .doc('summary')
-        .get();
-
-    if (progressDoc.exists) {
-      return progressDoc.data() as Map<String, dynamic>;
-    }
-
-    return {'totalSessions': 0, 'totalMinutes': 0, 'currentStreak': 0};
-  }
 
   Future<List<Map<String, dynamic>>> _getRecentCalmActivity(
     String userId,
@@ -1073,42 +1058,6 @@ class EcosystemIntegrationService {
     return null;
   }
 
-  List<String> _generateReflectionPrompts(
-    Map<String, dynamic> technique,
-    String? motive,
-  ) {
-    final basePrompts = [
-      'How did this technique make you feel?',
-      'What thoughts came up during the practice?',
-      'Would you use this technique again?',
-    ];
-
-    // Add motive-specific prompts
-    switch (motive) {
-      case 'Sleep':
-        basePrompts.add('How relaxed do you feel now?');
-        basePrompts.add('What might help you sleep better tonight?');
-        break;
-      case 'Stress':
-        basePrompts.add('What stress did you release during this practice?');
-        basePrompts.add('How can you carry this calm feeling forward?');
-        break;
-      case 'Anxiety':
-        basePrompts.add('What anxious thoughts became quieter?');
-        basePrompts.add('How grounded do you feel right now?');
-        break;
-      case 'Focus':
-        basePrompts.add('How clear does your mind feel?');
-        basePrompts.add('What will you focus on next?');
-        break;
-      case 'Habit Building':
-        basePrompts.add('How does this practice support your goals?');
-        basePrompts.add('What habit are you building through this?');
-        break;
-    }
-
-    return basePrompts;
-  }
 }
 
 /// Navigation link model for existing features

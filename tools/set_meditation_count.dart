@@ -12,11 +12,11 @@ void main() async {
 
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
-    print('❌ No user signed in. Please sign into the app first.');
+    debugPrint('❌ No user signed in. Please sign into the app first.');
     return;
   }
 
-  print('✅ Found user: ${user.uid}');
+  debugPrint('✅ Found user: ${user.uid}');
 
   await FirebaseFirestore.instance
       .collection('users')
@@ -28,6 +28,6 @@ void main() async {
         'lastCompleted': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-  print('✅ Done! meditation completionCount set to 14.');
-  print('Now complete 1 meditation in the app to trigger the badge!');
+  debugPrint('✅ Done! meditation completionCount set to 14.');
+  debugPrint('Now complete 1 meditation in the app to trigger the badge!');
 }

@@ -40,7 +40,6 @@ class HomeRoutineSection extends StatelessWidget {
     final morningItems = <String>[];
     final afternoonItems = <String>[];
     final eveningItems = <String>[];
-    final customItems = <String>[]; // Kept empty as per original logic
 
     for (var activity in activities) {
         // Always recalculate the period from RoutineConfig for known activities.
@@ -61,8 +60,11 @@ class HomeRoutineSection extends StatelessWidget {
             final double val = t.hour + t.minute / 60.0;
             if (val < 12.0) {
               category = 'Morning';
-            } else if (val < 17.0) category = 'Afternoon';
-            else category = 'Evening';
+            } else if (val < 17.0) {
+              category = 'Afternoon';
+            } else {
+              category = 'Evening';
+            }
           } catch (e) {
             category = 'Morning';
           }

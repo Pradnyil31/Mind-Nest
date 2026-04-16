@@ -32,7 +32,6 @@ class _CompactProgressInsightsState
 
   // Enhanced with calm progress data
   int _calmSessions = 0;
-  int _calmStreak = 0;
   String _displayTitle = '';
   String _displayMessage = '';
   String _progressColor = '#6B7280';
@@ -229,7 +228,6 @@ class _CompactProgressInsightsState
           _completionRate = rate;
 
           _calmSessions = calmInsights['totalSessions'] as int? ?? 0;
-          _calmStreak = calmInsights['currentStreak'] as int? ?? 0;
           _displayTitle = calmInsights['displayTitle'] as String? ?? _getTitle();
           _displayMessage = calmInsights['displayMessage'] as String? ?? _getMessage();
           _progressColor = calmInsights['progressColor'] as String? ?? '#6B7280';

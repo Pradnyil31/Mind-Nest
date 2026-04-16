@@ -10,7 +10,7 @@ import 'package:fy_project/services/auth_service.dart';
 import 'package:fy_project/services/firestore_service.dart';
 
 @GenerateMocks([FirestoreService, AuthService])
-import 'task_8_motive_personalization_validation.mocks.dart';
+import 'motive_personalization_validation_test.mocks.dart';
 
 /// Task 8: Checkpoint - Motive personalization validation
 ///
@@ -92,7 +92,7 @@ void main() {
           reason: 'Should have technique priorities for $motive',
         );
 
-        print(
+        debugPrint(
           '✓ Validated $motive profile: ${profile.displayName} ${profile.emoji}',
         );
       }
@@ -136,7 +136,7 @@ void main() {
         expect(motiveService.state.adaptationInProgress, isFalse);
         expect(motiveService.state.shouldRefreshInterface, isFalse);
 
-        print('✓ Validated smooth transition from Sleep to Anxiety');
+        debugPrint('✓ Validated smooth transition from Sleep to Anxiety');
       },
     );
 
@@ -181,7 +181,7 @@ void main() {
           );
         }
 
-        print(
+        debugPrint(
           '✓ Validated $motive technique priorities: ${actualPriorities.join(", ")}',
         );
       }
@@ -268,7 +268,7 @@ void main() {
               break;
           }
 
-          print('✓ Validated $motive messaging: "$welcomeMessage"');
+          debugPrint('✓ Validated $motive messaging: "$welcomeMessage"');
         }
       },
     );
@@ -310,7 +310,7 @@ void main() {
       expect(adaptationStatus['adaptationComponents'], isA<Map>());
       expect(adaptationStatus['adaptationMetrics'], isA<Map>());
 
-      print('✓ Validated cross-motive data preservation from Focus to Stress');
+      debugPrint('✓ Validated cross-motive data preservation from Focus to Stress');
     });
 
     testWidgets(
@@ -340,7 +340,7 @@ void main() {
             isTrue,
           );
 
-          print('✓ Validated $motive color theme: ${colorTheme.primaryColor}');
+          debugPrint('✓ Validated $motive color theme: ${colorTheme.primaryColor}');
         }
       },
     );
@@ -386,7 +386,7 @@ void main() {
       expect(motiveService.state.adaptationInProgress, isFalse);
       expect(motiveService.state.shouldRefreshInterface, isFalse);
 
-      print('✓ Validated interface adaptation timing: ${adaptationTime}ms');
+      debugPrint('✓ Validated interface adaptation timing: ${adaptationTime}ms');
     });
 
     test('validates comprehensive motive profile completeness', () {
@@ -475,7 +475,7 @@ void main() {
             break;
         }
 
-        print(
+        debugPrint(
           '✓ Validated $motive profile completeness: ${profile.displayName} ${profile.emoji}',
         );
       }
@@ -511,7 +511,7 @@ void main() {
         }
       }
 
-      print('✓ Validated all motive transition scenarios');
+      debugPrint('✓ Validated all motive transition scenarios');
     });
   });
 
@@ -533,7 +533,7 @@ void main() {
         expect(colorTheme.gradientColors.length, equals(2));
       }
 
-      print('✓ Validated complete system integration');
+      debugPrint('✓ Validated complete system integration');
     });
   });
 }
