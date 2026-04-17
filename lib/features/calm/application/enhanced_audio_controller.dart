@@ -67,7 +67,11 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
     try {
       await _audioService.initialize();
     } catch (e, stackTrace) {
-      appLogger.e('Failed to initialize audio service', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        'Failed to initialize audio service',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -178,7 +182,11 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
     try {
       await _audioService.setMasterVolume(volume);
     } catch (e, stackTrace) {
-      appLogger.e('Failed to set master volume', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        'Failed to set master volume',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -258,7 +266,11 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
     try {
       await _audioService.stopAllSounds();
     } catch (e, stackTrace) {
-      appLogger.e('Failed to stop all sounds', error: e, stackTrace: stackTrace);
+      appLogger.e(
+        'Failed to stop all sounds',
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 

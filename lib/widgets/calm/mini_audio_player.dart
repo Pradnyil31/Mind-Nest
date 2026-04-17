@@ -63,7 +63,8 @@ class _MiniAudioPlayerState extends ConsumerState<MiniAudioPlayer>
     if (showBar) {
       if (!_slideController.isCompleted) _slideController.forward();
       if (audioState.isPlaying) {
-        if (!_pulseController.isAnimating) _pulseController.repeat(reverse: true);
+        if (!_pulseController.isAnimating)
+          _pulseController.repeat(reverse: true);
       } else {
         _pulseController.stop();
         _pulseController.value = 0;
@@ -106,7 +107,9 @@ class _MiniAudioPlayerState extends ConsumerState<MiniAudioPlayer>
                     animation: _pulseAnimation,
                     builder: (context, child) {
                       return Transform.scale(
-                        scale: audioState.isPlaying ? _pulseAnimation.value : 1.0,
+                        scale: audioState.isPlaying
+                            ? _pulseAnimation.value
+                            : 1.0,
                         child: Container(
                           width: 50,
                           height: 50,

@@ -61,8 +61,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
   @override
   Widget build(BuildContext context) {
     final soundState = ref.watch(enhancedAudioControllerProvider);
-    final soundController =
-        ref.read(enhancedAudioControllerProvider.notifier);
+    final soundController = ref.read(enhancedAudioControllerProvider.notifier);
 
     final selectedSound = AmbientSound.defaults.firstWhere(
       (s) => s.id == _selectedSoundId,
@@ -88,15 +87,13 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
       body: Column(
         children: [
           // ── Hero (intrinsic height, no overflow) ──────────────────
-          _buildHero(
-              selectedSound, isPlaying, soundController, soundState),
+          _buildHero(selectedSound, isPlaying, soundController, soundState),
           // ── Body fills the rest exactly ───────────────────────────
           Expanded(
             child: Container(
               decoration: const BoxDecoration(
                 color: Color(0xFFF8FAFC),
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,8 +144,9 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
   ) {
     // Determine button state - only Play or Pause, no Resume label
     final String buttonLabel = isPlaying ? 'Pause' : 'Play';
-    final IconData buttonIcon =
-        isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded;
+    final IconData buttonIcon = isPlaying
+        ? Icons.pause_rounded
+        : Icons.play_arrow_rounded;
 
     return Container(
       decoration: BoxDecoration(
@@ -209,8 +207,11 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                     child: Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new,
-                              color: Colors.white70, size: 20),
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white70,
+                            size: 20,
+                          ),
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                         Expanded(
@@ -248,8 +249,10 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                         ),
                       ),
                       alignment: Alignment.center,
-                      child: Text(sound.emoji,
-                          style: const TextStyle(fontSize: 36)),
+                      child: Text(
+                        sound.emoji,
+                        style: const TextStyle(fontSize: 36),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -273,13 +276,14 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                   const SizedBox(height: 20),
                   // Play / Pause pill button
                   GestureDetector(
-                    onTap: () =>
-                        _handlePlayPause(controller, isPlaying, sound),
+                    onTap: () => _handlePlayPause(controller, isPlaying, sound),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       curve: Curves.easeOut,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 12),
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: isPlaying
                             ? Colors.white.withValues(alpha: 0.18)
@@ -344,21 +348,17 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
       ),
       child: Row(
         children: [
-          Icon(Icons.volume_down_rounded,
-              color: widget.primaryColor, size: 20),
+          Icon(Icons.volume_down_rounded, color: widget.primaryColor, size: 20),
           const SizedBox(width: 4),
           Expanded(
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 activeTrackColor: widget.primaryColor,
-                inactiveTrackColor:
-                    widget.primaryColor.withValues(alpha: 0.15),
+                inactiveTrackColor: widget.primaryColor.withValues(alpha: 0.15),
                 thumbColor: widget.primaryColor,
-                overlayColor:
-                    widget.primaryColor.withValues(alpha: 0.12),
+                overlayColor: widget.primaryColor.withValues(alpha: 0.12),
                 trackHeight: 3,
-                thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 7),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
               ),
               child: Slider(
                 value: soundState.masterVolume,
@@ -366,8 +366,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
               ),
             ),
           ),
-          Icon(Icons.volume_up_rounded,
-              color: widget.primaryColor, size: 20),
+          Icon(Icons.volume_up_rounded, color: widget.primaryColor, size: 20),
           const SizedBox(width: 8),
           SizedBox(
             width: 38,
@@ -411,8 +410,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: isSelected
                   ? widget.primaryColor.withValues(alpha: 0.08)
@@ -444,8 +442,10 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: Text(sound.emoji,
-                      style: const TextStyle(fontSize: 22)),
+                  child: Text(
+                    sound.emoji,
+                    style: const TextStyle(fontSize: 22),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
