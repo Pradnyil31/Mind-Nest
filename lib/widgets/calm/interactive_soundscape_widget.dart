@@ -172,11 +172,12 @@ class _InteractiveSoundscapeWidgetState
     EnhancedAudioController controller,
   ) {
     return GestureDetector(
-      onTap: () async {
-        // Play first so activeSounds is populated BEFORE the screen opens.
-        // This ensures the player screen shows "Pause" (not "Play") on its
-        // very first build, and one tap pauses correctly.
-        await controller.playSound(sound, openPlayer: false);
+      onTap: () {
+        // We no longer await playSound here. The controller now updates state 
+        // synchronously first, ensuring the player screen shows the correct 
+        // state (Pause) immediately. Removing await fixes the 'double tap' 
+        // requirement by making the navigation instantaneous.
+        controller.playSound(sound, openPlayer: false);
         if (mounted) {
           controller.openAudioPlayer(context, sound);
         }
@@ -205,7 +206,22 @@ class _InteractiveSoundscapeWidgetState
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 200),
               style: TextStyle(fontSize: isActive ? 28 : 24),
-              child: Text(sound.emoji),
+              child: Hero(
+                tag: 'sound_emoji_${sound.id}',
+                flightShuttleBuilder: (
+                  flightContext,
+                  animation,
+                  flightDirection,
+                  fromHeroContext,
+                  toHeroContext,
+                ) {
+                  return DefaultTextStyle(
+                    style: DefaultTextStyle.of(toHeroContext).style,
+                    child: toHeroContext.widget,
+                  );
+                },
+                child: Text(sound.emoji),
+              ),
             ),
             const SizedBox(height: 8),
             Text(

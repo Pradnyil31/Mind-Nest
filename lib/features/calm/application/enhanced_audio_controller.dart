@@ -79,23 +79,19 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
   Future<void> playSound(AmbientSound sound, {bool openPlayer = true}) async {
     final individualVolume = state.individualVolumes[sound.id] ?? 1.0;
 
+    // Update state IMMEDIATELY for synchronous UI feedback
+    final newActiveSounds = <String>{sound.id};
+    state = state.copyWith(
+      activeSounds: newActiveSounds,
+      isPlaying: true,
+      isPaused: false,
+      currentlyPlayingSound: sound,
+    );
+
     try {
-      // ALWAYS stop other sounds first - only one sound at a time
-      if (state.activeSounds.isNotEmpty) {
-        await _audioService.stopAllSounds();
-      }
-
-      // Start the new sound
-      final newActiveSounds = <String>{sound.id};
+      // Background operation - service calls are still awaited but state is already updated
+      await _audioService.stopAllSounds();
       await _audioService.playSound(sound.id, individualVolume);
-
-      // Update state
-      state = state.copyWith(
-        activeSounds: newActiveSounds,
-        isPlaying: true,
-        isPaused: false,
-        currentlyPlayingSound: sound,
-      );
     } catch (e, stackTrace) {
       appLogger.e(
         'Audio operation failed for ${sound.id}',
@@ -111,24 +107,25 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
 
     try {
       if (state.activeSounds.contains(sound.id)) {
-        // If this sound is currently playing, pause it
-        await pauseCurrentSound();
+        // Synchronous state update for immediate feedback
+        state = state.copyWith(
+          activeSounds: const {},
+          isPlaying: false,
+          isPaused: true,
+        );
+        await _audioService.stopAllSounds();
       } else {
-        // If this sound is not playing, stop all others and play this one
-        if (state.activeSounds.isNotEmpty) {
-          await _audioService.stopAllSounds();
-        }
-
-        // Start the new sound
+        // Synchronous state update
         final newActiveSounds = <String>{sound.id};
-        await _audioService.playSound(sound.id, individualVolume);
-
         state = state.copyWith(
           activeSounds: newActiveSounds,
           isPlaying: true,
           isPaused: false,
           currentlyPlayingSound: sound,
         );
+
+        await _audioService.stopAllSounds();
+        await _audioService.playSound(sound.id, individualVolume);
       }
     } catch (e, stackTrace) {
       appLogger.e(
@@ -141,6 +138,12 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
 
   // Open full-screen audio player
   void openAudioPlayer(BuildContext context, AmbientSound sound) {
+    // PREVENT DUPLICATE SCREENS: Guard against multiple rapid pushes
+    if (state.isPlayerScreenOpen) {
+      appLogger.d('Audio player is already open, ignoring duplicate request.');
+      return;
+    }
+
     state = state.copyWith(isPlayerScreenOpen: true);
 
     Navigator.of(context)
@@ -153,21 +156,32 @@ class EnhancedAudioController extends StateNotifier<EnhancedAudioState> {
                 ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-                  const begin = Offset(0.0, 1.0);
-                  const end = Offset.zero;
-                  const curve = Curves.easeInOutCubic;
+                  const curve = Curves.easeOutQuart;
 
-                  var tween = Tween(
-                    begin: begin,
-                    end: end,
-                  ).chain(CurveTween(curve: curve));
+                  var slideAnimation = Tween<Offset>(
+                    begin: const Offset(0.0, 1.0),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(parent: animation, curve: curve));
 
-                  return SlideTransition(
-                    position: animation.drive(tween),
-                    child: child,
+                  var fadeAnimation = Tween<double>(
+                    begin: 0.0,
+                    end: 1.0,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+                    ),
+                  );
+
+                  return FadeTransition(
+                    opacity: fadeAnimation,
+                    child: SlideTransition(
+                      position: slideAnimation,
+                      child: child,
+                    ),
                   );
                 },
-            transitionDuration: const Duration(milliseconds: 400),
+            transitionDuration: const Duration(milliseconds: 500),
           ),
         )
         .then((_) {

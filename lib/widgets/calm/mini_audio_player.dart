@@ -118,9 +118,25 @@ class _MiniAudioPlayerState extends ConsumerState<MiniAudioPlayer>
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Center(
-                            child: Text(
-                              sound.emoji,
-                              style: const TextStyle(fontSize: 24),
+                            child: Hero(
+                              tag: 'sound_emoji_${sound.id}',
+                              flightShuttleBuilder: (
+                                flightContext,
+                                animation,
+                                flightDirection,
+                                fromHeroContext,
+                                toHeroContext,
+                              ) {
+                                return DefaultTextStyle(
+                                  style:
+                                      DefaultTextStyle.of(toHeroContext).style,
+                                  child: toHeroContext.widget,
+                                );
+                              },
+                              child: Text(
+                                sound.emoji,
+                                style: const TextStyle(fontSize: 24),
+                              ),
                             ),
                           ),
                         ),

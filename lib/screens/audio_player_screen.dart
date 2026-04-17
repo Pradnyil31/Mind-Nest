@@ -249,9 +249,24 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                         ),
                       ),
                       alignment: Alignment.center,
-                      child: Text(
-                        sound.emoji,
-                        style: const TextStyle(fontSize: 36),
+                      child: Hero(
+                        tag: 'sound_emoji_${sound.id}',
+                        flightShuttleBuilder: (
+                          flightContext,
+                          animation,
+                          flightDirection,
+                          fromHeroContext,
+                          toHeroContext,
+                        ) {
+                          return DefaultTextStyle(
+                            style: DefaultTextStyle.of(toHeroContext).style,
+                            child: toHeroContext.widget,
+                          );
+                        },
+                        child: Text(
+                          sound.emoji,
+                          style: const TextStyle(fontSize: 36),
+                        ),
                       ),
                     ),
                   ),
@@ -442,9 +457,12 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: Text(
-                    sound.emoji,
-                    style: const TextStyle(fontSize: 22),
+                  child: Hero(
+                    tag: isSelected ? 'sound_emoji_${sound.id}_list' : 'sound_emoji_${sound.id}',
+                    child: Text(
+                      sound.emoji,
+                      style: const TextStyle(fontSize: 22),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
