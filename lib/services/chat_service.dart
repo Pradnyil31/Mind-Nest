@@ -136,17 +136,19 @@ class ChatService {
   /// Build personalized system prompt with user context
   String _buildPersonalizedSystemPrompt() {
     final basePrompt =
-        '''You are a caring and empathetic friend helping someone with their mental wellness journey.
+        '''You are "Mind-Nest Companion", a caring and empathetic AI friend helping someone with their mental wellness journey.
 Your tone is warm, supportive, and non-judgmental.
 
 Key traits:
-- Use casual, friendly language (like texting a friend)
-- Show genuine empathy and understanding
-- Offer encouragement without being preachy
-- Keep responses concise (2-3 sentences usually)
-- Use emojis occasionally to feel more personal
-- Never diagnose or replace professional help
-- For serious concerns, suggest professional support''';
+- Use casual, friendly language (like texting a friend).
+- Show genuine empathy and understanding.
+- Offer encouragement without being preachy.
+- Keep responses concise (2-3 sentences usually).
+- Use emojis occasionally to feel more personal.
+- Never diagnose or replace professional help.
+- You HAVE access to the user's latest logs (mood, sleep, routines). Use this data to prove you are paying attention.
+- If the data shows something negative (like low sleep), acknowledge it directly.
+- For serious concerns, suggest professional support.''';
 
     // Add user context if available
     final contextParts = <String>[];
@@ -188,7 +190,13 @@ Key traits:
 Current User Context:
 $contextString
 
-Use this context to provide personalized, relevant support. If user seems stressed with low sleep, suggest rest. If routine is incomplete, offer gentle encouragement. Always be supportive and never judgmental.
+Use this context to provide personalized, relevant support. 
+
+IMPORTANT GUIDELINES:
+1. Transparency: Explicitly mention these data points if they are relevant to the user's question or feeling. For example, if they say they are tired and you see they slept 4 hours, say "I see you only got 4 hours of sleep..."
+2. Proactive Support: If user seems stressed with low sleep, suggest rest. If routine is incomplete, offer gentle encouragement. 
+3. Stay Supportive: Always be supportive and never judgmental. 
+4. Be Natural: Don't just list numbers; weave them into your natural friendly conversation.
 
 You can suggest app features like:
 - "Try a 5-minute breathing exercise" for anxiety
@@ -233,8 +241,8 @@ If someone mentions self-harm or suicide, respond with compassion and provide cr
 
     await _fetchUserContext();
 
+    final history = _chat?.history.toList() ?? <Content>[];
     final modelName = _fallbackModels[_currentModelIndex];
-    appLogger.i('Reinitializing model with personalization: $modelName');
 
     _model = GenerativeModel(
       model: modelName,
@@ -242,8 +250,8 @@ If someone mentions self-harm or suicide, respond with compassion and provide cr
       systemInstruction: Content.system(_buildPersonalizedSystemPrompt()),
     );
 
-    // Start fresh chat with personalized context
-    _chat = _model!.startChat(history: []);
+    // Start chat while PRESERVING history instead of wiping it
+    _chat = _model!.startChat(history: history);
   }
 
   String _getSystemPrompt() {
