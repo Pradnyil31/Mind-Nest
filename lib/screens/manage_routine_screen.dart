@@ -302,7 +302,12 @@ class _ManageRoutineScreenState extends ConsumerState<ManageRoutineScreen> {
 
             await notificationService.init();
             await notificationService.requestPermissions();
-            await notificationService.cancelAll();
+            
+            // Only cancel routine-specific notifications (IDs 1-4)
+            // instead of wiping EVERYTHING (Achievements, Calm reminders, etc.)
+            for (int i = 1; i <= 4; i++) {
+              await notificationService.cancel(i);
+            }
 
             // Wake Up
             await notificationService.scheduleDailyNotification(

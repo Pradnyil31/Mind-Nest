@@ -136,4 +136,62 @@ class NotificationService {
     }
     return scheduledDate;
   }
+
+  /// Ensures core routine notifications are scheduled
+  /// IDs 1-4: Wake, Midday, Evening, Bedtime
+  Future<void> syncRoutineNotifications({
+    required String name,
+    required String motive,
+    required int wakeHour,
+    required int wakeMinute,
+    required int bedHour,
+    required int bedMinute,
+  }) async {
+    if (kIsWeb) return;
+    if (!_isInitialized) await init();
+
+    try {
+      // 1. Wake Up (ID: 1)
+      await scheduleDailyNotification(
+        id: 1,
+        title: 'Good Morning!',
+        body: 'Time for your morning routine, $name.',
+        hour: wakeHour,
+        minute: wakeMinute,
+      );
+
+      // 2. Midday (ID: 2)
+      final middayHour = (wakeHour + 6) % 24;
+      await scheduleDailyNotification(
+        id: 2,
+        title: 'Check In',
+        body: 'How is your day going, $name? Take a mindful pause.',
+        hour: middayHour,
+        minute: wakeMinute,
+      );
+
+      // 3. Evening (ID: 3)
+      final eveningHour = (bedHour - 2 + 24) % 24;
+      await scheduleDailyNotification(
+        id: 3,
+        title: 'Wind Down',
+        body: 'Preparing for rest, $name? Let\'s wrap up the day.',
+        hour: eveningHour,
+        minute: bedMinute,
+      );
+
+      // 4. Bedtime (ID: 4)
+      await scheduleDailyNotification(
+        id: 4,
+        title: 'Sweet Dreams',
+        body: 'Time for restorative sleep. Goodnight, $name.',
+        hour: bedHour,
+        minute: bedMinute,
+      );
+
+      appLogger.i('Routine notifications synced successfully');
+    } catch (e) {
+      appLogger.e('Failed to sync routine notifications: $e');
+    }
+  }
 }

@@ -73,6 +73,44 @@ class _HomeContentViewState extends ConsumerState<HomeContentView> {
       _checkCheckInStatus(user.uid);
       _setupRoutineListener(user.uid);
       _loadActiveDaysThisWeek(user.uid);
+      
+      // Safety Sync: Ensure routine notifications are alive and correct on startup
+      _syncNotificationsSafety(user.uid);
+    }
+  }
+
+  Future<void> _syncNotificationsSafety(String uid) async {
+    try {
+      final doc = await ref.read(firestoreServiceProvider).getUserOnce(uid);
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final String name = data['displayName'] ?? 'there';
+        final String motive = data['primaryMotive'] ?? 'Wellness';
+        
+        TimeOfDay wake = const TimeOfDay(hour: 7, minute: 0);
+        TimeOfDay bed = const TimeOfDay(hour: 22, minute: 0);
+        
+        if (data.containsKey('routine')) {
+          final r = data['routine'] as Map<String, dynamic>;
+          if (r.containsKey('wakeUpTime')) {
+            wake = _parseTime(r['wakeUpTime']);
+          }
+          if (r.containsKey('bedTime')) {
+            bed = _parseTime(r['bedTime']);
+          }
+        }
+        
+        await ref.read(notificationServiceProvider).syncRoutineNotifications(
+          name: name,
+          motive: motive,
+          wakeHour: wake.hour,
+          wakeMinute: wake.minute,
+          bedHour: bed.hour,
+          bedMinute: bed.minute,
+        );
+      }
+    } catch (e) {
+      debugPrint('Safety notification sync failed: $e');
     }
   }
 

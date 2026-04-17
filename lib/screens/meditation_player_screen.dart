@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -243,95 +245,262 @@ class _MeditationPlayerScreenState extends ConsumerState<MeditationPlayerScreen>
   }
 
   Widget _buildPreparationView() {
+    final colors = _getCategoryColors();
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F9),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF2D2D2D)),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF9575CD).withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _getCategoryIcon(widget.meditation.category),
-                        size: 80,
-                        color: const Color(0xFF9575CD),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Text(
-                      widget.meditation.title,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.lato(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF2D2D2D),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      widget.meditation.description,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.lato(
-                        fontSize: 16,
-                        color: Colors.grey.shade600,
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+      body: Stack(
+        children: [
+          // Background Gradient with Mesh Effect
+          _buildMeshBackground(colors),
+
+          SafeArea(
+            child: Column(
+              children: [
+                _buildCustomAppBar(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
                       children: [
-                        _buildInfoChip(
-                          '${widget.meditation.durationMinutes} min',
-                          Icons.access_time,
+                        const SizedBox(height: 20),
+                        // Category Icon with glow
+                        _buildCategoryHero(colors),
+                        const SizedBox(height: 48),
+                        // Title & Description
+                        Text(
+                          widget.meditation.title,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                        const SizedBox(width: 16),
-                        _buildInfoChip(
-                          widget.meditation.difficulty,
-                          Icons.bar_chart,
+                        const SizedBox(height: 16),
+                        Text(
+                          widget.meditation.description,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            color: Colors.white.withValues(alpha: 0.7),
+                            height: 1.6,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
+                        const SizedBox(height: 48),
+                        // Glassmorphic Info Grid
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildGlassChip(
+                              '${widget.meditation.durationMinutes}m',
+                              Icons.access_time_rounded,
+                            ),
+                            const SizedBox(width: 16),
+                            _buildGlassChip(
+                              widget.meditation.difficulty,
+                              Icons.bolt_rounded,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 100), // Space for button
                       ],
                     ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Bottom Button
+          Positioned(
+            bottom: 40,
+            left: 32,
+            right: 32,
+            child: _buildBeginButton(colors),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMeshBackground(List<Color> colors) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors[0],
+            colors[1].withValues(alpha: 0.8),
+            const Color(0xFF0F172A),
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 400,
+              height: 400,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    colors[1].withValues(alpha: 0.2),
+                    Colors.transparent,
                   ],
                 ),
               ),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _startMeditation,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF9575CD),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomAppBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70, size: 20),
+          ),
+          Text(
+            'MEDITATION',
+            style: GoogleFonts.inter(
+              color: Colors.white.withValues(alpha: 0.4),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(width: 48), // Balance
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryHero(List<Color> colors) {
+    return Center(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Animated glow
+          AnimatedBuilder(
+            animation: _bgController,
+            builder: (context, child) {
+              return Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors[0].withValues(alpha: 0.3),
+                      blurRadius: 40 + (_bgController.value * 20),
+                      spreadRadius: 10,
                     ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'Begin Meditation',
-                    style: GoogleFonts.lato(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  ],
+                ),
+              );
+            },
+          ),
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 2,
+              ),
+            ),
+            child: Icon(
+              _getCategoryIcon(widget.meditation.category),
+              size: 64,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassChip(String text, IconData icon) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: Colors.white70),
+              const SizedBox(width: 8),
+              Text(
+                text,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBeginButton(List<Color> colors) {
+    return Container(
+      height: 64,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        gradient: LinearGradient(
+          colors: [
+            colors[0],
+            colors[1],
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors[0].withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: _startMeditation,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+        ),
+        child: Text(
+          'Begin Meditation',
+          style: GoogleFonts.outfit(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
         ),
       ),
@@ -342,224 +511,194 @@ class _MeditationPlayerScreenState extends ConsumerState<MeditationPlayerScreen>
     final colors = _getCategoryColors();
     final labels = widget.meditation.stepLabels;
     final totalSteps = widget.meditation.scriptSteps.length;
-    final accentColor = colors[1];
 
     return Scaffold(
-      body: AnimatedBuilder(
-        animation: _bgController,
-        builder: (context, child) {
-          final t = _bgController.value;
-          final bg1 = Color.lerp(colors[0], colors[1], t)!;
-          final bg2 = Color.lerp(colors[1], colors[0], t)!;
+      body: Stack(
+        children: [
+          // Immersive Background
+          AnimatedBuilder(
+            animation: _bgController,
+            builder: (context, child) {
+              final t = _bgController.value;
+              return Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color.lerp(colors[0], const Color(0xFF0F172A), 0.5)!,
+                      Color.lerp(colors[1], const Color(0xFF0F172A), 0.8)!,
+                      const Color(0xFF020617),
+                    ],
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    // Moving ambient blobs
+                    Positioned(
+                      top: 100 + (math.sin(t * math.pi * 2) * 50),
+                      left: -50 + (math.cos(t * math.pi * 2) * 30),
+                      child: _buildAmbientBlob(colors[0], 300, 0.15),
+                    ),
+                    Positioned(
+                      bottom: 100 + (math.cos(t * math.pi * 2) * 40),
+                      right: -50 + (math.sin(t * math.pi * 2) * 40),
+                      child: _buildAmbientBlob(colors[1], 350, 0.1),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
 
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [bg1, bg2],
-              ),
-            ),
-            child: SafeArea(
-              child: Stack(
-                children: [
-                  // --- Floating orbs ---
-                  // Orb top-left
-                  Positioned(
-                    top: -80 + (t * 30),
-                    left: -100 + (t * 20),
-                    child: Container(
-                      width: 320,
-                      height: 320,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            accentColor.withAlpha(38),
-                            Colors.transparent,
-                          ],
-                        ),
+          SafeArea(
+            child: Column(
+              children: [
+                // Minimal Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: _stopMeditation,
+                        icon: const Icon(Icons.close_rounded, color: Colors.white38),
                       ),
-                    ),
-                  ),
-                  // Orb bottom-right
-                  Positioned(
-                    bottom: -60 + (t * 25),
-                    right: -80 + (t * 15),
-                    child: Container(
-                      width: 280,
-                      height: 280,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            colors[0].withAlpha(60),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Orb center-right
-                  Positioned(
-                    top: 200 - (t * 20),
-                    right: -60,
-                    child: Container(
-                      width: 220,
-                      height: 220,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            accentColor.withAlpha(25),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // --- Header row ---
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    right: 8,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          onPressed: _stopMeditation,
-                          icon: const Icon(Icons.close, color: Colors.white54),
-                        ),
-                        Text(
-                          widget.meditation.title,
-                          style: GoogleFonts.lato(
-                            color: Colors.white54,
-                            fontSize: 14,
-                            letterSpacing: 1.5,
+                      Expanded(
+                        child: Text(
+                          widget.meditation.title.toUpperCase(),
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            fontSize: 10,
+                            letterSpacing: 3,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        // Mute button
-                        
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 48),
+                    ],
                   ),
+                ),
 
-                  // --- Central content ---
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Pulsing breath orb (decorative)
-                        AnimatedBuilder(
-                          animation: _breathingController,
-                          builder: (_, __) => Container(
-                            width: 120 + (_breathingController.value * 16),
-                            height: 120 + (_breathingController.value * 16),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withAlpha(
-                                  (8 + (_breathingController.value * 10)).round()),
-                              border: Border.all(
-                                color: Colors.white.withAlpha(
-                                    (30 + (_breathingController.value * 20)).round()),
-                                width: 1.5,
+                Expanded(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Fluid Visualizer
+                      AnimatedBuilder(
+                        animation: _breathingController,
+                        builder: (context, child) {
+                          return CustomPaint(
+                            painter: MeditationFluidPainter(
+                              progress: _breathingController.value,
+                              color: colors[0],
+                              category: widget.meditation.category,
+                            ),
+                            size: const Size(double.infinity, double.infinity),
+                          );
+                        },
+                      ),
+
+                      // Central Instruction
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 800),
+                            child: Text(
+                              _phase == MeditationPhase.breathing
+                                  ? (_isInhale ? 'Inhale' : 'Exhale')
+                                  : ((labels.length > _currentStep)
+                                      ? labels[_currentStep]
+                                      : ''),
+                              key: ValueKey(_instructionText),
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(
+                                fontSize: 42,
+                                fontWeight: FontWeight.w200,
+                                color: Colors.white,
+                                letterSpacing: 1,
                               ),
                             ),
                           ),
-                        ),
-
-                        const SizedBox(height: 40),
-
-                        // Step label — large, minimal
-                        Text(
-                          _phase == MeditationPhase.breathing
-                              ? (_isInhale ? 'Inhale...' : 'Exhale...')
-                              : ((labels.length > _currentStep)
-                                  ? labels[_currentStep]
-                                  : ''),
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.lato(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w300,
-                            color: Colors.white,
-                            letterSpacing: 1.2,
+                          const SizedBox(height: 12),
+                          Text(
+                            _formatTime(_remainingSeconds),
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              color: Colors.white.withValues(alpha: 0.3),
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Remaining time
-                        Text(
-                          _formatTime(_remainingSeconds),
-                          style: GoogleFonts.lato(
-                            fontSize: 16,
-                            color: Colors.white38,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
                   ),
+                ),
 
-                  // --- Step dots at bottom ---
-                  if (_phase == MeditationPhase.script)
-                    Positioned(
-                      bottom: 60,
-                    left: 0,
-                    right: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(totalSteps, (i) {
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 400),
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          width: i == _currentStep ? 20 : 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(3),
-                            color: i == _currentStep
-                                ? Colors.white
-                                : Colors.white24,
-                          ),
-                        );
-                      }),
-                    ),
+                // Step Progression
+                if (_phase == MeditationPhase.script)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 60),
+                    child: _buildModernStepDots(totalSteps),
                   ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildInfoChip(String text, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: const Color(0xFF9575CD)),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: GoogleFonts.lato(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF2D2D2D),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+
+  String get _instructionText => _phase == MeditationPhase.breathing
+      ? (_isInhale ? 'Inhale' : 'Exhale')
+      : ((widget.meditation.stepLabels.length > _currentStep)
+          ? widget.meditation.stepLabels[_currentStep]
+          : '');
+
+  Widget _buildAmbientBlob(Color color, double size, double opacity) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            color.withValues(alpha: opacity),
+            Colors.transparent,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernStepDots(int totalSteps) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(totalSteps, (i) {
+        final isActive = i == _currentStep;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 500),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: isActive ? 24 : 6,
+          height: 6,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(3),
+            color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.1),
+            boxShadow: isActive ? [
+              BoxShadow(
+                color: Colors.white.withValues(alpha: 0.3),
+                blurRadius: 8,
+              )
+            ] : null,
+          ),
+        );
+      }),
+    );
+  }
+
 
   IconData _getCategoryIcon(MeditationCategory category) {
     switch (category) {
@@ -582,5 +721,68 @@ class _MeditationPlayerScreenState extends ConsumerState<MeditationPlayerScreen>
     final m = totalSeconds ~/ 60;
     final s = totalSeconds % 60;
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+}
+
+class MeditationFluidPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final MeditationCategory category;
+
+  MeditationFluidPainter({
+    required this.progress,
+    required this.color,
+    required this.category,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.15)
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+
+    final baseRadius = math.min(size.width, size.height) * 0.25;
+    final pulseRadius = baseRadius + (progress * 50);
+
+    // Draw multiple organic layers
+    for (int i = 0; i < 3; i++) {
+      _drawOrganicShape(canvas, center, pulseRadius - (i * 20), paint, i);
+    }
+
+    // Core glow
+    final corePaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.white.withValues(alpha: 0.3),
+          color.withValues(alpha: 0.0),
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: pulseRadius));
+    canvas.drawCircle(center, pulseRadius, corePaint);
+  }
+
+  void _drawOrganicShape(Canvas canvas, Offset center, double radius, Paint paint, int index) {
+    final path = Path();
+    const int segments = 8;
+    for (int i = 0; i < segments; i++) {
+      final angle = (i * 2 * math.pi / segments);
+      // Add some noise/variance to radius
+      final variance = math.sin(progress * math.pi * 2 + index + i) * 15;
+      final x = center.dx + (radius + variance) * math.cos(angle);
+      final y = center.dy + (radius + variance) * math.sin(angle);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant MeditationFluidPainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }
