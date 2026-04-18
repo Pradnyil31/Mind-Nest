@@ -13,7 +13,8 @@ class CalmTechniqueScreen extends ConsumerStatefulWidget {
   const CalmTechniqueScreen({super.key, required this.technique});
 
   @override
-  ConsumerState<CalmTechniqueScreen> createState() => _CalmTechniqueScreenState();
+  ConsumerState<CalmTechniqueScreen> createState() =>
+      _CalmTechniqueScreenState();
 }
 
 class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
@@ -56,17 +57,24 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
 
   // Per-step durations. Default for each technique type if not overridden.
   List<int> get _stepDurations {
-    final steps = widget.technique.steps ?? [];
+    final items = _displayItems;
     switch (widget.technique.id) {
       case 'cold-water-visualization':
         // Visualization — 12 s per calming beat
-        return List.filled(steps.length, 12);
+        return List.filled(items.length, 12);
       case 'worry-banking':
         // Reflective steps need more time
         return [15, 20, 20, 20, 15, 20, 15];
+      case 'self-compassion':
+      case 'gratitude-affirmations':
+        // Affirmations — 8 seconds each (shorter, more contemplative)
+        return List.filled(items.length, 8);
       default:
-        // Default: 15 s per step
-        return List.filled(steps.length, 15);
+        // Default: 15 s per step for guided, 10 s for affirmations
+        return List.filled(
+          items.length,
+          widget.technique.type == TechniqueType.affirmation ? 10 : 15,
+        );
     }
   }
 
@@ -94,10 +102,14 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
     super.dispose();
   }
 
+  // Get items to display - either steps or content
+  List<String> get _displayItems =>
+      widget.technique.steps ?? widget.technique.content ?? [];
+
   void _startStep(int step) {
-    final steps = widget.technique.steps ?? [];
-    if (step >= steps.length) {
-      setState(() => _currentStep = steps.length); // completion
+    final items = _displayItems;
+    if (step >= items.length) {
+      setState(() => _currentStep = items.length); // completion
       return;
     }
 
@@ -106,7 +118,7 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
     _voice.cancelPendingResume();
 
     final durations = _stepDurations;
-    final dur = (step < durations.length) ? durations[step] : 15;
+    final dur = (step < durations.length) ? durations[step] : 10;
 
     setState(() {
       _currentStep = step;
@@ -117,7 +129,7 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
     _progressController.duration = Duration(seconds: dur);
     _progressController.forward(from: 0.0);
 
-    _voice.speak(steps[step]);
+    _voice.speak(items[step]);
 
     _stepTimer?.cancel();
     _stepTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -143,8 +155,8 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
   @override
   Widget build(BuildContext context) {
     if (!_isStarted) return _buildIntroView();
-    final steps = widget.technique.steps ?? [];
-    final isComplete = _currentStep >= steps.length;
+    final items = _displayItems;
+    final isComplete = _currentStep >= items.length;
     return isComplete ? _buildCompletionView() : _buildStepView();
   }
 
@@ -171,7 +183,10 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                         color: _techniqueColor.withAlpha(38),
                         shape: BoxShape.circle,
                       ),
-                      child: Text(widget.technique.icon, style: const TextStyle(fontSize: 80)),
+                      child: Text(
+                        widget.technique.icon,
+                        style: const TextStyle(fontSize: 80),
+                      ),
                     ),
                     const SizedBox(height: 32),
                     Text(
@@ -199,7 +214,10 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
@@ -208,7 +226,11 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.access_time, size: 16, color: _techniqueColor),
+                              Icon(
+                                Icons.access_time,
+                                size: 16,
+                                color: _techniqueColor,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 '${widget.technique.durationMinutes} min',
@@ -223,7 +245,10 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                         ),
                         const SizedBox(width: 12),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
@@ -232,7 +257,11 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.record_voice_over, size: 16, color: _techniqueColor),
+                              Icon(
+                                Icons.record_voice_over,
+                                size: 16,
+                                color: _techniqueColor,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'Voice Guided',
@@ -260,7 +289,9 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _techniqueColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                     elevation: 0,
                   ),
                   child: Text(
@@ -281,7 +312,7 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
   }
 
   Widget _buildStepView() {
-    final steps = widget.technique.steps!;
+    final items = _displayItems;
     final colors = _getThemeColors();
 
     return AnimatedBuilder(
@@ -312,10 +343,12 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                       height: 240,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: RadialGradient(colors: [
-                          _techniqueColor.withAlpha(28),
-                          Colors.transparent,
-                        ]),
+                        gradient: RadialGradient(
+                          colors: [
+                            _techniqueColor.withAlpha(28),
+                            Colors.transparent,
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -327,10 +360,12 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                       height: 200,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: RadialGradient(colors: [
-                          _techniqueColor.withAlpha(18),
-                          Colors.transparent,
-                        ]),
+                        gradient: RadialGradient(
+                          colors: [
+                            _techniqueColor.withAlpha(18),
+                            Colors.transparent,
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -344,7 +379,10 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                           children: [
                             IconButton(
                               onPressed: () => Navigator.pop(context),
-                              icon: const Icon(Icons.close, color: Colors.white54),
+                              icon: const Icon(
+                                Icons.close,
+                                color: Colors.white54,
+                              ),
                             ),
                             Text(
                               widget.technique.title,
@@ -354,7 +392,6 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                                 letterSpacing: 1.2,
                               ),
                             ),
-                            
                           ],
                         ),
                       ),
@@ -362,10 +399,11 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                       Padding(
                         padding: const EdgeInsets.fromLTRB(40, 8, 40, 0),
                         child: LinearProgressIndicator(
-                          value: _currentStep / steps.length,
+                          value: _currentStep / items.length,
                           backgroundColor: Colors.white10,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(_techniqueColor),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _techniqueColor,
+                          ),
                           minHeight: 2,
                         ),
                       ),
@@ -374,17 +412,21 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                       Expanded(
                         child: Center(
                           child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 32),
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(widget.technique.icon,
-                                    style: const TextStyle(fontSize: 80)),
-                                const SizedBox(height: 32),
-                                // Step number label
                                 Text(
-                                  'Step ${_currentStep + 1} of ${steps.length}',
+                                  widget.technique.icon,
+                                  style: const TextStyle(fontSize: 80),
+                                ),
+                                const SizedBox(height: 32),
+                                // Step/Affirmation number label
+                                Text(
+                                  widget.technique.type ==
+                                          TechniqueType.affirmation
+                                      ? 'Affirmation ${_currentStep + 1} of ${items.length}'
+                                      : 'Step ${_currentStep + 1} of ${items.length}',
                                   style: GoogleFonts.lato(
                                     fontSize: 16,
                                     color: Colors.white54,
@@ -403,13 +445,15 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                                         animation: _progressController,
                                         builder: (_, __) =>
                                             CircularProgressIndicator(
-                                          value: 1 - _progressController.value,
-                                          strokeWidth: 4,
-                                          backgroundColor: Colors.white12,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                  _techniqueColor),
-                                        ),
+                                              value:
+                                                  1 - _progressController.value,
+                                              strokeWidth: 4,
+                                              backgroundColor: Colors.white12,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    _techniqueColor,
+                                                  ),
+                                            ),
                                       ),
                                       Text(
                                         '$_countdownSeconds',
@@ -440,7 +484,9 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                           label: Text(
                             _isPaused ? 'Resume' : 'Pause',
                             style: GoogleFonts.lato(
-                                color: Colors.white38, fontSize: 16),
+                              color: Colors.white38,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       ),
@@ -471,7 +517,11 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                     color: _techniqueColor.withAlpha(50),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.check_circle, size: 80, color: _techniqueColor),
+                  child: Icon(
+                    Icons.check_circle,
+                    size: 80,
+                    color: _techniqueColor,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 Text(
@@ -486,7 +536,11 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                 Text(
                   'You\'ve completed the ${widget.technique.title} exercise.\nTake a moment to notice how you feel.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.lato(fontSize: 16, color: Colors.white70, height: 1.6),
+                  style: GoogleFonts.lato(
+                    fontSize: 16,
+                    color: Colors.white70,
+                    height: 1.6,
+                  ),
                 ),
                 const SizedBox(height: 40),
                 SizedBox(
@@ -499,10 +553,12 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                           context,
                           savingText: 'Saving progress...',
                           onComplete: () async {
-                            await ref.read(firestoreServiceProvider).logActivityCompletion(
-                              user.uid,
-                              'calm_technique',
-                            );
+                            await ref
+                                .read(firestoreServiceProvider)
+                                .logActivityCompletion(
+                                  user.uid,
+                                  'calm_technique',
+                                );
                           },
                         );
                       }
@@ -511,19 +567,29 @@ class _CalmTechniqueScreenState extends ConsumerState<CalmTechniqueScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _techniqueColor,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
                     ),
                     child: Text(
                       'Done',
-                      style: GoogleFonts.lato(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.lato(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => _startStep(0),
-                  child: Text('Start Over',
-                      style: GoogleFonts.lato(color: Colors.white70, fontSize: 16)),
+                  child: Text(
+                    'Start Over',
+                    style: GoogleFonts.lato(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                  ),
                 ),
               ],
             ),
